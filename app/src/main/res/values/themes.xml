@@ -1,6 +1,9 @@
 <resources>
+    <!-- 系统级兜底主题。Compose 内的视觉由 AOSAgentTheme 定义，
+         此处只保证启动窗口与系统栏不出现浅色闪屏。 -->
     <style name="Theme.AOSAgent" parent="@android:style/Theme.DeviceDefault">
+        <item name="android:windowBackground">@color/aos_bg_primary</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@android:color/black</item>
+        <item name="android:navigationBarColor">@color/aos_bg_primary</item>
     </style>
 </resources>

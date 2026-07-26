@@ -48,6 +48,7 @@
 - [core-agent-plan.md](./core-agent-plan.md) — 批次 2：核心功能计划
 - [extended-advanced-plan.md](./extended-advanced-plan.md) — 批次 3：扩展 / 复杂功能计划
 - [terminal-plan.md](./terminal-plan.md) — 终端模块专项计划（从属 Batch 2，不再作为当前优先批次单独提前执行）
+- [ui-design-system-plan.md](./ui-design-system-plan.md) — UI 设计系统落地与多语言（Batch 1 共用前置）
 
 ## 6. 已归档
 

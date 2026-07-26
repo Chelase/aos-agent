@@ -1,3 +1,50 @@
 <resources>
+    <!-- 默认语言资源（中文）。英文见 values-en/strings.xml。 -->
     <string name="app_name">AOSAgent</string>
+    <string name="app_tagline">智能副驾</string>
+
+    <!-- 服务 -->
+    <string name="service_running">AOSAgent 正在后台运行</string>
+
+    <!-- 首页 -->
+    <string name="home_quick_actions">快捷操作</string>
+    <string name="home_at_a_glance">状态一览</string>
+    <string name="action_terminal">终端</string>
+    <string name="action_chat">对话</string>
+    <string name="action_system_panel">系统面板</string>
+    <string name="action_engineer_mode">工程师模式</string>
+    <string name="badge_coming_soon">待开放</string>
+    <string name="badge_ready">可用</string>
+
+    <!-- 状态 -->
+    <string name="status_agent">Agent</string>
+    <string name="status_agent_standby">待命</string>
+    <string name="status_platform">平台</string>
+    <string name="status_platform_automotive">车机</string>
+    <string name="status_platform_generic">通用 Android</string>
+    <string name="status_drive_mode">驾驶模式</string>
+    <string name="status_drive_mode_parked">停车</string>
+
+    <!-- 语言切换 -->
+    <string name="language_label">语言</string>
+    <string name="language_current">中文</string>
+    <string name="language_switch_to">English</string>
+    <string name="language_switch_description">切换界面语言</string>
+
+    <!-- 工程师模式 -->
+    <string name="engineer_title">工程师模式</string>
+    <string name="engineer_subtitle">只读诊断</string>
+    <string name="action_back">返回</string>
+    <string name="section_system">系统</string>
+    <string name="section_device">设备</string>
+    <string name="section_platform">平台</string>
+    <string name="label_android_version">Android 版本</string>
+    <string name="label_api_level">API 级别</string>
+    <string name="label_manufacturer">厂商</string>
+    <string name="label_brand">品牌</string>
+    <string name="label_model">型号</string>
+    <string name="label_device">设备名</string>
+    <string name="label_automotive">Automotive</string>
+    <string name="value_yes">是</string>
+    <string name="value_no">否</string>
 </resources>

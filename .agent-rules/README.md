@@ -84,6 +84,7 @@
 - `mechanisms/risk-assessment.md` — 技术风险、开发风险与性能风险评估
 - mechanisms/terminal-architecture.md — 终端模块架构（Termux + PTY JNI + Compose）
 - mechanisms/engineer-mode-architecture.md — 工程师模式调试诊断面板
+- mechanisms/ui-design-system.md — UI 设计 token、共享组件库与中英双语机制
 
 新增机制文档必须按 `mechanisms/README.md` 的七段强制结构编写（结论 → 涉及对象 → 运行链路 → 使用点 → 修改点 → 关键约束 → 维护方式），并遵守禁止写入内容清单。
 

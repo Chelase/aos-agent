@@ -1,0 +1,48 @@
+<resources>
+    <string name="app_tagline">Intelligent Co-Pilot</string>
+
+    <!-- Service -->
+    <string name="service_running">AOSAgent is running in the background</string>
+
+    <!-- Home -->
+    <string name="home_quick_actions">Quick Actions</string>
+    <string name="home_at_a_glance">At a Glance</string>
+    <string name="action_terminal">Terminal</string>
+    <string name="action_chat">Chat</string>
+    <string name="action_system_panel">System Panel</string>
+    <string name="action_engineer_mode">Engineer Mode</string>
+    <string name="badge_coming_soon">Coming Soon</string>
+    <string name="badge_ready">Ready</string>
+
+    <!-- Status -->
+    <string name="status_agent">Agent</string>
+    <string name="status_agent_standby">Standby</string>
+    <string name="status_platform">Platform</string>
+    <string name="status_platform_automotive">Automotive</string>
+    <string name="status_platform_generic">Generic Android</string>
+    <string name="status_drive_mode">Drive Mode</string>
+    <string name="status_drive_mode_parked">Parked</string>
+
+    <!-- Language -->
+    <string name="language_label">Language</string>
+    <string name="language_current">English</string>
+    <string name="language_switch_to">中文</string>
+    <string name="language_switch_description">Switch interface language</string>
+
+    <!-- Engineer Mode -->
+    <string name="engineer_title">Engineer Mode</string>
+    <string name="engineer_subtitle">Read-only Diagnostics</string>
+    <string name="action_back">Back</string>
+    <string name="section_system">System</string>
+    <string name="section_device">Device</string>
+    <string name="section_platform">Platform</string>
+    <string name="label_android_version">Android Version</string>
+    <string name="label_api_level">API Level</string>
+    <string name="label_manufacturer">Manufacturer</string>
+    <string name="label_brand">Brand</string>
+    <string name="label_model">Model</string>
+    <string name="label_device">Device</string>
+    <string name="label_automotive">Automotive</string>
+    <string name="value_yes">Yes</string>
+    <string name="value_no">No</string>
+</resources>

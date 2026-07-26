@@ -3,11 +3,14 @@ package com.aos.agent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.stringResource
+import com.aos.agent.i18n.AppLocaleController
+import com.aos.agent.i18n.SystemLocaleStore
 import com.aos.agent.system.AndroidSystemInfoReader
 import com.aos.agent.system.SystemInfoProvider
 import com.aos.agent.ui.engineer.EngineerModeScreen
@@ -17,9 +20,18 @@ import com.aos.agent.ui.theme.AOSAgentTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // 首启兜底中文。setApplicationLocales 会触发 Activity 重建，
+        // 重建后 ensureDefault 读到已设置的值，不会再次写入。
+        val localeController = AppLocaleController(SystemLocaleStore(this))
+        localeController.ensureDefault()
+
         val systemInfoProvider = SystemInfoProvider(AndroidSystemInfoReader(this))
         setContent {
-            AOSAgentApp(systemInfoProvider = systemInfoProvider)
+            AOSAgentApp(
+                systemInfoProvider = systemInfoProvider,
+                onLanguageToggle = { localeController.toggle() },
+            )
         }
     }
 }
@@ -27,6 +39,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun AOSAgentApp(
     systemInfoProvider: SystemInfoProvider,
+    onLanguageToggle: () -> Unit,
 ) {
     AOSAgentTheme {
         var engineerModeVisible by remember { mutableStateOf(false) }
@@ -40,7 +53,11 @@ private fun AOSAgentApp(
         } else {
             HomeScreen(
                 systemInfo = systemInfo,
+                // 语言标签走资源而非枚举，切换后由 Activity 重建自动刷新
+                currentLanguageLabel = stringResource(R.string.language_current),
+                targetLanguageLabel = stringResource(R.string.language_switch_to),
                 onEngineerModeClick = { engineerModeVisible = true },
+                onLanguageToggle = onLanguageToggle,
             )
         }
     }
