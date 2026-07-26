@@ -16,7 +16,8 @@ UI 视觉由集中的设计 token 层统一供给，界面文案全部走 Androi
 | Components | `ui/components/AOSControls.kt` | 按钮、状态标签/圆点、功能磁贴、语言开关 |
 | Components | `ui/components/AOSLogo.kt` | Canvas 绘制的六边形品牌标记 |
 | i18n | `i18n/AppLocale.kt` | `AppLanguage` / `LocaleStore` / `AppLocaleController` |
-| 入口 | `MainActivity.kt` | 首启兜底语言 + 页面切换 + 语言标签注入 |
+| 入口 | `AOSAgentApplication.kt` | 首启语言兜底（Activity 创建前完成） |
+| 入口 | `MainActivity.kt` | 页面切换 + 语言标签注入 + 切换回调 |
 | 资源 | `res/values/strings.xml` | 中文文案（默认资源） |
 | 资源 | `res/values-en/strings.xml` | 英文文案 |
 | 资源 | `res/xml/locales_config.xml` | 声明 zh-CN / en，manifest `localeConfig` 引用 |
@@ -26,12 +27,14 @@ UI 视觉由集中的设计 token 层统一供给，界面文案全部走 Androi
 ## 运行链路
 
 ```
-[启动] MainActivity.onCreate
+[启动] AOSAgentApplication.onCreate
    │
-   ├─► AppLocaleController(SystemLocaleStore(context)).ensureDefault()
-   │      └─► LocaleStore.currentTag()  ──► LocaleManager.applicationLocales
-   │             ├─ 空        → apply("zh-CN") → 系统重建 Activity → 再次 onCreate（此时非空，不再写）
-   │             └─ 已有值    → 保留用户选择，直接返回
+   └─► AppLocaleController(SystemLocaleStore(context)).ensureDefault()
+          └─► LocaleStore.currentTag()  ──► LocaleManager.applicationLocales
+                 ├─ 空        → apply("zh-CN")：此时尚无 Activity，不触发重建
+                 └─ 已有值    → 保留用户选择，直接返回
+
+[启动] MainActivity.onCreate
    │
    └─► setContent { AOSAgentApp }
           │
@@ -55,7 +58,8 @@ UI 视觉由集中的设计 token 层统一供给，界面文案全部走 Androi
 
 ## 使用点
 
-- `MainActivity.onCreate` 启动时调用 `ensureDefault()`，保证首启为中文。
+- `AOSAgentApplication.onCreate` 调用 `ensureDefault()`，保证首启为中文。
+  实测：全新安装 + 系统语言 en_US 时，首启界面即为中文，Activity 只创建一次（无重建）。
 - `HomeScreen` 的语言卡片调用 `onLanguageToggle`，透传到 `AppLocaleController.toggle()`。
 - `HomeScreen` / `EngineerModeScreen` 全部文案通过 `stringResource` 取值，无硬编码字面量。
 - `AgentForegroundService.createNotification` 用 `R.string.service_running`，通知文案同样随语言变化。
@@ -75,6 +79,8 @@ UI 视觉由集中的设计 token 层统一供给，界面文案全部走 Androi
 ## 关键约束
 
 1. **应用强制深色**，不提供浅色模式；`AOSAgentTheme` 无 `darkTheme` 参数，`values-night/themes.xml` 与 `values/themes.xml` 取值一致。
+   系统兜底主题必须继承 `Theme.DeviceDefault.NoActionBar`：`DeviceDefault` 自带浅色 ActionBar，
+   会在深色界面顶部压出一条浅蓝标题栏（已实机复现并修正）。
 2. **语言只有一份真相**：状态存于 `LocaleManager`，禁止另建 SharedPreferences 缓存语言，否则与系统 per-app locale 记录冲突。
 3. **中文是默认资源**（放 `values/` 而非 `values-zh/`），保证任何未覆盖语言的环境都回落中文，与车机系统语言无关。
 4. **切换语言会重建 Activity**，Composable 内的 `remember` 状态会丢失；需要跨切换保留的状态必须提升到 `ViewModel` 或持久层。

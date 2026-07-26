@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.aos.agent.R
+import com.aos.agent.system.NetworkTransport
 import com.aos.agent.system.SystemInfo
 import com.aos.agent.ui.components.AOSCard
 import com.aos.agent.ui.components.AOSDataRow
@@ -113,6 +114,19 @@ private fun MetricStrip(systemInfo: SystemInfo) {
     }
 }
 
+/** 网络承载类型映射到本地化文案。Batch 1 Step 2 的系统面板复用时再提取到共享位置。 */
+@Composable
+private fun networkLabel(transport: NetworkTransport): String = stringResource(
+    when (transport) {
+        NetworkTransport.WIFI -> R.string.network_wifi
+        NetworkTransport.CELLULAR -> R.string.network_cellular
+        NetworkTransport.ETHERNET -> R.string.network_ethernet
+        NetworkTransport.OTHER -> R.string.network_other
+        NetworkTransport.NONE -> R.string.network_none
+        NetworkTransport.UNAVAILABLE -> R.string.network_unavailable
+    },
+)
+
 @Composable
 private fun InfoCards(
     systemInfo: SystemInfo,
@@ -142,6 +156,11 @@ private fun InfoCards(
                 } else {
                     stringResource(R.string.value_no)
                 },
+            )
+            AOSRowDivider()
+            AOSDataRow(
+                label = stringResource(R.string.label_network),
+                value = networkLabel(systemInfo.networkTransport),
             )
         }
 

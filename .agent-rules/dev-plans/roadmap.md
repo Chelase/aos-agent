@@ -115,10 +115,13 @@
 
 ## 进度
 
-- Batch 0（框架搭建）: ⏳ 待开始
-- Batch 1（基础功能）: ⏳ 待开始
+- Batch 0（框架搭建）: ✅ 已完成（2026-07-26）
+- Batch 1（基础功能）: 🚧 进行中 — 共用前置「UI 设计系统与多语言」已完成，Step 1~5 未开始
 - Batch 2（核心功能）: ⏳ 待开始
 - Batch 3（扩展 / 复杂功能）: ⏳ 待开始
+
+> 批次外交付：[ui-design-system-plan.md](./ui-design-system-plan.md) 是 Batch 1 各 Step 的共用前置
+> （设计 token、共享组件库、中英双语基建），不占用 Batch 1 的 Step 编号。
 
 
 

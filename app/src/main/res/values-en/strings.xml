@@ -43,6 +43,15 @@
     <string name="label_model">Model</string>
     <string name="label_device">Device</string>
     <string name="label_automotive">Automotive</string>
+    <string name="label_network">Network</string>
     <string name="value_yes">Yes</string>
     <string name="value_no">No</string>
+
+    <!-- Network transport -->
+    <string name="network_wifi">Wi-Fi</string>
+    <string name="network_cellular">Cellular</string>
+    <string name="network_ethernet">Ethernet</string>
+    <string name="network_other">Other</string>
+    <string name="network_none">Not Connected</string>
+    <string name="network_unavailable">Unavailable</string>
 </resources>

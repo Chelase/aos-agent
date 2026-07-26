@@ -45,6 +45,15 @@
     <string name="label_model">型号</string>
     <string name="label_device">设备名</string>
     <string name="label_automotive">Automotive</string>
+    <string name="label_network">网络</string>
     <string name="value_yes">是</string>
     <string name="value_no">否</string>
+
+    <!-- 网络承载类型。WIFI / 蜂窝 / 以太网为技术标识，未连接与不可用需区分 -->
+    <string name="network_wifi">Wi-Fi</string>
+    <string name="network_cellular">蜂窝网络</string>
+    <string name="network_ethernet">以太网</string>
+    <string name="network_other">其他</string>
+    <string name="network_none">未连接</string>
+    <string name="network_unavailable">不可用</string>
 </resources>

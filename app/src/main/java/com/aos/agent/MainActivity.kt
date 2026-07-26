@@ -21,11 +21,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 首启兜底中文。setApplicationLocales 会触发 Activity 重建，
-        // 重建后 ensureDefault 读到已设置的值，不会再次写入。
+        // 首启语言兜底在 AOSAgentApplication 完成，此处只负责切换入口。
         val localeController = AppLocaleController(SystemLocaleStore(this))
-        localeController.ensureDefault()
-
         val systemInfoProvider = SystemInfoProvider(AndroidSystemInfoReader(this))
         setContent {
             AOSAgentApp(
