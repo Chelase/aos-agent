@@ -3,6 +3,8 @@
 
     <!-- Service -->
     <string name="service_running">AOSAgent is running in the background</string>
+    <string name="notification_channel_name">AOSAgent Runtime</string>
+    <string name="notification_channel_description">Ongoing notification indicating the agent is running. Disabling it may affect auto-start on boot.</string>
 
     <!-- Home -->
     <string name="home_quick_actions">Quick Actions</string>

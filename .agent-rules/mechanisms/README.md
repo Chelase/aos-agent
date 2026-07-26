@@ -92,6 +92,7 @@
 - [third-party-apps.md](./third-party-apps.md) — 第三方应用管理（上传 APK / 网络搜索 / 安装）
 - [agent-capabilities.md](./agent-capabilities.md) — Agent 能力架构（工具 / 插件 / 多步推理）
 - [ui-design-system.md](./ui-design-system.md) — UI 设计 token、共享组件库与中英双语机制
+- [boot-and-foreground-service.md](./boot-and-foreground-service.md) — 开机自启广播链路与前台服务保活
 
 
 

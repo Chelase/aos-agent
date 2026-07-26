@@ -50,6 +50,10 @@
 - [terminal-plan.md](./terminal-plan.md) — 终端模块专项计划（从属 Batch 2，不再作为当前优先批次单独提前执行）
 - [ui-design-system-plan.md](./ui-design-system-plan.md) — UI 设计系统落地与多语言（Batch 1 共用前置）
 
+### 子目录
+
+- [batch1/](./batch1/README.md) — Batch 1 各 Step 拆解出的子计划（父计划为复杂功能，禁止直接实现）
+
 ## 6. 已归档
 
 > 初始化时为空。归档后从"当前在册"移到此处。

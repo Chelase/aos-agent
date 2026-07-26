@@ -5,6 +5,8 @@
 
     <!-- 服务 -->
     <string name="service_running">AOSAgent 正在后台运行</string>
+    <string name="notification_channel_name">AOSAgent 运行时</string>
+    <string name="notification_channel_description">常驻通知，表明 Agent 正在后台运行。关闭后可能影响开机自启。</string>
 
     <!-- 首页 -->
     <string name="home_quick_actions">快捷操作</string>
