@@ -11,9 +11,11 @@
 
 ## 2. 远端平台
 
-当前 Git 远端平台：未配置（无远端）
+当前 Git 远端平台：GitHub
 
-当前项目未检测到 Git 远端仓库。GitHub/GitLab 工具未配置，相关命令不可用。
+- 远端：`origin` → `https://github.com/Chelase/aos-agent.git`（私有仓库）
+- 默认分支：`main`，本地 `main` 跟踪 `origin/main`
+- 推送前先确认工作区干净、提交粒度符合本文件第 5 节要求。
 
 ## 3. 提交内容语言
 
