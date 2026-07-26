@@ -16,5 +16,4 @@
 
 ## 当前参考资料
 
-> 初始化时为空。Agent 或用户可按需添加参考资料。
-> 示例格式：`- <topic>.md — 一句话说明参考内容和来源。`
+- `unified-ecosystem-vision.md` — **统一生态愿景（开发约束）**：aos-agent、AOC、aoc-watch-agent 三大项目的定位与协作关系。**所有开发计划必须与其对齐，不得偏离。**

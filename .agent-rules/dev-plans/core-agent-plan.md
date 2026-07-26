@@ -1,5 +1,18 @@
 # 核心功能计划
 
+> ⚠️ **复杂功能 — 禁止直接实现**
+>
+> 本批次属于复杂功能，Agent 读取本计划文档后，不得直接按全文一次性实现。
+>
+> **必须按以下流程执行：**
+> 1. 从「步骤」中选择一个 Step
+> 2. 将该 Step 进一步拆解为独立的子计划文档，写入 `dev-plans/archived/` 或新子目录
+> 3. 子计划文档需包含：改动文件清单、关键实现方案、分步验收条件
+> 4. 子计划就绪后再开始编码实现
+> 5. 完成后回到本计划，选择下一个 Step，重复上述流程
+>
+> **禁止：** 一个 Agent 调用直接实现多个 Step。
+
 > 配套机制文档：`.agent-rules/mechanisms/architecture-overview.md`、`.agent-rules/mechanisms/agent-capabilities.md`、`.agent-rules/mechanisms/terminal-architecture.md`
 
 ## 当前阶段
