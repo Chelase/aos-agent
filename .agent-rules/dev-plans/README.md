@@ -43,6 +43,7 @@
 ## 5. 当前在册
 
 - [roadmap.md](./roadmap.md) — 三阶段开发路线图（Phase 0-3）
+- [mvp-core-plan.md](./mvp-core-plan.md) — 最小 MVP：Agent 执行 + Skill + AOC 接入（当前最高优先级专项）
 - [framework-foundation-plan.md](./framework-foundation-plan.md) — 批次 0：框架搭建计划
 - [basic-capabilities-plan.md](./basic-capabilities-plan.md) — 批次 1：基础功能计划
 - [core-agent-plan.md](./core-agent-plan.md) — 批次 2：核心功能计划
@@ -53,6 +54,7 @@
 ### 子目录
 
 - [batch1/](./batch1/README.md) — Batch 1 各 Step 拆解出的子计划（父计划为复杂功能，禁止直接实现）
+- [mvp/](./mvp/README.md) — MVP 专项各 Step 拆解出的子计划（父计划为 [mvp-core-plan.md](./mvp-core-plan.md)）
 
 ## 6. 已归档
 
