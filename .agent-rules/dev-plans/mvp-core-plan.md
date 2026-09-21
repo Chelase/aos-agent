@@ -23,6 +23,7 @@
 > 借鉴来源：
 > - [../docs/android-agent-projects-survey.md](../docs/android-agent-projects-survey.md) — 手机端 Agent（OpenMinis/Operit/RikkaHub）
 > - [../docs/car-agent-ecosystem-survey.md](../docs/car-agent-ecosystem-survey.md) — 车载演示仓库 / 座舱形态文章 / HaloOS（2026-09-14 吸收）
+> - [../docs/car-agent-market-survey-2026-09.md](../docs/car-agent-market-survey-2026-09.md) — 车机 Agent 成熟度（Gemini / 高通 Claw / 国内 OEM 量产 / 华为技能平台 / CarToolForge，2026-09-21 吸收）
 >
 > 「抄思路不抄代码」；两个 GitHub 车载仓库无 License、HaloOS 不在座舱层，一律不复制代码。映射见下方「借鉴来源映射」。
 
@@ -129,8 +130,8 @@ MVP 全部 Step 完成后回写 `roadmap.md`。
 
 1. **`Tool` schema 用 `name` + `version` + `category` 三元组**，对齐 Android 16 `@AppFunctionSchemaDefinition` 语义；description 必带**单位与取值枚举**（CarToolForge 的 yaml 每条都写清 `0/1/256` 含义，这是降低畸形 function-call 概率的实证做法）。不引入 `androidx.appfunctions` 依赖（alpha10 + 需 API 36），只借形状，为二期把工具暴露给系统 Agent 留零改造路径。
 2. **车辆属性改成声明式 allowlist**：`assets/vehicle/vehicle_properties.yaml` 为唯一事实源，字段 `name` / `id`(vendor 扩展必填) / `category` / `permission` / `access` / `unit` / `values` / `description`；分类沿用 AOSP 六类 `VEHICLE_INFO` / `ENERGY_MANAGEMENT` / `HVAC_SYSTEM` / `BODY_CONTROL` / `CHASSIS_AND_DYNAMICS` / `LIGHTING_SYSTEM`。`VehicleReader` 按 allowlist 产出，OEM 差异与字段增减只改配置不改 Kotlin（对齐已有的「探测 → 适配 → 降级」）。
-3. **工具保持「少而语义化」**：MVP 仍是一个 `vehicle_basic`（返回结构化 bundle，可选 `fields` 入参），**不做** CarToolForge 那种按数据类型泛型展开的 15+ 工具族。依据是他们自己的实测结论：泛型工具族需要 >20B 模型才有可用效果，为此另做 CarTool-Instruct 微调数据集。MVP 用远程大模型 + 只读少工具绕开该问题；本地小模型属 Batch 3，届时再评估该数据集。
-4. **写控车是结构性阻断**：AOSP 侧 `CONTROL_CAR_CLIMATE` / `WINDOWS` / `SEATS` / `DOORS` / `MIRRORS` / `ENERGY` / `GLOVE_BOX` 及 `CAR_TIRES` 均为 **signature|privileged**，普通可安装 APK 拿不到；读侧 `CAR_SPEED`、`CAR_ENERGY` 为 **dangerous**（可运行时授予），`CAR_INFO`、`CAR_POWERTRAIN`、`CAR_EXTERIOR_ENVIRONMENT`、`CAR_ENERGY_PORTS` 为 **normal**。→ 本期 allowlist 中 `access: write` 条目**不注册为可调用工具**，也不预留写路径代码位；任何控车写能力的前置条件是 Batch 3 系统级预装 + OEM 授权，而非排期。
+3. **工具保持「少而语义化」**：MVP 仍是一个 `vehicle_basic`（返回结构化 bundle，可选 `fields` 入参），**不做** CarToolForge 那种按数据类型泛型展开的 15+ 工具族。依据是他们自己的实测结论：泛型工具族需要 >20B 模型才有可用效果，为此另做 CarTool-Instruct 微调数据集。第二个独立数据点来自国内供应商侧——诚迈×智达诚远的萤火Claw 端侧车控方案用的是 Qwen3-30B-A3B。车控 function-calling 的实用下限看起来在 20~30B 级，不是 3B/7B。MVP 用远程大模型 + 只读少工具绕开该问题；本地小模型属 Batch 3，届时再评估该数据集。
+4. **写控车是结构性阻断**：AOSP 侧 `CONTROL_CAR_CLIMATE` / `WINDOWS` / `SEATS` / `DOORS` / `MIRRORS` / `ENERGY` / `GLOVE_BOX` 及 `CAR_TIRES` 均为 **signature|privileged**，普通可安装 APK 拿不到；读侧 `CAR_SPEED`、`CAR_ENERGY` 为 **dangerous**（可运行时授予），`CAR_INFO`、`CAR_POWERTRAIN`、`CAR_EXTERIOR_ENVIRONMENT`、`CAR_ENERGY_PORTS` 为 **normal**。→ 本期 allowlist 中 `access: write` 条目**不注册为可调用工具**，也不预留写路径代码位；任何控车写能力的前置条件是 Batch 3 系统级预装 + OEM 授权，而非排期。分级确认本身是行业通行做法（智己 IM Ultra Agent 对高风险指令走对话式二次确认），与我们 `ask` + `ToolConfirmer` fail-closed 同形，将来拿到签名也照此办理。
    ⚠️ 上述等级取自 CarToolForge manifest 注释（与 AOSP `car-lib` 一致），**本项目尚未逐字段实测**；子计划必须先做权限核对再定 allowlist 初版。
 5. **降级返回结构化而不是散文**：取不到时返回 `{field, status: permission_denied | no_vhal | unsupported, detail}`。`rules/project-onboarding.md` §7 的 `"Unavailable"` 字符串约定只适用于 SystemInfoReader → 面板路径；工具返回值要进模型上下文，散文会堵死循环。
 
@@ -210,7 +211,7 @@ MVP 全部 Step 完成后回写 `roadmap.md`。
 - **网络边界**：模拟器经 10.0.2.2 访问宿主机 hub；真车跨公网需 AOC gRPC mTLS 或内网/VPN，MVP 阶段限制在可信网络。
 - **shell 能力上限**：app 沙箱 + SELinux 限制 shell_exec 能力范围，MVP 不绕过——这正是后续终端 PTY / 系统级化的动机。
 - **平台方已占位（2026-09 调研）**：Gemini for Android Automotive 自 2026-06-26 起在量产车 rollout（Volvo EX30 首批，可直接调空调/座椅加热/雨刮，能力取决于各车企集成深度）；高通 2026-06-05 启动「车端人工智能 Claw 生态计划」，提供通用智能体框架 + 开放 SKILL HUB，运行于骁龙数字底盘，首批伙伴含中科创达 / 德赛西威 / 斑马智能 / 镁佳 / 诚迈 / 车联天下。→ aos-agent 的价值不能落在"能聊天 / 能控车"，只能是**跨设备 Agent 网络节点 + 离线独立 + 用户可自装**；工具层的能力声明形状因此要与外部编排层可对齐（见决策 10）。
-- **第三方没有车厂分发通道**：公开报道把国内车企不接 OpenClaw 类框架归因于 ASIL-B/D 功能安全认证、失控责任边界与云依赖延迟，主流选择是自研封闭 Agent（小鹏天玑、理想 Mind 系列）。→ MVP 验收全部锚定模拟器与用户自有设备 sideload，**不得**把真车控车写成验收条件。
+- **第三方没有车厂分发通道**（2026-09-21 国内面调研补实）：面向车主的车机 Agent 已成熟且**全部封闭**——理想同学 + OTA 8.2（2026-01-23，多步分解 + 原生控车 + 记忆 + 主动建议）、小鹏天玑 AIOS 6.0（2026-02-04 起 OTA）、极氪超级Eva（2026-03 首搭）、智己 IM Ultra Agent（2026-03-26）都不对外；唯一有第三方技能平台的是华为小艺 / HarmonySpace 6（自然语言开发 Skill、一键发布、车机跨端同步），但检索不到线控/ADAS/安全子系统的公开 API。诚迈×智达诚远的萤火Claw（端侧 Qwen3-30B-A3B + 可独立调度能力单元 + SDK）仍是 B2B 授权且无具名量产车。→ 结论：**缺口不在"能不能做车机 Agent"，在"AAOS 上第三方拿不到的那一层"**；MVP 验收一律锚定模拟器与用户自有设备 sideload，**不得**把真车控车写成验收条件。详见 [../docs/car-agent-market-survey-2026-09.md](../docs/car-agent-market-survey-2026-09.md)。
 
 ## 进度
 

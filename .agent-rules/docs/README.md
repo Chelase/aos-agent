@@ -17,3 +17,6 @@
 ## 当前参考资料
 
 - `unified-ecosystem-vision.md` — **统一生态愿景（开发约束）**：aos-agent、AOC、aoc-watch-agent 三大项目的定位与协作关系。**所有开发计划必须与其对齐，不得偏离。**
+- [android-agent-projects-survey.md](./android-agent-projects-survey.md) — 手机端开源 Agent 项目调研（OpenMinis/Operit/RikkaHub：License 边界、可借鉴设计点与 MVP 修订映射）
+- [car-agent-ecosystem-survey.md](./car-agent-ecosystem-survey.md) — 车载 Agent / 星环 OS 调研（orangefplus/car-agent、wwsa666/caragent、知乎座舱形态、HaloOS：分层映射与 MVP 加速点）
+- [car-agent-market-survey-2026-09.md](./car-agent-market-survey-2026-09.md) — 车机 Agent 成熟度调研（Gemini/高通 Claw/国内 OEM 量产能力/华为技能平台/CarToolForge 等开源实测：谁已成熟、第三方可不可接入、缺口在哪）
