@@ -21,9 +21,10 @@
 > 已预置：
 > - `git-operations.md`：Git 协作工具、约定式提交、中文提交规范。
 > - `complex-feature-mechanism.md`：复杂跨模块功能实施时强制同步生成机制文档的规则。
+> - `skill-routing.md`：界面/UI 三个设计技能如何搭配，工程化架构走 `improve-codebase-architecture` 并固定四个 Agent 参考系；含"禁止生成第二套真来源"映射表。
+> - `execution-behavior.md`：汇报风格（通俗易懂且精简、结论先行）与任务执行行为约定。
 >
 > 可按需新增（示例，非默认创建）：
 > - `repo-context.md`：仓库背景、技术栈、目录职责边界。
 > - `system-architecture.md`：系统架构约束。
 > - `doc-conventions.md`：文档命名与产出约定。
-> - `execution-behavior.md`：任务执行行为约定（如是否主动跑构建）。

@@ -2,7 +2,7 @@
 
 ## 结论
 
-AOS-Agent 是一个车载 AI Agent，具备工具调用、插件扩展、多步推理、上下文管理等核心能力。架构参考 OpenClaw、Hermes、Claude Code、OpenCode 等开源 AI Agent 系统的设计模式。
+AOS-Agent 是一个车载 AI Agent，具备工具调用、插件扩展、多步推理、上下文管理等核心能力。架构参考 OpenClaw、Hermes、Claude Code、OpenCode、Pi 等开源 AI Agent 系统的设计模式；架构层调整的技能路由见 `../rules/skill-routing.md` §3。
 
 ## 涉及对象
 
@@ -122,6 +122,7 @@ LLM 整合结果 -> 自然语言回复
 | OpenCode | Agent loop + 文件操作 + shell 执行 | Agent 主循环、文件系统工具 |
 | OpenClaw | 多 Agent 编排 + 技能系统 + 插件热加载 | 插件架构、技能注册 |
 | Hermes | 工具调用 + 多步推理 + web 搜索 | 多步规划、网络搜索工具 |
+| Pi | 尚未逐项梳理 | 按 `../rules/skill-routing.md` §3 补齐后再引用，禁止凭印象对齐 |
 
 ## 使用点
 
@@ -153,4 +154,4 @@ LLM 整合结果 -> 自然语言回复
 - **新增插件**：编写 plugin.yaml + 实现代码，放入插件目录。
 - **验证**：与 Agent 对话 -> 工具调用正确 -> 回复合理。
 
-> 更新时间：2026-06-28
+> 更新时间：2026-09-26（补 Pi 参考系与技能路由指针）

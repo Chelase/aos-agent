@@ -75,7 +75,11 @@
 > 新增规则时在此追加索引，并保持与 `rules/README.md` 一致。
 > 示例格式：`- rules/<name>.md：一句话说明。`
 
+- `rules/git-operations.md` — Git 远端平台、中文约定式提交与提交粒度
+- `rules/complex-feature-mechanism.md` — 复杂跨模块功能强制生成机制文档
 - `rules/project-onboarding.md` — 项目速览（技术栈、目录结构、核心模块、特殊机制、常用开发路径）
+- `rules/skill-routing.md` — 界面/UI 与工程化架构的技能路由（强制搭配指定技能 + 真来源映射）
+- `rules/execution-behavior.md` — 汇报风格与任务执行行为约定
 
 ## 6. 当前机制文档
 
