@@ -116,9 +116,18 @@
 ## 进度
 
 - Batch 0（框架搭建）: ✅ 已完成（2026-07-26）
-- Batch 1（基础功能）: 🚧 进行中 — 共用前置「UI 设计系统与多语言」已完成，Step 1~5 未开始
-- Batch 2（核心功能）: ⏳ 待开始
+- Batch 1（基础功能）: 🚧 进行中 — Step 1 已完成（2026-07-26）；**Step 2~5 冻结延后**（2026-09-06 决策，并入下方 MVP 专项路线）
+- Batch 2（核心功能）: ⏳ 待开始 — 其中 Step 2（Agent 主循环）/ Step 3（工具系统）已提前并入 MVP 专项
 - Batch 3（扩展 / 复杂功能）: ⏳ 待开始
+
+## MVP 专项（当前最高优先级）
+
+> 2026-09-06 决策：面板类 UI 降级，优先打通「Agent 执行 + Skill 调用 + AOC 接入」纵向切片。
+> 2026-09-14 强化：**不是 UI 优先。** 验收门闩是无头引擎 + 工具 + Skill + AOC；对话界面为可选调试层。吸收 [../docs/car-agent-ecosystem-survey.md](../docs/car-agent-ecosystem-survey.md)（FakeVehicleReader、引擎事件、只读控车分级、skill 权限/降级字段；不接 WTT / RAG / 多 Agent / HaloOS 源码）。
+
+- 计划：[mvp-core-plan.md](./mvp-core-plan.md)
+- 范围：AOC Entry 接入、本地无头 Agent 主循环、ToolSystem（含车辆 mock Reader）、Skill 机制、AOC 双向协作
+- Batch 1 冻结部分（系统面板/工程师模式/自检报告/电源监听）在 MVP 完成后回归本路线图
 
 > 批次外交付：[ui-design-system-plan.md](./ui-design-system-plan.md) 是 Batch 1 各 Step 的共用前置
 > （设计 token、共享组件库、中英双语基建），不占用 Batch 1 的 Step 编号。

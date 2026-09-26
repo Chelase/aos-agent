@@ -36,7 +36,7 @@
 
 | 项目 | 角色 | 定位 |
 |------|------|------|
-| **AOC (AgentOpenConnect)** | 中枢编排 + AI 大脑 | 桌面/服务器端的多 Agent 委派执行框架，提供 LLM 推理路由、单一人格收敛、跨设备状态同步 |
+| **AOC (AgentOpenConnect)** | 中枢编排 + AI 大脑 | 桌面/服务器端的多 Agent 委派执行框架，提供 LLM 推理路由、单一人格收敛、跨设备状态同步；活动中心是**可迁移角色**，不绑定物理机器，故障后候选设备按确定性顺位接管（2026-09-06 对齐 AOC `vision-rule.md`） |
 | **aos-agent** | 车载 Agent 节点 | OpenClaw/Hermes 车机版，跑在 AAOS 上的原生 Agent，提供车辆感知、CLI 终端、驾驶安全交互 |
 | **aoc-watch-agent** | 穿戴 Agent 节点 | 手表端的轻量 Agent 节点，提供健康感知、抬手交互、通知触达 |
 
@@ -119,7 +119,7 @@ aos-agent 的跨设备能力通过对接 AOC 实现，不自研生态协议：
 
 ---
 
-> 更新时间：2026-07-14
+> 更新时间：2026-07-14（2026-09-06 对齐修订：补注 AOC 活动中心为可迁移角色、故障可按顺位接管，对齐 AgentOpenConnect `vision-rule.md` 2026-08-09 版）
 >
 > 相关项目：
 > - AOC (AgentOpenConnect)：`D:\code\project\AgentOpenConnect`
