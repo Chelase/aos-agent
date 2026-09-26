@@ -2,7 +2,7 @@
 
 ## 结论
 
-项目主要风险集中在 AAOS 模拟器 API 兼容性和车机硬件性能，已制定对应缓解措施。
+项目风险已从"模拟器兼容性"上移到"量产真机的权限与分发"：控车写权限对普通 app 结构性不可得、dangerous 读权限在车机上可能根本没法授予、目标车型可能压根不是 AAOS。缓解手段统一为一个原则——**能力探测 + 结构化降级**，不把任何系统特性当既定存在。
 
 ## 涉及对象
 
@@ -21,10 +21,16 @@
 | 风险 | 概率 | 影响 | 缓解措施 |
 |---|---|---|---|
 | Automotive 模拟器不支持某些 Car API | 高 | 中 | 尽量使用标准 API，备注兼容方案 |
+| **量产车不给普通 app 车控权限**：AOSP `CONTROL_*`、`CAR_TIRES` 等是 signature&#124;privileged，普通可安装 APK 拿不到 | 高（已查证 CarToolForge manifest 与 AOSP 分级） | 高（控车写能力对"任意车机"这一目标基本不可得） | 本期只做读；写控车一律前置到系统级预装 + OEM 授权（Batch 3）；权限清单必须在真机逐字段实测，见 `../dev-plans/mvp/step3-toolsystem-plan.md` §1 |
+| **dangerous 级读权限在车机上可能无法授予**：量产车机常无手机端那套运行时授权弹窗，用户点不到"允许" | 中 | 高（车速/电量等核心车况在真车上读不到） | 探测 + 结构化降级；备选：只依赖 normal 级字段（CAR_INFO / CAR_POWERTRAIN / CAR_EXTERIOR_ENVIRONMENT）；真机实测前先不假设可读 |
+| **存量车机 API 版本低**：AAOS 跟随 AOSP 版本，车队大量停在 Android 12/13 | 高 | 中（AppFunctions(36)、per-app locale(33)、specialUse(34) 等全部不可假定） | minSdk 已降到 31；一律走能力探测降级（`architecture-overview.md` 关键约束 6） |
+| **部分目标车机根本不是 AAOS**：国内主流 OEM 自研座舱 OS 多为 Android 衍生，不保证有 `android.car` | 中 | 高（车辆工具整体不可用） | `android.car` 以 compileOnly 引入，运行期探测；无 Car API 时车辆工具整体降级，Agent 与 AOC 仍可用 |
+| **shell_exec 在量产机上近乎无用**：app 沙箱 + SELinux + 无 execve(/data) 限制 | 高 | 中（MVP 三工具之一不可用会让演示变形） | shell 定位成"可选探针工具"，MVP 门闩不依赖它；真实终端仍留 Batch 2 |
 | 车机硬件性能不足 | 中 | 高 | 初期就在低端配置测试 |
 | Live2D SDK 集成复杂度高 | 中 | 中 | Phase 1 用 Canvas 代替，Phase 2 再评估 |
 | PTY 终端需要额外的 C/JNI 交叉编译配置 | 低 | 低 | NDK 工具链成熟，CMake 配置标准 |
 | EV 电源循环导致数据丢失 | 低 | 高 | 每次状态变更都 Checkpoint |
+| **分发通道**：Google Play 车机分类与 OEM 商店各有 targetSdk/审核要求，侧载在多数量产车上不可行 | 中 | 高（决定"任意车机"能否成立） | 未核实：需要按目标车型逐个确认；不把侧载当作既定前提 |
 
 ### 开发风险评估
 
@@ -77,4 +83,4 @@
 - **风险解除**：移入"已解除"章节，注明解除原因和时间。
 - **审查频率**：每个 Phase 结束时审查一次风险表。
 
-> 更新时间：2026-06-27
+> 更新时间：2026-09-26（按"任意车机可运行"目标补 5 条真机风险）

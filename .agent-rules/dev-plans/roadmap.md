@@ -97,7 +97,7 @@
 - Live2D / 高质量宠物表现
 - 本地 LLM 集成
 - 第三方应用上传 / 搜索 / 安装管理
-- Agent 插件系统 / MCP / 扩展工具链
+- Agent 插件系统 / **MCP server 侧暴露**（把本车工具给外部 Agent 调用）/ 扩展工具链（MCP client 已前移到 MVP Step 6）
 - 深度 Car API 集成（导航 / 空调 / 车窗等）
 - 系统级 App 化 / 平台签名 / AOSP 集成
 - 长稳压测与安全审查
@@ -126,7 +126,8 @@
 > 2026-09-14 强化：**不是 UI 优先。** 验收门闩是无头引擎 + 工具 + Skill + AOC；对话界面为可选调试层。吸收 [../docs/car-agent-ecosystem-survey.md](../docs/car-agent-ecosystem-survey.md)（FakeVehicleReader、引擎事件、只读控车分级、skill 权限/降级字段；不接 WTT / RAG / 多 Agent / HaloOS 源码）。
 
 - 计划：[mvp-core-plan.md](./mvp-core-plan.md)
-- 范围：AOC Entry 接入、本地无头 Agent 主循环、ToolSystem（含车辆 mock Reader）、Skill 机制、AOC 双向协作
+- 范围：AOC Entry 接入、本地无头 Agent 主循环、ToolSystem（含车辆 mock Reader）、Skill 机制、AOC 双向协作、**MCP 工具来源接入（Step 6，2026-09-26 加入）**
+- 目标形态：**轻量但强大 + 任意车机可运行**（minSdk 31；能力运行期探测降级；release 整包基线 20.8MB）
 - Batch 1 冻结部分（系统面板/工程师模式/自检报告/电源监听）在 MVP 完成后回归本路线图
 
 > 批次外交付：[ui-design-system-plan.md](./ui-design-system-plan.md) 是 Batch 1 各 Step 的共用前置

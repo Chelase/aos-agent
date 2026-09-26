@@ -75,7 +75,7 @@ AOS-Agent 是一个运行在 Android Automotive OS 上的原生桌面 AI Agent�
 
 - **Kotlin** — Android 开发首选，Jetpack Compose 原生支持
 - **C/C++** — PTY 终端实现、JNI 桥接必要
-- **minSdk = 34** (Android 14+ AAOS), **targetSdk = 35**
+- **minSdk = 31** (Android 12+，目标是"任意车机可装"，存量车机大量停在 AAOS 12/13), **targetSdk = 36**
 - **JDK 17+**, **AGP + Kotlin Compiler** 标准 Android 工具链
 
 ### 模块结构
@@ -120,6 +120,8 @@ aos-agent/
    - Compose UI 帧率 > 30fps
    - 数据 checkpoint 写入 < 50ms
    - 终端 I/O 延迟 < 100ms
+   - release 未签名整包 ≤ 20.8MB（2026-09-26 实测基线，未做 ABI 拆分）；新增依赖须按 `risk-assessment.md` 评估体积与启动代价
+6. **能力探测优先于版本假定**：任何依赖 API 版本或系统特性的功能（Car API、AppFunctions、框架 per-app locale、specialUse 前台服务类型），必须先探测再使用，缺失时返回结构化"不支持 + 原因"，不得假定存在。现成样例：`i18n/AppLocale.kt` 的 `localeStoreFor()`——Android 13 以下框架没有 per-app locale，退化为跟随系统。
 
 ## 维护方式
 
@@ -127,7 +129,7 @@ aos-agent/
 - **调整技术选型**：更新技术选型表并注明变更原因。
 - **验证**：确保分层约束不被违反（UI ↔ System 不直连）。
 
-> 更新时间：2026-06-28
+> 更新时间：2026-09-26（minSdk 34 → 31；补能力探测与轻量体积基线）
 
 
 

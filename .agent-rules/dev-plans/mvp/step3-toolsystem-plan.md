@@ -39,6 +39,7 @@ adb shell dumpsys package com.aos.agent | grep -A20 "requested permissions"
 | `core/tools/ShellTool.kt` | 新增 | `Runtime.exec`；白名单 auto / 名单外 ask / 黑名单 forbid |
 | `core/tools/VehicleBasicTool.kt` | 新增 | 唯一车况工具，按 allowlist 产出结构化 bundle |
 | `system/vehicle/VehiclePropertyAllowlist.kt` | 新增 | 解析 `assets/vehicle/vehicle_properties.yaml`；`access: write` 与 privileged 条目不注册 |
+| `system/Capabilities.kt` | 新增 | 运行期能力探测：`hasCarApi` / `hasAppFunctions` / `perAppLocale` / 后续 MCP 可达性。工具与 UI 共用一份，不许各写各的 `SDK_INT` 判断 |
 | `system/vehicle/VehicleReader.kt` | 新增 | `suspend fun read(spec): VehicleValue` 接口，纯 Kotlin 可测 |
 | `system/vehicle/AndroidVehicleReader.kt` | 新增 | `Car.createCar` + `CarPropertyManager`；`SecurityException`→`permission_denied`，连接失败→`no_vhal` |
 | `system/vehicle/FakeVehicleReader.kt` | 新增 | 读 `assets/vehicle/mock_state.json`，模拟器/单测用 |
@@ -83,6 +84,8 @@ OEM 扩展属性必须带 `id`（整数），与 AOSP vendor-extended 规则一�
 
 **引擎接线**：`AgentEngine` 从 `ToolSystem.exposedFor(skillSubset)` 取工具定义注入 prompt，解析到 tool_call → 查 `permission` → `ask` 无确认器即回 `Unavailable`/拒绝说明 → 执行带 30s 超时 → `tool_result` 事件 → 回灌模型。防护逻辑独立于引擎（`ToolLoopGuard`），便于单测。
 
+**minSdk 31 的影响**（2026-09-26 决策，见父计划决策 12）：`AndroidVehicleReader` 不能假定 `android.car` 存在——存量含 AAOS 12/13，且国内多数量产座舱只是 Android 衍生系统。进入时先经 `Capabilities.hasCarApi` 探测，缺失即整体 `no_vhal` 降级；同一份探测结果供 UI 与 Step 6 的 MCP 来源共用，不许各写各的 `SDK_INT` 判断。
+
 **性能**：yaml 与 mock 解析在 IO 协程一次性完成，不进主线程；工具层不得让常驻内存突破父计划 <200MB 基线。
 
 ## 4. 分步验收条件
@@ -99,7 +102,7 @@ OEM 扩展属性必须带 `id`（整数），与 AOSP vendor-extended 规则一�
 - `androidx.appfunctions` / KSP / `AppFunctionManager` 任何依赖与代码位。
 - 车辆属性写路径、控车工具、`AreaIdConfig` 分区访问、动态 min/max、`BYTES`/`MIXED` 类型（CarToolForge 自认也未支持）。
 - 本地小模型与 function-calling 微调（CarTool-Instruct 只在 Batch 3 评估）。
-- 终端 UI / PTY、语音、MCP SDK。
+- 终端 UI / PTY、语音；MCP 工具来源属父计划 Step 6，本步不碰。
 
 ## 进度
 

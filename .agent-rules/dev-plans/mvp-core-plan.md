@@ -4,7 +4,9 @@
 > ① Agent 核心参考 OpenClaw/Hermes 模式（契约见 `../mechanisms/agent-capabilities.md`，不自研架构）；
 > ② AOC 接入复用对端 Entry 协议与身份机制，不自建协议（契约见 `../mechanisms/aoc-integration.md`）；
 > ③ 本地引擎保证 AOC Hub 不可用时独立运行（愿景原则三）；
-> ④ 工具优先覆盖车辆差异化能力（vehicle 工具先行）。无偏离。
+> ④ 工具优先覆盖车辆差异化能力（vehicle 工具先行）；
+> ⑤ 轻内核 + 能力外挂：MCP 作为第二类工具来源接进 ToolSystem，内核不感知（愿景原则五）；
+> ⑥ "任意车机可运行"当验收项处理：minSdk 降到 31，系统特性一律运行期探测降级。无偏离。
 
 > ⚠️ **复杂功能 — 禁止直接实现**
 >
@@ -60,6 +62,8 @@ MVP 全部 Step 完成后回写 `roadmap.md`。
 9. **借鉴策略**：手机端三仓库传染性协议 + 两个车载仓库无 License + HaloOS 层位不同，一律不复制代码，只吸收接口与工程模式；具体落点见下表。
 10. **工具 schema 对齐 Android 16 AppFunctions 语义，但不引入其依赖**：`Tool` 定义用 `name` + `version` + `category` 三元组（对齐 `@AppFunctionSchemaDefinition`），二期可零重设计地把同一批工具经 `AppFunctionManager` 暴露给系统级 Agent。`androidx.appfunctions` 仍在 alpha，不进 MVP。
 11. **车辆属性走声明式 allowlist**：`assets/vehicle/vehicle_properties.yaml` 是唯一事实源，OEM 差异与字段增减改配置不改 Kotlin；`access: write` 条目一律不注册为工具。
+12. **"任意车机"落到 minSdk 与能力探测上**：minSdk 由 34 降到 **31**（Android 12，覆盖 AAOS 12/13 存量车型）。凡依赖 API 版本或系统特性者（Car API、AppFunctions(36)、框架 per-app locale(33)、specialUse 前台服务(34)）一律运行期探测 + 结构化降级，已落地样例见 `i18n/AppLocale.kt:localeStoreFor`。风险清单见 `../mechanisms/risk-assessment.md`。
+13. **MCP 是工具来源，不是新编排层**：只实现 **MCP client**（streamable-HTTP / SSE），远端工具经适配层注册成 `Tool`；引擎、SkillRegistry、AOC 三层都不感知 MCP。跨设备身份与接力仍只走 AOC——MCP 不替代 AOC（愿景约束 5）。stdio 子进程型 server 在量产车机上大概率不可用，**未核实前不设计**。
 
 ## 借鉴来源映射（抄思路不抄代码）
 
@@ -86,10 +90,10 @@ MVP 全部 Step 完成后回写 `roadmap.md`。
 
 ### 模块
 
-- 新增：`system/aoc/`、`system/vehicle/`、`core/llm/`、`core/tools/`、`core/skills/`、`core/engine/`
+- 新增：`system/aoc/`、`system/vehicle/`、`core/llm/`、`core/tools/`（含 `core/tools/mcp/` 适配层）、`core/skills/`、`core/engine/`
 - 扩展：`data/store/`、`service/`
 - **不作为本期必达**：`ui/chat/`（若拆 Step 子计划时需要一个调试输入框，单独标明「可选、不挡验收」）
-- 依赖：`app/build.gradle.kts` 新增 okhttp、kotlinx-serialization-json；`android.car` 以 compileOnly 引入（运行环境由车机/模拟器提供）
+- 依赖：`app/build.gradle.kts` 新增 okhttp、kotlinx-serialization-json；`android.car` 以 compileOnly 引入（运行环境由车机/模拟器提供）。MCP client 优先用 okhttp + serialization 薄实现，不为此引入重依赖（体积基线见 `../mechanisms/architecture-overview.md` 关键约束 5）；若改用官方 SDK 需先确认其 minSdk 与传输层满足"任意车机"前提。
 
 ### 重点文件（新增）
 
@@ -100,6 +104,8 @@ MVP 全部 Step 完成后回写 `roadmap.md`。
 - `core/tools/Tool.kt` / `ToolSystem.kt` / `ToolConfirmer.kt` / `SystemInfoTool.kt` / `ShellTool.kt` / `VehicleBasicTool.kt`
 - `system/vehicle/VehicleReader.kt` / `AndroidVehicleReader.kt` / `FakeVehicleReader.kt` / `VehiclePropertyAllowlist.kt` + `assets/vehicle/vehicle_properties.yaml`
 - `core/skills/SkillRegistry.kt` + `assets/skills/<id>/skill.json`
+- `core/tools/mcp/McpClient.kt` / `McpToolSource.kt`（Step 6：远端工具 → `Tool` 适配）
+- `system/Capabilities.kt`（运行期能力探测：Car API / AppFunctions / per-app locale / server 可达性，供工具与 UI 共用）
 
 ## 步骤
 
@@ -152,7 +158,7 @@ MVP 全部 Step 完成后回写 `roadmap.md`。
 
 ### Step 4. Skill 机制
 
-**内容：** `assets/skills/<id>/skill.json`：id/name/description/触发场景/tools/提示词片段，外加 `permission`（查询|舒适|运动|高风险，MVP 仅用查询）、`fallback`（工具不可用时的说明）、`result_hint`（回传/摘要提示）。`SkillRegistry` 启动扫描、向引擎注入 skill 列表、命中后只加载该 skill 的工具子集与提示词。内置 2 个只读 skill：`vehicle_status`、`system_diagnostics`。字段对齐 AOC capability，预留上报映射。未命中 skill 回退通用对话，不报错。不拆多 Agent，不上 MCP SDK。
+**内容：** `assets/skills/<id>/skill.json`：id/name/description/触发场景/tools/提示词片段，外加 `permission`（查询|舒适|运动|高风险，MVP 仅用查询）、`fallback`（工具不可用时的说明）、`result_hint`（回传/摘要提示）。`SkillRegistry` 启动扫描、向引擎注入 skill 列表、命中后只加载该 skill 的工具子集与提示词。内置 2 个只读 skill：`vehicle_status`、`system_diagnostics`。字段对齐 AOC capability，预留上报映射。未命中 skill 回退通用对话，不报错。不拆多 Agent。工具来源不在此层扩展——MCP 在 Step 6 作为工具来源接进 `ToolSystem`，Skill 层只按名字引用。
 
 **验收：**
 - 无头：「车辆状态怎么样」命中 `vehicle_status` 并只暴露其工具集
@@ -169,6 +175,19 @@ MVP 全部 Step 完成后回写 `roadmap.md`。
 - AOC discovery 能看到 aos-agent 及其 skill 列表
 - hub 全程不可达时本地无头循环 / 工具 / skill 不受影响
 
+### Step 6. MCP 工具来源接入（2026-09-26 新增）
+
+**内容：** 在 `ToolSystem` 之上加一层 **MCP client 适配**：连接已存在的 MCP server（streamable-HTTP / SSE），把远端 `tools/list` 映射成 `Tool` 注册进 `ToolSystem`，`tools/call` 映射到 `Tool.execute`，返回仍走 `ToolResult` 结构化路径。**引擎、SkillRegistry、AOC 三层都不感知 MCP**——它们看到的还是 `Tool`，这正是愿景原则五"轻内核 + 能力外挂"的判据：加一类能力来源不改内核。
+
+配置走 DataStore（一个 server 一条目：地址 + 可选 token）。连接失败或 server 不可达 → 该来源整体不注册 + 结构化状态，不把异常抛进模型上下文。权限：远端工具默认 `ask`，无 `ToolConfirmer` 即拒（fail-closed）；可按 server 粒度白名单提升为 `auto`。**不做 MCP server 侧，不做 stdio 子进程型 server**（量产车机无 root 时 exec 受限，transport 可行性未核实，见 `../docs/` 待补的 MCP 调研）。
+
+**验收：**
+- 无头：连上本地一个假 MCP server（HTTP/SSE），其工具出现在引擎可用工具里，调用产生的 `tool_call`/`tool_result` 与本地工具**同形**
+- 拔掉该 server：本地工具、skill、AOC 链路照常，只有该来源消失
+- 未注入 `ToolConfirmer` 时远端工具不被执行
+- 远端工具数量增长不改引擎代码；Skill 的 `tools` 能按 `server/工具名` 引用远端工具
+- 包体积与冷启动不超过 `../mechanisms/architecture-overview.md` 关键约束 5 的基线，超出需在子计划说明
+
 ## 验收清单
 
 主路径（必须，全部无头或 AOC，不依赖 Compose 界面）：
@@ -184,6 +203,8 @@ MVP 全部 Step 完成后回写 `roadmap.md`。
 - [ ] 循环防护与畸形 JSON 修复生效
 - [ ] 车辆属性来自 `vehicle_properties.yaml`；`access: write` 条目不注册为工具
 - [ ] 性能基线不回退（前台服务就绪 < 2s，常驻内存 < 200MB）
+- [ ] 远端 MCP 工具可作为第二类工具来源被引擎调用，且拔链不影响本地能力
+- [ ] 低版本车机（API 31/32）：能力探测生效，per-app locale 等缺失项降级为"跟随系统 + 说明原因"，不崩溃
 
 非门闩（允许缺席）：
 
@@ -194,7 +215,8 @@ MVP 全部 Step 完成后回写 `roadmap.md`。
 - 对话 UI 打磨、工具时间线、Agent 拓扑可视化、RikkaHub 风格聊天页
 - 空调 / 车窗 / 天窗 / 座椅 / 氛围灯 / 驾驶模式等控制类工具
 - WTT / `wtt.sh` / OpenClaw `@cecwxf/wtt`；任何第二套跨设备 Topic 网络
-- RAG 知识库、LangGraph 式多 Agent 编排、MCP SDK / MCP Server
+- RAG 知识库、LangGraph 式多 Agent 编排
+- **MCP server 侧**（把本车工具反向暴露成 MCP）与 stdio 子进程型 MCP server；本期只做 streamable-HTTP / SSE 的 client（Step 6）
 - 跨端长期记忆库、家庭/办公 Agent、VIN 作为跨设备身份
 - 集成 HaloOS / VCOS / ADOS 源码
 - 终端 UI / PTY JNI（Batch 2 Step 1）
@@ -220,6 +242,7 @@ MVP 全部 Step 完成后回写 `roadmap.md`。
 - [ ] Step 3. ToolSystem 与首批工具 — 2026-09-14 补 FakeVehicleReader / ToolConfirmer / 只读控车分级；**2026-09-21 按外部调研调整**，子计划见 [mvp/step3-toolsystem-plan.md](./mvp/step3-toolsystem-plan.md)
 - [ ] Step 4. Skill 机制 — 2026-09-14 补 permission / fallback / result_hint
 - [ ] Step 5. AOC 双向协作收口 — 2026-09-14 明确不依赖 UI，skill_result 带工具轨迹
+- [ ] Step 6. MCP 工具来源接入 — **2026-09-26 新增**（用户决策：进 MVP，只做 client over HTTP/SSE）
 
-> Step 1 与 Step 2 相互独立可并行开工；Step 3 依赖 Step 2，Step 5 依赖 Step 1 + Step 4。
+> Step 1 与 Step 2 相互独立可并行开工；Step 3 依赖 Step 2，Step 5 依赖 Step 1 + Step 4，Step 6 依赖 Step 3（需要 `Tool` 抽象已就位）。
 > 2026-09-14：吸收 `../docs/car-agent-ecosystem-survey.md`；仍禁止按全文一次性实现，须先拆 `dev-plans/mvp/step<N>-*.md`。

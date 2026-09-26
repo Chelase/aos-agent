@@ -19,7 +19,10 @@ Step 1 / 2 / 4 / 5 的子计划在各自开工前创建。Step 1 与 Step 2 相�
 ```
 Step 1 (AOC Entry) ─┐
 Step 2 (引擎无头循环) ─┬─→ Step 3 (ToolSystem) ─→ Step 4 (Skill) ─→ Step 5 (AOC 收口)
+                                                      └─→ Step 6 (MCP 工具来源，依赖 Step 3)
 ```
+
+Step 6 依赖 Step 3 的 `Tool` 抽象；除它之外，Step 3/4/5 的门闩都不依赖 MCP，MCP 缺席不阻塞前面的验收。
 
 ## 约定
 

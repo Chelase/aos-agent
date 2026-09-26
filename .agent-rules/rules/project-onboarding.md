@@ -14,7 +14,7 @@ AOSAgent — 运行在 Android Automotive OS 上的原生车载 AI Agent，目�
 | 语言 | Kotlin + Java + C/C++ | Kotlin 2.3.21 / Java 17 |
 | UI | Jetpack Compose + Material3 + Canvas | Compose BOM 2025.10.00 |
 | 构建 | Android Gradle Plugin + Gradle | AGP 9.2.1 / Gradle 9.4.1 |
-| 最低 API | minSdk 34 (Android 14+ AAOS) | targetSdk 36 |
+| 最低 API | minSdk 31 (Android 12+，覆盖 AAOS 12 起存量车机) | targetSdk 36 |
 | 测试 | JUnit 4 + Compose UI Test + Espresso | - |
 
 ## 3. 目录结构
