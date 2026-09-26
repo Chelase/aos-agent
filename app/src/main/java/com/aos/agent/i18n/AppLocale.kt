@@ -2,7 +2,9 @@ package com.aos.agent.i18n
 
 import android.app.LocaleManager
 import android.content.Context
+import android.os.Build
 import android.os.LocaleList
+import androidx.annotation.RequiresApi
 
 /** 应用支持的语言。中文是默认语言，与车机系统语言无关。 */
 enum class AppLanguage(val tag: String) {
@@ -72,7 +74,8 @@ class AppLocaleController(
     }
 }
 
-/** 基于框架 `LocaleManager` 的实现（API 33+，本项目 minSdk 34）。 */
+/** 基于框架 `LocaleManager` 的实现（API 33+，见 [localeStoreFor]）。 */
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 class SystemLocaleStore(
     context: Context,
 ) : LocaleStore {
@@ -89,3 +92,30 @@ class SystemLocaleStore(
         localeManager?.applicationLocales = LocaleList.forLanguageTags(tag)
     }
 }
+
+/**
+ * API 33 以下没有框架级 per-app locale，只能跟随系统语言。
+ * 写操作故意不做持久化：应用不拥有语言状态，避免与系统记录两份真相。
+ */
+class SystemFollowLocaleStore(
+    context: Context,
+) : LocaleStore {
+
+    private val locales: LocaleList = context.resources.configuration.locales
+
+    override fun currentTag(): String? =
+        if (locales.isEmpty) null else locales.get(0)?.toLanguageTag()
+
+    override fun apply(tag: String) = Unit
+}
+
+/**
+ * 按运行环境选择语言存储。车机存量大量停在 Android 12/13，
+ * 语言能力和 Car API、AppFunctions 一样属于"有则用、无则降级"，不能假定存在。
+ */
+fun localeStoreFor(context: Context): LocaleStore =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        SystemLocaleStore(context)
+    } else {
+        SystemFollowLocaleStore(context)
+    }

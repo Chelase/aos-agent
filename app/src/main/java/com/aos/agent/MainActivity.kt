@@ -10,7 +10,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import com.aos.agent.i18n.AppLocaleController
-import com.aos.agent.i18n.SystemLocaleStore
+import com.aos.agent.i18n.localeStoreFor
 import com.aos.agent.system.AndroidSystemInfoReader
 import com.aos.agent.system.SystemInfoProvider
 import com.aos.agent.ui.engineer.EngineerModeScreen
@@ -22,7 +22,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         // 首启语言兜底在 AOSAgentApplication 完成，此处只负责切换入口。
-        val localeController = AppLocaleController(SystemLocaleStore(this))
+        val localeController = AppLocaleController(localeStoreFor(this))
         val systemInfoProvider = SystemInfoProvider(AndroidSystemInfoReader(this))
         setContent {
             AOSAgentApp(

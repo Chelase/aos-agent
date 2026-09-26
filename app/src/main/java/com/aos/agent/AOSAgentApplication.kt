@@ -2,7 +2,7 @@ package com.aos.agent
 
 import android.app.Application
 import com.aos.agent.i18n.AppLocaleController
-import com.aos.agent.i18n.SystemLocaleStore
+import com.aos.agent.i18n.localeStoreFor
 
 /**
  * 应用入口。
@@ -15,6 +15,6 @@ import com.aos.agent.i18n.SystemLocaleStore
 class AOSAgentApplication : Application() {
     override fun onCreate() {
         super.onCreate()
-        AppLocaleController(SystemLocaleStore(this)).ensureDefault()
+        AppLocaleController(localeStoreFor(this)).ensureDefault()
     }
 }
