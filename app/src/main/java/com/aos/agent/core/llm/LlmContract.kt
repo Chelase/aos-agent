@@ -12,11 +12,25 @@ internal fun LlmRole.wire(): String = when (this) {
     LlmRole.Tool -> "tool"
 }
 
-data class LlmMessage(val role: LlmRole, val content: String)
+/** 模型发起的一次工具调用。[argumentsJson] 是模型原文，可能畸形，交给 ToolJsonRepair。 */
+data class LlmToolCall(
+    val id: String,
+    val name: String,
+    val argumentsJson: String,
+)
 
 /**
- * 工具定义。Step 2 只占位不解析，Step 3 的 ToolSystem 负责产出。
+ * [toolCalls] 属于 assistant 轮，[toolCallId] 与 [toolName] 属于 tool 轮；
+ * 其余场景留空，序列化时按 OpenAI 形态取舍。
  */
+data class LlmMessage(
+    val role: LlmRole,
+    val content: String,
+    val toolCalls: List<LlmToolCall> = emptyList(),
+    val toolCallId: String? = null,
+    val toolName: String? = null,
+)
+
 data class ToolDefinition(
     val name: String,
     val description: String,
@@ -31,6 +45,14 @@ data class LlmRequest(
 
 sealed interface LlmStreamChunk {
     data class Text(val delta: String) : LlmStreamChunk
+
+    /** 流式 function calling 的增量片段，按 [index] 聚合成一次完整调用。 */
+    data class ToolCallDelta(
+        val index: Int,
+        val id: String?,
+        val name: String?,
+        val argumentsDelta: String?,
+    ) : LlmStreamChunk
 
     /** 流正常结束。 */
     data object Done : LlmStreamChunk

@@ -50,6 +50,9 @@ class ContextManager(
 
     val turnCount: Int get() = turns.size
 
+    /** 开一轮：返回可追加的副本（系统提示 + 预算内历史 + 本次提问），不改动已存历史。 */
+    fun beginTurn(userText: String): MutableList<LlmMessage> = buildRequest(userText).messages.toMutableList()
+
     fun buildRequest(userText: String, tools: List<ToolDefinition> = emptyList()): LlmRequest {
         val candidate = turns + LlmMessage(LlmRole.User, userText)
         return LlmRequest(

@@ -8,19 +8,22 @@ AOS-Agent 是一个车载 AI Agent，具备工具调用、插件扩展、多步�
 
 | 层 | 文件/模块 | 角色 | 状态 |
 |---|---|---|---|
-| Core | `core/engine/AgentEngine.kt` | 无头单轮主循环，产出 `Flow<AgentEvent>` | 已实现（MVP Step 2） |
+| Core | `core/engine/AgentEngine.kt` | 无头主循环 + 工具调用回灌，产出 `Flow<AgentEvent>` | 已实现（Step 2，Step 3 扩展工具循环） |
 | Core | `core/engine/ContextManager.kt` | 系统提示常驻 + 历史按预算从最旧丢弃 | 已实现（MVP Step 2） |
 | Core | `core/engine/AgentEvent.kt` | `Started`/`Token`/`Completed`/`Failed` 事件契约 | 已实现（MVP Step 2） |
 | Core | `core/llm/LlmProvider.kt` + `OpenAiCompatibleProvider.kt` | 流式模型接入；SSE 解析为纯函数 | 已实现（MVP Step 2） |
 | Core | `core/llm/LlmConfig.kt` + `data/store/LlmConfigStore.kt` | 配置与私有 DataStore 持久化 | 已实现（MVP Step 2） |
-| Core | AgentEngine 工具调用分支 | function calling 循环 | 待实现（Step 3） |
-| Core | `core/tools/ToolSystem.kt` | 工具注册、调度、执行、三级权限 | 待实现（Step 3） |
+| Core | `core/tools/ToolSystem.kt` | 工具注册、子集暴露、三级权限、30s 超时、异常包装 | 已实现（MVP Step 3） |
+| Core | `core/tools/Tool.kt` / `ToolJsonRepair.kt` / `ToolLoopGuard.kt` | 工具契约（name/version/category）、参数畸形保守修复、步数与重复调用防护 | 已实现（MVP Step 3） |
+| System | `system/vehicle/VehiclePropertyAllowlist.kt` + `assets/vehicle/vehicle_properties.json` | 车辆属性声明式 allowlist，写与特权条目挡下并留原因 | 已实现（MVP Step 3） |
+| System | `system/vehicle/AndroidVehicleReader.kt` | 真车 Car API 读取 | **未实现**：`android.car` 编译期接入方式待定 |
 | Core | SkillRegistry.kt | 技能注册中心 | 待实现（Step 4），参考 OpenClaw Skills |
 | Core | `core/tools/mcp/`（MCP client 工具来源） | 远端工具 → `Tool` 适配 | 待实现（Step 6） |
 | Core | PluginManager.kt | 插件热加载与管理 | 待规划（Batch 3），参考 OpenClaw Plugin System |
 | Core | TaskPlanner.kt | 多步任务规划与执行 | 待规划，参考 OpenClaw / Hermes |
-| Tools | CarApiTool.kt / VehicleBasicTool.kt | 车辆属性只读工具 | 待实现（Step 3） |
-| Tools | ShellTool.kt | 终端命令执行工具 | 待实现（Step 3） |
+| Tools | `core/tools/VehicleBasicTool.kt` | 唯一车辆只读工具，字段由 allowlist 决定 | 已实现（MVP Step 3） |
+| Tools | `core/tools/ShellTool.kt` | argv 直接执行，不经 shell；白名单 auto / 名单外 ask / 黑名单 forbid | 已实现（MVP Step 3） |
+| Tools | `core/tools/SystemInfoTool.kt` | 复用 SystemInfoReader | 已实现（MVP Step 3） |
 | Tools | FileSystemTool.kt | 文件读写操作工具 | 待规划 |
 | Tools | AppManagerTool.kt | 应用安装管理工具 | 待规划 |
 | Tools | WebSearchTool.kt | 网络搜索工具 | 待规划 |

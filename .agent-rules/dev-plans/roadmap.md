@@ -126,7 +126,8 @@
 > 2026-09-14 强化：**不是 UI 优先。** 验收门闩是无头引擎 + 工具 + Skill + AOC；对话界面为可选调试层。吸收 [../docs/car-agent-ecosystem-survey.md](../docs/car-agent-ecosystem-survey.md)（FakeVehicleReader、引擎事件、只读控车分级、skill 权限/降级字段；不接 WTT / RAG / 多 Agent / HaloOS 源码）。
 
 - 计划：[mvp-core-plan.md](./mvp-core-plan.md)
-- 范围：AOC Entry 接入、本地无头 Agent 主循环、ToolSystem（含车辆 mock Reader）、Skill 机制、AOC 双向协作、**MCP 工具来源接入（Step 6，2026-09-26 加入）**
+- 范围（2026-09-27 改版）：本地无头 Agent 主循环、ToolSystem（含车辆 mock Reader）、Skill 机制、**MCP 工具来源接入（Step 6）**
+- **AOC 接入（原 Step 1 Entry 链路 + Step 5 双向协作）移出本期 MVP**，契约文档保留，二期实施
 - 目标形态：**轻量但强大 + 任意车机可运行**（minSdk 31；能力运行期探测降级；release 整包基线 20.8MB）
 - Batch 1 冻结部分（系统面板/工程师模式/自检报告/电源监听）在 MVP 完成后回归本路线图
 

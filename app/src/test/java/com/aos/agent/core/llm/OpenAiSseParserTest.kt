@@ -58,4 +58,29 @@ class OpenAiSseParserTest {
             ),
         )
     }
+
+    /** 流式 function calling：id/name 只在首块，arguments 分片到达。 */
+    @Test
+    fun parsesToolCallFragment() {
+        val payload =
+            """{"choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"id":"call_1",""" +
+                """"function":{"name":"vehicle_basic","arguments":"{\"fields\""}}]}}]}"""
+
+        assertEquals(
+            SseEvent.ToolCall(0, "call_1", "vehicle_basic", "{\"fields\""),
+            parseSseData(payload),
+        )
+    }
+
+    @Test
+    fun parsesArgumentsOnlyFragment() {
+        val payload = """{"choices":[{"delta":{"tool_calls":[{"index":1,"function":{"arguments":"xyz"}}]}}]}"""
+
+        assertEquals(SseEvent.ToolCall(1, null, null, "xyz"), parseSseData(payload))
+    }
+
+    @Test
+    fun emptyToolCallsArrayIsIgnored() {
+        assertEquals(SseEvent.Ignored, parseSseData("""{"choices":[{"delta":{"tool_calls":[]}}]}"""))
+    }
 }

@@ -11,7 +11,7 @@
 | 文件 | 对应父计划 Step | 状态 |
 |---|---|---|
 | [step2-agent-engine-plan.md](./step2-agent-engine-plan.md) | Step 2 本地 Agent 主循环（无头） | **已实现 2026-09-27**（真 endpoint 冒烟待授权） |
-| [step3-toolsystem-plan.md](./step3-toolsystem-plan.md) | Step 3 ToolSystem 与首批工具 | 已就绪，未开工（2026-09-21 按外部调研调整）；依赖的 Step 2 已就位 |
+| [step3-toolsystem-plan.md](./step3-toolsystem-plan.md) | Step 3 ToolSystem 与首批工具 | **已实现 2026-09-27**；遗留 `AndroidVehicleReader`（§6 Car API 接入方式待定） |
 
 Step 1 / 4 / 5 的子计划在各自开工前创建。Step 1（AOC Entry）与 Step 2 相互独立，Step 2 已完成。
 
