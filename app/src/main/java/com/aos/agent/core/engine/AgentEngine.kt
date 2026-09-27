@@ -27,9 +27,19 @@ class AgentEngine(
     private val tools: ToolSystem? = null,
     private val guard: ToolLoopGuard = ToolLoopGuard(),
 ) {
-    fun run(query: String): Flow<AgentEvent> = flow {
+    /**
+     * @param instruction 本轮命中的 skill 提示片段；只作用于本轮，不进长期历史。
+     * @param toolNames skill 声明的工具子集；null 表示暴露全部已注册工具。
+     *                  引擎不认识 SkillRegistry——路由由调用方决定，加 skill 不改这里。
+     */
+    fun run(
+        query: String,
+        instruction: String? = null,
+        toolNames: Set<String>? = null,
+    ): Flow<AgentEvent> = flow {
         emit(AgentEvent.Started)
-        val messages = context.beginTurn(query)
+        val messages = context.beginTurn(query, instruction)
+        val toolDefinitions = tools?.let { it.definitions(it.exposedFor(toolNames)) }.orEmpty()
         guard.reset()
         var step = 0
 
@@ -47,7 +57,7 @@ class AgentEngine(
             provider.stream(
                 LlmRequest(
                     messages = messages.toList(),
-                    toolDefinitions = tools?.definitions().orEmpty(),
+                    toolDefinitions = toolDefinitions,
                 ),
             ).collect { chunk ->
                 when (chunk) {

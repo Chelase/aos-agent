@@ -1,0 +1,14 @@
+{
+  "id": "system_diagnostics",
+  "name": "系统诊断",
+  "description": "查看车机系统版本、厂商型号、是否 Automotive 平台与当前网络类型",
+  "triggers": ["系统信息", "系统版本", "诊断", "什么型号", "厂商", "网络", "system info"],
+  "tools": ["system_info"],
+  "prompt": "用一到两句话概括系统环境，数值直接引用工具返回，不要猜测厂商定制能力。",
+  "permission": "query",
+  "fallback": "字段缺失时说明系统未提供该信息",
+  "result_hint": "输出关键字段清单：android_version / sdk_int / manufacturer / model / is_automotive / network_transport",
+  "tags": ["system", "readonly"],
+  "input_modes": ["text", "voice"],
+  "output_modes": ["text"]
+}

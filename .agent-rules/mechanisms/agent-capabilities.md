@@ -17,7 +17,7 @@ AOS-Agent 是一个车载 AI Agent，具备工具调用、插件扩展、多步�
 | Core | `core/tools/Tool.kt` / `ToolJsonRepair.kt` / `ToolLoopGuard.kt` | 工具契约（name/version/category）、参数畸形保守修复、步数与重复调用防护 | 已实现（MVP Step 3） |
 | System | `system/vehicle/VehiclePropertyAllowlist.kt` + `assets/vehicle/vehicle_properties.json` | 车辆属性声明式 allowlist，写与特权条目挡下并留原因 | 已实现（MVP Step 3） |
 | System | `system/vehicle/AndroidVehicleReader.kt` | 真车 Car API 读取 | **未实现**：`android.car` 编译期接入方式待定 |
-| Core | SkillRegistry.kt | 技能注册中心 | 待实现（Step 4），参考 OpenClaw Skills |
+| Core | `core/skills/SkillRegistry.kt` + `SkillDefinition.kt` + `AssetSkillLoader.kt` | 技能定义解析、触发词命中、越权过滤；`assets/skills/<id>/skill.json` 为唯一配置源 | 已实现（MVP Step 4） |
 | Core | `core/tools/mcp/`（MCP client 工具来源） | 远端工具 → `Tool` 适配 | 待实现（Step 6） |
 | Core | PluginManager.kt | 插件热加载与管理 | 待规划（Batch 3），参考 OpenClaw Plugin System |
 | Core | TaskPlanner.kt | 多步任务规划与执行 | 待规划，参考 OpenClaw / Hermes |

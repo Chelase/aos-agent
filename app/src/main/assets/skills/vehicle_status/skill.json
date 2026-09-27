@@ -1,0 +1,14 @@
+{
+  "id": "vehicle_status",
+  "name": "车辆状态查询",
+  "description": "查询车速、电量、续航、车外温度、车型与里程等只读车况",
+  "triggers": ["车辆状态", "车况", "电量", "续航", "车速", "胎压", "vehicle status"],
+  "tools": ["vehicle_basic", "system_info"],
+  "prompt": "回答车况时给出数值与单位。字段返回 status 而非数值时，如实说明是权限未授予还是车机未暴露该属性，不要编造数值，也不要把缺失当成 0。",
+  "permission": "query",
+  "fallback": "车辆属性整体不可用时，改用 system_info 说明当前系统与环境，并明确车况读取尚未接入",
+  "result_hint": "输出 {字段: {status, value, unit}} 的要点摘要，一行一个字段",
+  "tags": ["vehicle", "readonly"],
+  "input_modes": ["text", "voice"],
+  "output_modes": ["text", "voice"]
+}

@@ -50,15 +50,28 @@ class ContextManager(
 
     val turnCount: Int get() = turns.size
 
-    /** 开一轮：返回可追加的副本（系统提示 + 预算内历史 + 本次提问），不改动已存历史。 */
-    fun beginTurn(userText: String): MutableList<LlmMessage> = buildRequest(userText).messages.toMutableList()
+    /**
+     * 开一轮：返回可追加的副本（系统提示 + 预算内历史 + 本次提问），不改动已存历史。
+     * [extraInstruction] 是本轮命中的 skill 提示片段——只影响本轮，不写进长期历史。
+     */
+    fun beginTurn(userText: String, extraInstruction: String? = null): MutableList<LlmMessage> =
+        buildRequest(userText, extraInstruction = extraInstruction).messages.toMutableList()
 
-    fun buildRequest(userText: String, tools: List<ToolDefinition> = emptyList()): LlmRequest {
+    fun buildRequest(
+        userText: String,
+        tools: List<ToolDefinition> = emptyList(),
+        extraInstruction: String? = null,
+    ): LlmRequest {
         val candidate = turns + LlmMessage(LlmRole.User, userText)
         return LlmRequest(
-            messages = listOf(LlmMessage(LlmRole.System, systemPrompt)) + trim(candidate),
+            messages = listOf(LlmMessage(LlmRole.System, systemPromptWith(extraInstruction))) + trim(candidate),
             toolDefinitions = tools,
         )
+    }
+
+    private fun systemPromptWith(extraInstruction: String?): String {
+        val instruction = extraInstruction?.trim()
+        return if (instruction.isNullOrEmpty()) systemPrompt else "$systemPrompt\n\n$instruction"
     }
 
     /** 只有正常完成的轮次才入历史，失败轮次不留半截内容。 */
