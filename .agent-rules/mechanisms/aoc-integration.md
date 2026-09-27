@@ -2,7 +2,7 @@
 
 ## 结论
 
-aos-agent 以 AOC Entry 节点身份通过纯 HTTP JSON 协议接入 AOC 生态（注册身份、DM 双向通道、skill 请求/回传），LLM 推理全部发生在 AOC 中心 Brain，车机端不自建推理路由。对端协议事实已调研确认；aos-agent 侧接入链路为规划态（mvp-core-plan Step 1/5 落地后更新本文档为已实现）。
+aos-agent 以 AOC Entry 节点身份通过纯 HTTP JSON 协议接入 AOC 生态（注册身份、DM 双向通道、skill 请求/回传）。AOC 侧的中心 Brain 是**增量能力**：车机端有自己的本地引擎与 LLM 连接（见 `mvp-core-plan` 决策 1 与愿景原则三），AOC 协议层不再承担 aos-agent 的推理路由。对端协议事实已调研确认；aos-agent 侧接入链路为规划态（mvp-core-plan Step 1/5 落地后更新本文档为已实现）。
 
 ## 涉及对象
 
@@ -67,7 +67,7 @@ capability 声明：本地 skill 列表按 AOC skill 字段（id/name/descriptio
 3. `set_capabilities` 为全量替换语义，不是增量；上报前先取全量再合并。
 4. 同名 agent_id 180 秒内重连需处理 force_reconnect，否则注册失败。
 5. MVP 走 HTTP 明文，仅限可信网络（模拟器 10.0.2.2 / 局域网）；跨公网必须切 AOC gRPC mTLS。secret 存应用私有 DataStore，禁用 SharedPreferences。
-6. LLM 推理全部在中心 Brain；aos-agent 通过 DM 只发自然语言与结构化 skill 请求，协议层不自建推理路由。
+6. AOC 协议层不自建推理路由：aos-agent 经 DM 只发自然语言与结构化 skill 请求，不把"帮我调一次 LLM"做成协议能力。本地引擎的推理走aos-agent 自己的 `LlmProvider`（愿景原则三：Hub 不可用时核心功能照常）。
 
 ## 维护方式
 

@@ -238,7 +238,7 @@ MVP 全部 Step 完成后回写 `roadmap.md`。
 ## 进度
 
 - [ ] Step 1. AOC Entry 接入链路 — 立项 2026-09-06
-- [ ] Step 2. 本地 Agent 主循环（无头优先） — 2026-09-14 从「+ 最小对话界面」改为无头门闩
+- [x] Step 2. 本地 Agent 主循环（无头优先） — 2026-09-14 从「+ 最小对话界面」改为无头门闩；**2026-09-27 无头循环落地**（JVM 16 例 + 仪器 15 例全绿），子计划 [mvp/step2-agent-engine-plan.md](./mvp/step2-agent-engine-plan.md)；真 endpoint 冒烟待授权
 - [ ] Step 3. ToolSystem 与首批工具 — 2026-09-14 补 FakeVehicleReader / ToolConfirmer / 只读控车分级；**2026-09-21 按外部调研调整**，子计划见 [mvp/step3-toolsystem-plan.md](./mvp/step3-toolsystem-plan.md)
 - [ ] Step 4. Skill 机制 — 2026-09-14 补 permission / fallback / result_hint
 - [ ] Step 5. AOC 双向协作收口 — 2026-09-14 明确不依赖 UI，skill_result 带工具轨迹

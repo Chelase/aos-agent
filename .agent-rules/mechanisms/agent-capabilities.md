@@ -6,23 +6,27 @@ AOS-Agent 是一个车载 AI Agent，具备工具调用、插件扩展、多步�
 
 ## 涉及对象
 
-| 层 | 文件/模块 | 角色 | 参考来源 |
+| 层 | 文件/模块 | 角色 | 状态 |
 |---|---|---|---|
-| Core | AgentEngine.kt | Agent 推理引擎核心 | Claude Code / OpenCode |
-| Core | ToolSystem.kt | 工具注册、调度、执行 | OpenClaw Tool Executor |
-| Core | PluginManager.kt | 插件热加载与管理 | OpenClaw Plugin System |
-| Core | ContextManager.kt | 对话上下文管理 | Claude Code Context |
-| Core | TaskPlanner.kt | 多步任务规划与执行 | OpenClaw / Hermes |
-| Core | SkillRegistry.kt | 技能注册中心 | OpenClaw Skills |
-| Core | LLM Router | 模型路由（云端/本地） | General |
-| Tools | CarApiTool.kt | 车机 API 调用工具 | Tool Pattern |
-| Tools | ShellTool.kt | 终端命令执行工具 | Claude Code Shell |
-| Tools | FileSystemTool.kt | 文件读写操作工具 | OpenCode FS |
-| Tools | AppManagerTool.kt | 应用安装管理工具 | Custom |
-| Tools | WebSearchTool.kt | 网络搜索工具 | Hermes Web |
-| Memory | ShortTermMemory.kt | 短期对话记忆 | Context Window |
-| Memory | LongTermMemory.kt | 长期事实记忆（Room DB） | Claude Code Memory |
-| UI | AgentChat.kt | Agent 对话 UI | Claude Code / OpenCode |
+| Core | `core/engine/AgentEngine.kt` | 无头单轮主循环，产出 `Flow<AgentEvent>` | 已实现（MVP Step 2） |
+| Core | `core/engine/ContextManager.kt` | 系统提示常驻 + 历史按预算从最旧丢弃 | 已实现（MVP Step 2） |
+| Core | `core/engine/AgentEvent.kt` | `Started`/`Token`/`Completed`/`Failed` 事件契约 | 已实现（MVP Step 2） |
+| Core | `core/llm/LlmProvider.kt` + `OpenAiCompatibleProvider.kt` | 流式模型接入；SSE 解析为纯函数 | 已实现（MVP Step 2） |
+| Core | `core/llm/LlmConfig.kt` + `data/store/LlmConfigStore.kt` | 配置与私有 DataStore 持久化 | 已实现（MVP Step 2） |
+| Core | AgentEngine 工具调用分支 | function calling 循环 | 待实现（Step 3） |
+| Core | `core/tools/ToolSystem.kt` | 工具注册、调度、执行、三级权限 | 待实现（Step 3） |
+| Core | SkillRegistry.kt | 技能注册中心 | 待实现（Step 4），参考 OpenClaw Skills |
+| Core | `core/tools/mcp/`（MCP client 工具来源） | 远端工具 → `Tool` 适配 | 待实现（Step 6） |
+| Core | PluginManager.kt | 插件热加载与管理 | 待规划（Batch 3），参考 OpenClaw Plugin System |
+| Core | TaskPlanner.kt | 多步任务规划与执行 | 待规划，参考 OpenClaw / Hermes |
+| Tools | CarApiTool.kt / VehicleBasicTool.kt | 车辆属性只读工具 | 待实现（Step 3） |
+| Tools | ShellTool.kt | 终端命令执行工具 | 待实现（Step 3） |
+| Tools | FileSystemTool.kt | 文件读写操作工具 | 待规划 |
+| Tools | AppManagerTool.kt | 应用安装管理工具 | 待规划 |
+| Tools | WebSearchTool.kt | 网络搜索工具 | 待规划 |
+| Memory | ShortTermMemory.kt | 短期对话记忆 | 由 ContextManager 承担（Step 2 已落地最小形态） |
+| Memory | LongTermMemory.kt | 长期事实记忆（Room DB） | 待规划 |
+| UI | AgentChat.kt | Agent 对话 UI | 非门闩，可缺席 |
 
 ## 运行链路
 
@@ -147,6 +151,7 @@ LLM 整合结果 -> 自然语言回复
 3. 对话上下文有 Token 上限，超限后自动摘要历史。
 4. 插件系统必须有安全沙箱，不能访问 Agent 核心数据。
 5. 驾驶模式下 Agent 优先使用语音交互。
+6. 引擎事件流契约固定为 `Started → Token* → Completed | Failed`：失败以事件形式产出、不向调用方抛异常；Step 3/5/6 只能在流上增加事件类型，不得改动既有语义。`core/llm` 与 `core/engine` 禁止 import `android.*`，否则"无头可驱动"这条验收失效。
 
 ## 维护方式
 
@@ -154,4 +159,4 @@ LLM 整合结果 -> 自然语言回复
 - **新增插件**：编写 plugin.yaml + 实现代码，放入插件目录。
 - **验证**：与 Agent 对话 -> 工具调用正确 -> 回复合理。
 
-> 更新时间：2026-09-26（补 Pi 参考系与技能路由指针）
+> 更新时间：2026-09-27（MVP Step 2 无头引擎落地，涉及对象补实现状态）
