@@ -30,6 +30,8 @@
     <string name="language_current">English</string>
     <string name="language_switch_to">中文</string>
     <string name="language_switch_description">Switch interface language</string>
+    <string name="language_follow_system">Follows system</string>
+    <string name="language_follow_system_reason">This head unit’s system version does not support a per-app language. The interface follows the system language, which you can change in system settings.</string>
 
     <!-- Engineer Mode -->
     <string name="engineer_title">Engineer Mode</string>

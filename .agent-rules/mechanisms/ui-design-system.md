@@ -2,7 +2,7 @@
 
 ## 结论
 
-UI 视觉由集中的设计 token 层统一供给，界面文案全部走 Android 资源，语言状态由框架 `LocaleManager` 单点持久化，默认中文、可切英文。
+UI 视觉由集中的设计 token 层统一供给，界面文案全部走 Android 资源；语言状态优先由框架 `LocaleManager` 单点持久化（默认中文、可切英文），平台不支持该能力时降级为跟随系统并把开关渲染成禁用态。
 
 ## 涉及对象
 
@@ -15,7 +15,7 @@ UI 视觉由集中的设计 token 层统一供给，界面文案全部走 Androi
 | Components | `ui/components/AOSSurfaces.kt` | 卡片、区块标题、数据行、指标 |
 | Components | `ui/components/AOSControls.kt` | 按钮、状态标签/圆点、功能磁贴、语言开关 |
 | Components | `ui/components/AOSLogo.kt` | Canvas 绘制的六边形品牌标记 |
-| i18n | `i18n/AppLocale.kt` | `AppLanguage` / `LocaleStore` / `AppLocaleController` |
+| i18n | `i18n/AppLocale.kt` | `AppLanguage` / `LocaleStore`（含 `switchable`）/ `AppLocaleController` / `localeStoreFor()` 能力选择 |
 | 入口 | `AOSAgentApplication.kt` | 首启语言兜底（Activity 创建前完成） |
 | 入口 | `MainActivity.kt` | 页面切换 + 语言标签注入 + 切换回调 |
 | 资源 | `res/values/strings.xml` | 中文文案（默认资源） |
@@ -29,7 +29,7 @@ UI 视觉由集中的设计 token 层统一供给，界面文案全部走 Androi
 ```
 [启动] AOSAgentApplication.onCreate
    │
-   └─► AppLocaleController(SystemLocaleStore(context)).ensureDefault()
+   └─► AppLocaleController(localeStoreFor(context)).ensureDefault()
           └─► LocaleStore.currentTag()  ──► LocaleManager.applicationLocales
                  ├─ 空        → apply("zh-CN")：此时尚无 Activity，不触发重建
                  └─ 已有值    → 保留用户选择，直接返回
@@ -47,11 +47,15 @@ UI 视觉由集中的设计 token 层统一供给，界面文案全部走 Androi
                  ├─ stringResource(R.string.*) ──► 按当前 locale 命中 values/ 或 values-en/
                  └─ ui/components/* ──► 读 AOSSpacing / AOSSizing / AOSTheme 渲染
 
-[语言切换] HomeScreen 语言开关 onToggle
-   └─► AppLocaleController.toggle()
-          ├─► current() → next() 取目标语言
-          └─► LocaleStore.apply(tag) → LocaleManager.applicationLocales
-                 └─► 系统重建 Activity → 资源按新 locale 重新解析 → UI 全量刷新
+[语言切换] MainActivity 取 AppLocaleController.canSwitch → HomeScreen languageSwitchable
+   │
+   ├─ true  → 开关可点 → onToggle → AppLocaleController.toggle()
+   │             ├─► current() → next() 取目标语言
+   │             └─► LocaleStore.apply(tag) → LocaleManager.applicationLocales
+   │                    └─► 系统重建 Activity → 资源按新 locale 重新解析 → UI 全量刷新
+   │
+   └─ false → 开关渲染为禁用态（design.md §5.8）：只显示当前语言 + `跟随系统` 标签 + 原因文案
+                且 AppLocaleController.switchTo/toggle 直接返回，不写任何本地副本
 ```
 
 语言切换不走 Compose 状态：写入 `applicationLocales` 后由框架重建 Activity，`stringResource` 自然命中新 locale 的资源，因此无需在 Composable 中持有语言状态。
@@ -81,11 +85,11 @@ UI 视觉由集中的设计 token 层统一供给，界面文案全部走 Androi
 1. **应用强制深色**，不提供浅色模式；`AOSAgentTheme` 无 `darkTheme` 参数，`values-night/themes.xml` 与 `values/themes.xml` 取值一致。
    系统兜底主题必须继承 `Theme.DeviceDefault.NoActionBar`：`DeviceDefault` 自带浅色 ActionBar，
    会在深色界面顶部压出一条浅蓝标题栏（已实机复现并修正）。
-2. **语言只有一份真相**：状态存于 `LocaleManager`，禁止另建 SharedPreferences 缓存语言，否则与系统 per-app locale 记录冲突。
+2. **语言只有一份真相**：可切换时状态存于 `LocaleManager`，禁止另建 SharedPreferences 缓存语言；不可切换时（`LocaleStore.switchable == false`）**不写任何本地副本**，直接跟随系统，避免日后能力恢复时两份状态打架。
 3. **中文是默认资源**（放 `values/` 而非 `values-zh/`），保证任何未覆盖语言的环境都回落中文，与车机系统语言无关。
 4. **切换语言会重建 Activity**，Composable 内的 `remember` 状态会丢失；需要跨切换保留的状态必须提升到 `ViewModel` 或持久层。
 5. **触控目标不得低于 56dp**（design.md §1.2 驾驶安全），新增交互组件一律取 `AOSSizing.touchTarget`。
-6. **未交付能力渲染为禁用态**而非隐藏（首页磁贴），不伪造数据也不假装功能存在。
+6. **能力缺失渲染为禁用态而非隐藏，且必须说明原因**（首页磁贴、语言开关同理，规范见 `docs/原型/design.md` §5.8）：不伪造数据、不假装功能存在、也不留一个按了没反应的死控件；解释文案取 `onSurfaceVariant` 保证对比度，禁用控件本体才允许降对比。
 
 ## 维护方式
 
@@ -93,4 +97,4 @@ UI 视觉由集中的设计 token 层统一供给，界面文案全部走 Androi
 - **排查**：语言不生效先查 `adb shell cmd locale get-app-locales com.aos.agent`；文案缺失查 `values-en/` 是否漏配同名 key；视觉偏差比对 `DesignTokensTest` 是否仍与 design.md 一致。
 - **验证**：`./gradlew :app:testDebugUnitTest`（token 与语言逻辑）、`./gradlew :app:assembleDebug`（资源与编译）、`./gradlew :app:connectedDebugAndroidTest`（页面要素与语言开关，需 Automotive 模拟器）。
 
-> 更新时间：2026-07-26
+> 更新时间：2026-09-27（语言开关补不可切换态与降级链路）

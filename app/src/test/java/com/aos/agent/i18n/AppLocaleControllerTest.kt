@@ -6,7 +6,10 @@ import org.junit.Test
 
 class AppLocaleControllerTest {
 
-    private class FakeLocaleStore(private var tag: String? = null) : LocaleStore {
+    private class FakeLocaleStore(
+        private var tag: String? = null,
+        override val switchable: Boolean = true,
+    ) : LocaleStore {
         var applyCount = 0
             private set
 
@@ -16,6 +19,27 @@ class AppLocaleControllerTest {
             this.tag = tag
             applyCount++
         }
+    }
+
+    @Test
+    fun toggle_doesNothingWhenPlatformCannotSwitch() {
+        val store = FakeLocaleStore(tag = "zh-CN", switchable = false)
+        val controller = AppLocaleController(store)
+
+        assertEquals(false, controller.canSwitch)
+        assertEquals(AppLanguage.CHINESE, controller.toggle())
+        assertEquals(0, store.applyCount)
+        assertEquals("zh-CN", store.currentTag())
+    }
+
+    @Test
+    fun toggle_switchesWhenPlatformSupportsIt() {
+        val store = FakeLocaleStore(tag = "zh-CN", switchable = true)
+        val controller = AppLocaleController(store)
+
+        assertEquals(true, controller.canSwitch)
+        assertEquals(AppLanguage.ENGLISH, controller.toggle())
+        assertEquals("en", store.currentTag())
     }
 
     @Test

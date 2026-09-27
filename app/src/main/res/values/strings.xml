@@ -32,6 +32,8 @@
     <string name="language_current">中文</string>
     <string name="language_switch_to">English</string>
     <string name="language_switch_description">切换界面语言</string>
+    <string name="language_follow_system">跟随系统</string>
+    <string name="language_follow_system_reason">这台车机的系统版本不支持单独设置本应用语言，界面语言随车机系统语言变化。可在系统设置中调整。</string>
 
     <!-- 工程师模式 -->
     <string name="engineer_title">工程师模式</string>

@@ -31,6 +31,9 @@ enum class AppLanguage(val tag: String) {
  * 与 [com.aos.agent.system.SystemInfoReader] 保持同一注入风格。
  */
 interface LocaleStore {
+    /** 该环境是否支持在应用内切换语言。不支持时界面要给出原因，而不是留一个按了没反应的开关。 */
+    val switchable: Boolean
+
     /** 返回当前已设置的语言标签；未设置返回 null。 */
     fun currentTag(): String?
 
@@ -46,6 +49,9 @@ interface LocaleStore {
 class AppLocaleController(
     private val store: LocaleStore,
 ) {
+    /** 界面据此决定语言开关是可点还是禁用 + 说明原因。 */
+    val canSwitch: Boolean get() = store.switchable
+
     /** 读取当前语言；未设置或无法识别时回落到默认语言。 */
     fun current(): AppLanguage = AppLanguage.fromTag(store.currentTag()) ?: AppLanguage.DEFAULT
 
@@ -63,14 +69,15 @@ class AppLocaleController(
     }
 
     fun switchTo(language: AppLanguage) {
+        if (!canSwitch) return
         store.apply(language.tag)
     }
 
-    /** 在中英文之间切换，返回切换后的语言。 */
+    /** 在中英文之间切换，返回切换后的语言；环境不支持切换时返回当前语言。 */
     fun toggle(): AppLanguage {
         val target = current().next()
-        store.apply(target.tag)
-        return target
+        switchTo(target)
+        return if (canSwitch) target else current()
     }
 }
 
@@ -82,6 +89,8 @@ class SystemLocaleStore(
 
     private val localeManager: LocaleManager? =
         context.getSystemService(LocaleManager::class.java)
+
+    override val switchable: Boolean get() = localeManager != null
 
     override fun currentTag(): String? {
         val locales = localeManager?.applicationLocales ?: return null
@@ -102,6 +111,8 @@ class SystemFollowLocaleStore(
 ) : LocaleStore {
 
     private val locales: LocaleList = context.resources.configuration.locales
+
+    override val switchable: Boolean get() = false
 
     override fun currentTag(): String? =
         if (locales.isEmpty) null else locales.get(0)?.toLanguageTag()

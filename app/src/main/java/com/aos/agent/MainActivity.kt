@@ -27,6 +27,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             AOSAgentApp(
                 systemInfoProvider = systemInfoProvider,
+                languageSwitchable = localeController.canSwitch,
                 onLanguageToggle = { localeController.toggle() },
             )
         }
@@ -36,6 +37,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun AOSAgentApp(
     systemInfoProvider: SystemInfoProvider,
+    languageSwitchable: Boolean,
     onLanguageToggle: () -> Unit,
 ) {
     AOSAgentTheme {
@@ -53,6 +55,7 @@ private fun AOSAgentApp(
                 // 语言标签走资源而非枚举，切换后由 Activity 重建自动刷新
                 currentLanguageLabel = stringResource(R.string.language_current),
                 targetLanguageLabel = stringResource(R.string.language_switch_to),
+                languageSwitchable = languageSwitchable,
                 onEngineerModeClick = { engineerModeVisible = true },
                 onLanguageToggle = onLanguageToggle,
             )

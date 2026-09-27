@@ -214,6 +214,13 @@ val AOSTypography = Typography(
 - **Error State**: 居中图标(status-error) + 错误文本 + "重试" 按钮(Secondary)
 - **Toast/Snackbar**: bg-elevated, text-primary, 底部弹出, 3秒自动消失
 
+### 5.8 语言开关 (LanguageSwitch)
+- **可切换态**: 满宽条，bg-tertiary，高 `touchTarget`(56dp)，圆角 16dp；内容 `当前语言(text-primary) | 目标语言(accent-primary)`，取 `AOSDataText.standard`；按压 0.97 / 100ms
+- **不可切换态**（车机无框架级 per-app locale，如 Android 13 以下或系统未提供该服务）: 不隐藏、也不留一个按了没反应的死按钮。控件收成满宽 inert 条，只显示当前语言(text-tertiary)，**去掉分隔线与目标语言**——两个相同标签会被读成可点项；下方补 `跟随系统` StatusBadge(NEUTRAL) + 原因文案
+- **对比度分工**: 禁用控件本身允许降对比，但原因文案是有效信息，必须用 text-secondary(`onSurfaceVariant`) 而非 text-tertiary，保证深色底上 ≥4.5:1
+- **必须给出路**: 原因文案要写清"在哪改"（系统设置），不能只说"不支持"
+- **无障碍**: 禁用态的 `contentDescription` 用原因文案，不沿用"切换界面语言"
+
 ---
 
 ## 6. 页面设计

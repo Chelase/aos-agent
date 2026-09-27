@@ -271,8 +271,15 @@ fun AOSActionTile(
 }
 
 /**
- * 语言开关：显示当前语言，点击切到另一种。
- * 只有中英两种语言，用切换按钮而非下拉，减少驾驶场景下的交互步数。
+ * 语言开关。
+ *
+ * 可切换：`当前语言 | 目标语言`，点右侧即切换（中英两种，用按钮而非下拉，
+ * 减少驾驶场景下的交互步数）。
+ *
+ * 不可切换（低版本车机没有框架级 per-app locale）：不隐藏、也不留一个按了没反应的
+ * 死按钮——控件收成"当前语言"状态块（避免出现两个相同标签被读成按钮），
+ * 下方给出禁用标签与原因。禁用控件允许低对比，但原因文案是有效信息，
+ * 取 onSurfaceVariant 保证深色底上的可读性。
  */
 @Composable
 fun AOSLanguageSwitch(
@@ -281,46 +288,82 @@ fun AOSLanguageSwitch(
     description: String,
     onToggle: () -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    disabledLabel: String? = null,
+    disabledReason: String? = null,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (pressed) PRESS_SCALE else 1f,
+        targetValue = if (pressed && enabled) PRESS_SCALE else 1f,
         animationSpec = tween(PRESS_DURATION_MS),
         label = "languageSwitchScale",
     )
+    val descriptionText = if (enabled) description else (disabledReason ?: description)
 
-    Row(
-        modifier = modifier
-            .scale(scale)
-            .height(AOSSizing.touchTarget)
-            .clip(RoundedCornerShape(AOSSizing.cardCorner))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onToggle,
-            )
-            .semantics { contentDescription = description }
-            .padding(horizontal = AOSSpacing.md),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(AOSSpacing.sm),
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(AOSSpacing.sm),
     ) {
-        Text(
-            text = currentLabel,
-            style = AOSDataText.standard,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-        Spacer(
+        Row(
             modifier = Modifier
-                .width(AOSSizing.borderWidth)
-                .height(16.dp)
-                .background(MaterialTheme.colorScheme.outline),
-        )
-        Text(
-            text = targetLabel,
-            style = AOSDataText.standard,
-            color = MaterialTheme.colorScheme.primary,
-        )
+                .fillMaxWidth()
+                .scale(scale)
+                .height(AOSSizing.touchTarget)
+                .clip(RoundedCornerShape(AOSSizing.cardCorner))
+                .background(
+                    if (enabled) {
+                        MaterialTheme.colorScheme.surfaceVariant
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    },
+                )
+                .clickable(
+                    enabled = enabled,
+                    interactionSource = interactionSource,
+                    indication = null,
+                    onClick = onToggle,
+                )
+                .semantics { contentDescription = descriptionText }
+                .padding(horizontal = AOSSpacing.md),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(AOSSpacing.sm),
+        ) {
+            Text(
+                text = currentLabel,
+                style = AOSDataText.standard,
+                color = if (enabled) {
+                    MaterialTheme.colorScheme.onSurface
+                } else {
+                    AOSTheme.textTertiary
+                },
+            )
+            if (enabled) {
+                Spacer(
+                    modifier = Modifier
+                        .width(AOSSizing.borderWidth)
+                        .height(16.dp)
+                        .background(MaterialTheme.colorScheme.outline),
+                )
+                Text(
+                    text = targetLabel,
+                    style = AOSDataText.standard,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
+
+        if (!enabled) {
+            disabledLabel?.let {
+                AOSStatusBadge(text = it, tone = AOSStatusTone.NEUTRAL)
+            }
+            disabledReason?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
     }
 }

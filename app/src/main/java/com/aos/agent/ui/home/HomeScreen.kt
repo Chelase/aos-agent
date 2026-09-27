@@ -46,6 +46,7 @@ fun HomeScreen(
     systemInfo: SystemInfo,
     currentLanguageLabel: String,
     targetLanguageLabel: String,
+    languageSwitchable: Boolean,
     onEngineerModeClick: () -> Unit,
     onLanguageToggle: () -> Unit,
 ) {
@@ -83,6 +84,7 @@ fun HomeScreen(
                 systemInfo = systemInfo,
                 currentLanguageLabel = currentLanguageLabel,
                 targetLanguageLabel = targetLanguageLabel,
+                languageSwitchable = languageSwitchable,
                 onLanguageToggle = onLanguageToggle,
                 modifier = Modifier
                     .weight(0.25f)
@@ -193,6 +195,7 @@ private fun GlanceColumn(
     systemInfo: SystemInfo,
     currentLanguageLabel: String,
     targetLanguageLabel: String,
+    languageSwitchable: Boolean,
     onLanguageToggle: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -248,6 +251,9 @@ private fun GlanceColumn(
                 targetLabel = targetLanguageLabel,
                 description = stringResource(R.string.language_switch_description),
                 onToggle = onLanguageToggle,
+                enabled = languageSwitchable,
+                disabledLabel = stringResource(R.string.language_follow_system),
+                disabledReason = stringResource(R.string.language_follow_system_reason),
                 modifier = Modifier.fillMaxWidth(),
             )
         }
