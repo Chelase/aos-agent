@@ -49,17 +49,18 @@ import com.aos.agent.ui.theme.AOSTheme
 private const val PRESS_SCALE = 0.97f
 private const val PRESS_DURATION_MS = 100
 
-/** 主按钮：品牌色实底。 */
+/** 主按钮：品牌色实底。禁用态与磁贴同一处理——降对比、不响应，原因由调用方在附近说明。 */
 @Composable
 fun AOSPrimaryButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (pressed) PRESS_SCALE else 1f,
+        targetValue = if (pressed && enabled) PRESS_SCALE else 1f,
         animationSpec = tween(PRESS_DURATION_MS),
         label = "primaryButtonScale",
     )
@@ -69,8 +70,15 @@ fun AOSPrimaryButton(
             .scale(scale)
             .height(AOSSizing.touchTarget)
             .clip(RoundedCornerShape(AOSSizing.cardCorner))
-            .background(MaterialTheme.colorScheme.primary)
+            .background(
+                if (enabled) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+                },
+            )
             .clickable(
+                enabled = enabled,
                 interactionSource = interactionSource,
                 indication = null,
                 onClick = onClick,
@@ -81,7 +89,11 @@ fun AOSPrimaryButton(
         Text(
             text = text,
             style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onPrimary,
+            color = if (enabled) {
+                MaterialTheme.colorScheme.onPrimary
+            } else {
+                AOSTheme.textTertiary
+            },
         )
     }
 }

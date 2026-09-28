@@ -58,4 +58,29 @@
     <string name="network_other">Other</string>
     <string name="network_none">Not Connected</string>
     <string name="network_unavailable">Unavailable</string>
+
+    <!-- Chat console -->
+    <string name="chat_title">Agent Console</string>
+    <string name="chat_subtitle">Verify tool calls, skills and MCP sources</string>
+    <string name="chat_input_hint">Ask about vehicle state or system info, or invoke a remote tool</string>
+    <string name="chat_send">Send</string>
+    <string name="chat_sending">Running…</string>
+    <string name="chat_need_config">No model configured: enter Base URL and model name on the right, then save</string>
+    <string name="chat_status_model">Model</string>
+    <string name="chat_status_skills">Skills loaded</string>
+    <string name="chat_status_tools">Available tools</string>
+    <string name="chat_status_vehicle">Readable vehicle fields</string>
+    <string name="chat_status_blocked">Not registered</string>
+    <string name="chat_status_mcp">MCP sources</string>
+    <string name="chat_config_baseurl">Base URL</string>
+    <string name="chat_config_model">Model</string>
+    <string name="chat_config_key">API key</string>
+    <string name="chat_config_save">Save model config</string>
+    <string name="chat_mcp_name">Source name</string>
+    <string name="chat_mcp_url">MCP URL</string>
+    <string name="chat_mcp_save">Save MCP source</string>
+    <string name="chat_saved_hint">Saved</string>
+    <string name="chat_none">(none)</string>
+
+    <string name="chat_empty_hint">Ask something to start. Tool calls, skill matches and results appear line by line here.</string>
 </resources>

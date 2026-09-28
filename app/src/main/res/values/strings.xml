@@ -60,4 +60,29 @@
     <string name="network_other">其他</string>
     <string name="network_none">未连接</string>
     <string name="network_unavailable">不可用</string>
+
+    <!-- Chat console -->
+    <string name="chat_title">Agent 控制台</string>
+    <string name="chat_subtitle">验证工具调用、Skill 与 MCP 来源</string>
+    <string name="chat_input_hint">问我车况、系统信息，或让我调用远端工具</string>
+    <string name="chat_send">发送</string>
+    <string name="chat_sending">执行中…</string>
+    <string name="chat_need_config">未配置模型服务：先在右侧填 Base URL 与模型名并保存</string>
+    <string name="chat_status_model">模型服务</string>
+    <string name="chat_status_skills">已加载技能</string>
+    <string name="chat_status_tools">可调用工具</string>
+    <string name="chat_status_vehicle">车辆可读字段</string>
+    <string name="chat_status_blocked">未注册字段</string>
+    <string name="chat_status_mcp">MCP 来源</string>
+    <string name="chat_config_baseurl">Base URL</string>
+    <string name="chat_config_model">模型名</string>
+    <string name="chat_config_key">API Key</string>
+    <string name="chat_config_save">保存模型配置</string>
+    <string name="chat_mcp_name">来源名</string>
+    <string name="chat_mcp_url">MCP 地址</string>
+    <string name="chat_mcp_save">保存 MCP 来源</string>
+    <string name="chat_saved_hint">已保存</string>
+    <string name="chat_none">（无）</string>
+
+    <string name="chat_empty_hint">输入问题开始。工具调用、skill 命中与执行结果会逐行显示在这里。</string>
 </resources>

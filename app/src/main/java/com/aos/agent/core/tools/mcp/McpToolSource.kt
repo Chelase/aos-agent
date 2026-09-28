@@ -47,7 +47,8 @@ class McpToolSource(
         throw cancellation
     } catch (error: Throwable) {
         Loaded(
-            McpSourceStatus(config.id, ok = false, toolCount = 0, detail = error.javaClass.simpleName),
+            // 调试面上要看得见"为什么连不上"：消息里只有 URL 与状态码，不含 token。
+            McpSourceStatus(config.id, ok = false, toolCount = 0, detail = error.message ?: error.javaClass.simpleName),
             emptyList(),
         )
     }

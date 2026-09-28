@@ -173,7 +173,7 @@ class McpToolSourceTest {
 
         assertFalse(loaded.status.ok)
         assertEquals(0, loaded.status.toolCount)
-        assertTrue("状态要能看出原因类型", loaded.status.detail?.contains("IOException") == true)
+        assertTrue("状态要能看出原因：${loaded.status.detail}", loaded.status.detail?.contains("connection refused") == true)
         assertTrue(loaded.tools.isEmpty())
     }
 

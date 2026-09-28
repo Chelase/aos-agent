@@ -48,6 +48,7 @@ fun HomeScreen(
     targetLanguageLabel: String,
     languageSwitchable: Boolean,
     onEngineerModeClick: () -> Unit,
+    onChatClick: () -> Unit,
     onLanguageToggle: () -> Unit,
 ) {
     Box(
@@ -76,6 +77,7 @@ fun HomeScreen(
             )
             QuickActionsColumn(
                 onEngineerModeClick = onEngineerModeClick,
+                onChatClick = onChatClick,
                 modifier = Modifier
                     .weight(0.40f)
                     .fillMaxHeight(),
@@ -140,6 +142,7 @@ private fun BrandColumn(
 @Composable
 private fun QuickActionsColumn(
     onEngineerModeClick: () -> Unit,
+    onChatClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -164,9 +167,9 @@ private fun QuickActionsColumn(
             )
             AOSActionTile(
                 title = stringResource(R.string.action_chat),
-                badgeText = comingSoon,
-                enabled = false,
-                onClick = {},
+                badgeText = ready,
+                enabled = true,
+                onClick = onChatClick,
                 modifier = Modifier.weight(1f),
             )
         }
