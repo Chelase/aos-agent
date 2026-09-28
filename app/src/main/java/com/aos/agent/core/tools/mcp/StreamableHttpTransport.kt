@@ -101,8 +101,14 @@ class StreamableHttpTransport(
             val request = Request.Builder()
                 .url(url)
                 .header("Accept", "application/json, text/event-stream")
-                .header("MCP-Protocol-Version", MCP_PROTOCOL_VERSION)
-                .apply { sessionId?.let { header(SESSION_HEADER, it) } }
+                // 协议版本头只能在握手之后带：initialize 请求本身带它会被 server 判成
+                // "还没协商就宣称版本"，官方 SDK server 直接 400。
+                .apply {
+                    sessionId?.let {
+                        header(SESSION_HEADER, it)
+                        header("MCP-Protocol-Version", MCP_PROTOCOL_VERSION)
+                    }
+                }
                 .apply { bearerToken?.takeIf { it.isNotBlank() }?.let { header("Authorization", "Bearer $it") } }
                 .post(body.toRequestBody(JSON_MEDIA_TYPE))
                 .build()
@@ -111,7 +117,7 @@ class StreamableHttpTransport(
                 object : Callback {
                     override fun onFailure(call: Call, e: IOException) {
                         continuation.resumeWith(
-                            Result.failure(McpException("${e.javaClass.simpleName}")),
+                            Result.failure(McpException("transport failed: ${e.javaClass.simpleName}: ${e.message}")),
                         )
                     }
 
@@ -120,7 +126,10 @@ class StreamableHttpTransport(
                             val outcome = runCatching {
                                 resp.header(SESSION_HEADER)?.let { sessionId = it }
                                 if (!resp.isSuccessful) {
-                                    throw McpException("HTTP ${resp.code}")
+                                    // 状态码 + 截断的响应体：server 的 400 原因只写在 body 里。
+                                    // 截断是防外溢——响应体可能回显我们自己的请求头或 token。
+                                    val detail = runCatching { resp.body?.string()?.take(200) }.getOrNull()
+                                    throw McpException("HTTP ${resp.code}" + (detail?.let { ": $it" } ?: ""))
                                 }
                                 handle(resp)
                             }

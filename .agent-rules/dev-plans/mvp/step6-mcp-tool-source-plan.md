@@ -53,9 +53,30 @@
 - **4.6 内核未改**：`git diff` 证明 `core/engine/*` 与 `core/skills/*` 在本步零改动（这是"能力外挂"的硬证据）。
 - **4.7 回写**：机制文档新增 MCP 工具来源契约；父计划 Step 6 勾选。
 
-## 5. 已知未验证项（不许含糊）
+## 5. 真实 server 互通 —— 已验证（2026-09-28）
 
-- **与真实 MCP server 的互通没测过**。4.1–4.5 用的是按规范手写样例，能证明"我们按规范实现"，不能证明"和某个具体 server 兼容"。补测需要在本机起一个 Streamable HTTP server（模拟器经 `10.0.2.2` 访问），列为本步收尾项。
+用**官方 MCP TypeScript SDK**（`@modelcontextprotocol/sdk` 1.30.1）在本机起了一个 Streamable HTTP
+fixture server（三个工具：`get.time` / `echo` / `boom`，其中 `boom` 故意 `isError:true`），
+车机端 `McpRealServerInstrumentedTest` 连上去跑通：握手 → `tools/list` 拿到 3 个工具 →
+`echo` 返回文本 + `structuredContent` → `boom` 映射成 `ToolResult.Error`。
+
+补测步骤（fixture 在仓库外，不落库）：
+1. 临时目录 `npm i @modelcontextprotocol/sdk`，跑一个 `server.mjs`（无状态模式：`sessionIdGenerator: undefined`）。
+2. `adb reverse tcp:9101 tcp:9101`。
+3. `adb shell am instrument -w -e class ...McpRealServerInstrumentedTest -e mcpUrl http://localhost:9101/mcp com.aos.agent.test/androidx.test.runner.AndroidJUnitRunner`。
+不传 `-e mcpUrl` 时该测试自动跳过，不会把外部依赖焊进常规测试。
+
+三个只有真跑才会暴露的结论：
+
+1. **模拟器打宿主机别指望 `10.0.2.2`**：Windows 防火墙挡入站，`10.0.2.2:9101` 直接 ConnectException。
+   `adb reverse` 把端口映射到设备 localhost 才通，且不用改防火墙。因此
+   `res/xml/network_security_config.xml` 同时放开了 `10.0.2.2` / `localhost` / `127.0.0.1` 明文。
+2. **`MCP-Protocol-Version` 头不能在 `initialize` 请求里发**，握手后才有资格宣称版本；
+   首发即被 server 判 400。现在只在拿到 session id 之后才带。
+3. **fixture 一开始也是错的**：官方 SDK 的 `McpServer` 一条实例只能连一条 transport，
+   且带 session 的写法在 `validateSession` 分支上会回 400 "Server not initialized"。
+   用 SDK 自带 client 打自己的 server 才定位到是 fixture 问题——这个二分法值得记：
+   先证明 server 正常，再怀疑 client。
 - 协议版本：按 `2025-06-18` 实现；server 若回更高版本，本期只记录不协商降级。
 - token 走明文 HTTP 时等同裸奔，与 AOC 一样限制在可信网络/回环地址。
 
@@ -68,7 +89,7 @@
 - [x] 4.5 权限 — 远端 `Ask` 工具在无确认器时被 `ToolSystem` 拒（与本地工具同一个 fail-closed 闸，不是另开一条路）；配成 `Auto` 才免确认
 - [x] 4.6 内核零改动 — `git diff` 证实本步**只新增文件**：`core/engine`、`core/skills`、`core/llm` 一行未动。这就是"能力外挂"的硬证据
 - [x] 4.7 回写 — 机制文档新增 MCP 工具来源契约，父计划 Step 6 标注
-- [ ] 真实 server 互通（§5）
+- [x] 真实 server 互通（§5）— 官方 TS SDK server fixture，车机端跑通握手/列表/调用/错误映射
 
 实测：JVM 108 例、Automotive 模拟器仪器测试 17 例全绿（2026-09-28）。
 
