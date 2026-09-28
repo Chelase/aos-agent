@@ -13,6 +13,14 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- 车辆只读属性。分级见 dev-plans/mvp/step3-toolsystem-plan.md §1.1：
+         normal 声明即可用；dangerous 需运行时授予，量产车机可能没有授权 UI。 -->
+    <uses-permission android:name="android.car.permission.CAR_INFO" />
+    <uses-permission android:name="android.car.permission.CAR_POWERTRAIN" />
+    <uses-permission android:name="android.car.permission.CAR_EXTERIOR_ENVIRONMENT" />
+    <uses-permission android:name="android.car.permission.CAR_SPEED" />
+    <uses-permission android:name="android.car.permission.CAR_ENERGY" />
+
     <application
         android:name=".AOSAgentApplication"
         android:allowBackup="true"

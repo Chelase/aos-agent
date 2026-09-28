@@ -16,9 +16,9 @@ class VehiclePropertyAllowlistTest {
         val allowlist = VehiclePropertyAllowlist.parse(shippedAsset())
 
         assertTrue("可用字段不该为空", allowlist.readable.isNotEmpty())
-        assertTrue(allowlist.names.contains("SPEED"))
-        assertEquals("m/s", allowlist.spec("SPEED")?.unit)
-        assertEquals("dangerous", allowlist.spec("SPEED")?.protection)
+        assertTrue(allowlist.names.contains("PERF_VEHICLE_SPEED"))
+        assertEquals("m/s", allowlist.spec("PERF_VEHICLE_SPEED")?.unit)
+        assertEquals("dangerous", allowlist.spec("PERF_VEHICLE_SPEED")?.protection)
     }
 
     /** 写属性与特权只读属性都不该进可用集，且原因要留下来可观测。 */
@@ -27,16 +27,16 @@ class VehiclePropertyAllowlistTest {
         val allowlist = VehiclePropertyAllowlist.parse(shippedAsset())
 
         assertNull(allowlist.spec("HVAC_TEMPERATURE_SET"))
-        assertNull(allowlist.spec("TYRE_PRESSURE"))
+        assertNull(allowlist.spec("TIRE_PRESSURE"))
         assertTrue(allowlist.skipped.any { it.name == "HVAC_TEMPERATURE_SET" && it.reason.contains("写属性") })
-        assertTrue(allowlist.skipped.any { it.name == "TYRE_PRESSURE" && it.reason.contains("签名") })
+        assertTrue(allowlist.skipped.any { it.name == "TIRE_PRESSURE" && it.reason.contains("签名") })
     }
 
     @Test
     fun privilegedReadBecomesAvailableOnlyWhenSystemSigned() {
         val allowlist = VehiclePropertyAllowlist.parse(shippedAsset(), allowPrivilegedRead = true)
 
-        assertTrue(allowlist.names.contains("TYRE_PRESSURE"))
+        assertTrue(allowlist.names.contains("TIRE_PRESSURE"))
         assertNull("写属性即使开了特权读取也不注册", allowlist.spec("HVAC_TEMPERATURE_SET"))
     }
 

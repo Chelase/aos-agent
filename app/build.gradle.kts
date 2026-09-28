@@ -31,6 +31,10 @@ android {
     buildFeatures {
         compose = true
     }
+    // android.car 是 SDK 平台包里的可选库（Android 10 Rev 5 起），官方样例同样用这一行：
+    // 编译期拿到类型检查，运行时用设备上的真实现，不打进 APK。
+    useLibrary("android.car")
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -59,6 +63,7 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    androidTestImplementation(libs.androidx.test.rules)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))

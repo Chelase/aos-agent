@@ -46,10 +46,25 @@ adb shell dumpsys package com.aos.agent | grep -A20 "requested permissions"
 
 结论：CarToolForge manifest 注释里的分级与 AOSP 一致，**写控车结构性不可得**这条成立。
 
-**仍未测到的一层**：具体属性在特定车型上是否真的存在且可读。模拟器 VHAL 确实暴露了属性
-（`dumpsys car_service` 命中 81 行相关字段），但 `cmd car_service get-prop` 在 user build 上直接
-`SecurityException: requires non-user build`——也就是说属性级可读性只能从应用内部实测，
-而这卡在下面的 Car API 编译期接入方式上。
+### 1.2 属性级实测（2026-09-28，同一模拟器，`VehiclePropertyProbeTest` 从应用内跑）
+
+权限分级查文档只能到"该要什么权限"，**"这台设备给不给读某个属性"只能实测**。跑出来的结果顺带纠正了 allowlist 初稿的三个错误名字：
+
+| 属性（AOSP 真名） | 实测结果 | 结论 |
+|---|---|---|
+| `PERF_VEHICLE_SPEED` | Number(0.0) | 可读。**AOSP 里没有 `SPEED` 这个名字** |
+| `EV_BATTERY_LEVEL` | Number(150000.0) | 可读，单位 Wh |
+| `EV_CURRENT_BATTERY_CAPACITY` | Number(150000.0) | 可读 |
+| `ENV_OUTSIDE_TEMPERATURE` | Number(25.0) | 可读 |
+| `INFO_MODEL` / `INFO_MAKE` | Text("Speedy Model") / Text("Toy Vehicle") | 可读，字符串 |
+| `PERF_ODOMETER` | Missing(permission_denied) ← SecurityException | 声明 `CAR_POWERTRAIN` **不够**，真实所需权限未确定 |
+| `TIRE_PRESSURE` | 未进可用集（挡在 allowlist） | 特权属性，符合预期 |
+
+三条要记的：
+
+1. **没有"剩余续航"这个系统属性**。`PERCENT_REMAINING_CHARGE` 与 `PROG_DISPLAY_DISTANCE` 都不存在；百分比要 `EV_BATTERY_LEVEL / INFO_EV_BATTERY_CAPACITY` 自己算，续航多为 vendor 扩展（必须显式给 `id`）。用户问续航时模型必须能说"读不到"，不能编。
+2. **`pm revoke` 在这台模拟器上没生效**：撤销后应用内 `checkSelfPermission` 仍返回 granted=true，所以"未授予时返回 permission_denied"这条**没能从 dangerous 权限路径实测到**；但 `PERF_ODOMETER` 走 `SecurityException` 分支返回了 `permission_denied`，同一降级路径已被真机验证。
+3. 属性名写错不会编译失败（我们按名字反射常量表），只会得到 `unsupported` —— 所以这份实测不是可选项，是 allowlist 唯一的准入方式。
 
 **回写规则**：上表属稳定系统约束，已随本步写入 `assets/vehicle/vehicle_properties.json` 的
 `protection` 字段；是否再拆独立机制文档，等真车数据进来后再定。
@@ -134,28 +149,28 @@ OEM 扩展属性必须带 `id`（整数），与 AOSP vendor-extended 规则一�
 - 本地小模型与 function-calling 微调（CarTool-Instruct 只在 Batch 3 评估）。
 - 终端 UI / PTY、语音；MCP 工具来源属父计划 Step 6，本步不碰。
 
-## 6. 未解问题：`android.car` 的编译期接入方式（阻塞 `AndroidVehicleReader`）
+## 6. `android.car` 编译期接入方式 —— 已解决（2026-09-28）
 
-`android.car` 不在标准 Android SDK 里，CarToolForge 是靠 AOSP 平台构建 + 装成 priv-app 才用上的。
-三个选项各有代价：
+**结论：走官方标准 `useLibrary("android.car")`，不走反射。**证据是 Google 官方样例
+`car-samples/car-lib/CarGearViewerKotlin/automotive/build.gradle` 第 42–43 行就是这一行；
+本机 SDK 也确实带了这份 stub：`<sdk>/platforms/android-36.1/optional/android.car.jar`
+（含 `android.car.hardware.property.CarPropertyManager` 与 `android.car.VehiclePropertyIds`，
+注意包路径与旧文档不同，写错会报 Unresolved）。AGP 把它当 provided：编译期有类型检查，不打进 APK。
 
-| 方案 | 代价 |
-|---|---|
-| 平台 stub jar `compileOnly files(...)` | 要维护一份 jar，且不同 OEM 的 jar 可能不一致 |
-| 反射网关（不引 jar） | 代码脏、编译期无检查，但**最贴合"任意车机可运行"**：OEM 差异本来就得运行期探 |
-| 等 Batch 3 系统级预装 | 与"用户可自装"的定位冲突 |
+反射只保留在一处合理用途：按名字解析 `VehiclePropertyIds` 常量。OEM 会增删属性，
+编译期常量表覆盖不了这种差异，找不到就返回 `unsupported`，不会编译失败也不会崩。
 
-本步处理：先不写 `AndroidVehicleReader`，用 `UnavailableVehicleReader` 如实返回"未接入"，
-工具层与 allowlist 已就绪——绑定方式定了只需加一个实现类，不动引擎与工具契约。
-**不允许**为了让模拟器好看而把 mock 数据当真实车况返回。
+（更正记录：曾判断"Google 不官方分发该 jar，需自编 AOSP 或找车厂要"，实测证伪。）
+读取实现落地后仍守一条：**不允许**为了让演示好看而把 mock 数据当真实车况返回；
+`UnavailableVehicleReader` 只在探测确认环境不支持时使用，且返回值必须带原因。
 
 ## 进度
 
-- [x] 1. 前置权限实测核对表 — 2026-09-27 在模拟器实测 11 条权限（§1.1）；属性级可读性仍卡在 §6
+- [x] 1. 前置权限实测核对表 — 2026-09-27 实测 11 条权限分级（§1.1）；2026-09-28 补属性级实测（§1.2），顺带纠正了三个不存在的属性名
 - [x] 4.1 ToolSystem 骨架 — 9 例单测（超时、异常包装、子集暴露、schema 三元组）
 - [x] 4.2 权限语义 — Ask 无确认器必拒、可放行可拒绝、Forbid 永不执行、按参数细分权限
 - [x] 4.3 车辆只读 + allowlist — 12 例单测，含"删一条 json 只降级该字段"与特权/写条目挡下并留原因
-- [ ] 4.4 真机降级 — **阻塞在 §6**：没有 `AndroidVehicleReader` 就无从在真车上验证
+- [x] 4.4 设备降级实测 — `AndroidVehicleReader` 已实现并在模拟器跑通（§1.2）；`PERF_ODOMETER` 实测走出 `permission_denied`。真车（非模拟器）仍待测，且 `pm revoke` 在模拟器上不生效，未授予路径只由 SecurityException 分支间接验证
 - [x] 4.5 端到端无头 — 引擎工具循环 7 例：调用→回灌→最终答复、参数畸形先修复、重复调用中止、步数上限、无 ToolSystem 显式失败
 - [x] 4.6 回写 — 本节与父计划、`agent-capabilities.md` 已更新
 

@@ -121,7 +121,7 @@ aos-agent/
    - 数据 checkpoint 写入 < 50ms
    - 终端 I/O 延迟 < 100ms
    - release 未签名整包 ≤ 20.8MB（2026-09-26 实测基线，未做 ABI 拆分）；新增依赖须按 `risk-assessment.md` 评估体积与启动代价
-6. **能力探测优先于版本假定**：任何依赖 API 版本或系统特性的功能（Car API、AppFunctions、框架 per-app locale、specialUse 前台服务类型），必须先探测再使用，缺失时返回结构化"不支持 + 原因"，不得假定存在。现成样例：`i18n/AppLocale.kt` 的 `localeStoreFor()`——Android 13 以下框架没有 per-app locale，退化为跟随系统。
+6. **能力探测优先于版本假定**：任何依赖 API 版本或系统特性的功能（Car API、AppFunctions、框架 per-app locale、specialUse 前台服务类型），必须先探测再使用，缺失时返回结构化"不支持 + 原因"，不得假定存在。统一入口是 `system/Capabilities.kt`（`hasCarApi` / `hasPerAppLocale` / `hasAppFunctions`），另有 `i18n/AppLocale.kt` 的 `localeStoreFor()` 作为按版本选实现的样例。`android.car` 用 `useLibrary` 引入 SDK 可选库：编译期有类型检查，不打进 APK。
 
 ## 维护方式
 

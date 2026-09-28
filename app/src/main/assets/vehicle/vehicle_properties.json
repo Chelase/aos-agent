@@ -1,14 +1,14 @@
 {
-  "_note": "车辆属性 allowlist。唯一事实源：加减字段或换 OEM 只改本文件，不改 Kotlin。protection 取值来自 2026-09-27 在 Automotive 模拟器(API 35) 上 dumpsys package permission 的实测输出；property 是否真的可读由 VehiclePropertyProbeTest 在设备上记录。",
+  "_note": "车辆属性 allowlist。唯一事实源：加减字段或换 OEM 只改本文件，不改 Kotlin。protection 来自 2026-09-27 在 Automotive 模拟器(API 35) dumpsys package permission 的实测；属性名与可读性来自 VehiclePropertyProbeTest 在同一模拟器上的实测——注意 AOSP 里没有 SPEED / ODOMETER / PERCENT_REMAINING_CHARGE 这些名字，也没有'剩余续航'这一系统属性（多为 vendor 扩展，必须显式给 id）。",
   "properties": [
     {
-      "name": "SPEED",
+      "name": "PERF_VEHICLE_SPEED",
       "category": "CHASSIS_AND_DYNAMICS",
       "permission": "android.car.permission.CAR_SPEED",
       "protection": "dangerous",
       "access": "read",
       "unit": "m/s",
-      "description": "当前车速，米每秒。0 表示静止。"
+      "description": "当前车速，米每秒。0 表示静止。注意 AOSP 常量名是 PERF_VEHICLE_SPEED，不是 SPEED。"
     },
     {
       "name": "EV_BATTERY_LEVEL",
@@ -17,16 +17,16 @@
       "protection": "dangerous",
       "access": "read",
       "unit": "Wh",
-      "description": "动力电池当前电量，瓦时。"
+      "description": "动力电池当前电量，瓦时。模拟器实测返回 150000.0。百分比要自己除以 INFO_EV_BATTERY_CAPACITY，AOSP 没有现成的百分比属性。"
     },
     {
-      "name": "PERCENT_REMAINING_CHARGE",
+      "name": "EV_CURRENT_BATTERY_CAPACITY",
       "category": "ENERGY_MANAGEMENT",
       "permission": "android.car.permission.CAR_ENERGY",
       "protection": "dangerous",
       "access": "read",
-      "unit": "percent",
-      "description": "剩余电量百分比，0~100。回答用户'还剩多少电'优先用这个。"
+      "unit": "Wh",
+      "description": "当前可用电池容量，瓦时。"
     },
     {
       "name": "ENV_OUTSIDE_TEMPERATURE",
@@ -35,7 +35,7 @@
       "protection": "normal",
       "access": "read",
       "unit": "celsius",
-      "description": "车外环境温度，摄氏度。"
+      "description": "车外环境温度，摄氏度。模拟器实测返回 25.0。"
     },
     {
       "name": "INFO_MODEL",
@@ -56,22 +56,22 @@
       "description": "制造商名称，字符串。"
     },
     {
-      "name": "PROG_DISPLAY_DISTANCE",
+      "name": "PERF_ODOMETER",
       "category": "VEHICLE_INFO",
       "permission": "android.car.permission.CAR_POWERTRAIN",
       "protection": "normal",
       "access": "read",
       "unit": "km",
-      "description": "总行驶里程，公里。"
+      "description": "总行驶里程，公里。实测：声明 CAR_POWERTRAIN 仍抛 SecurityException，真实所需权限未确定，暂当不可用处理。"
     },
     {
-      "name": "TYRE_PRESSURE",
+      "name": "TIRE_PRESSURE",
       "category": "CHASSIS_AND_DYNAMICS",
       "permission": "android.car.permission.CAR_TIRES",
       "protection": "signature|privileged",
       "access": "read",
       "unit": "kPa",
-      "description": "四轮胎压。普通可安装应用拿不到 CAR_TIRES，保留在此仅用于验证特权字段被跳过。"
+      "description": "胎压。普通可安装应用拿不到 CAR_TIRES，保留在此仅用于验证特权字段被挡下。"
     },
     {
       "name": "HVAC_TEMPERATURE_SET",
