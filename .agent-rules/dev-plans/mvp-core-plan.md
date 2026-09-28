@@ -203,7 +203,7 @@ MVP 全部 Step 完成后回写 `roadmap.md`。
 - [x] 循环防护与畸形 JSON 修复生效
 - [x] 车辆属性来自 `vehicle_properties.json`；`access: write` 条目不注册为工具
 - [ ] 性能基线不回退（前台服务就绪 < 2s，常驻内存 < 200MB）
-- [ ] 远端 MCP 工具可作为第二类工具来源被引擎调用，且拔链不影响本地能力
+- [~] 远端 MCP 工具可作为第二类工具来源被引擎调用，且拔链不影响本地能力（假传输已证；真实 server 互通待补）
 - [ ] 低版本车机（API 31/32）：能力探测生效，per-app locale 等缺失项降级为"跟随系统 + 说明原因"，不崩溃
 
 非门闩（允许缺席）：
@@ -243,7 +243,7 @@ MVP 全部 Step 完成后回写 `roadmap.md`。
 - [x] Step 3. ToolSystem 与首批工具 — 2026-09-14 补 FakeVehicleReader / ToolConfirmer / 只读控车分级；2026-09-21 按外部调研调整；2026-09-27 工具层与引擎工具循环落地；**2026-09-28 补 `AndroidVehicleReader` + `Capabilities`**，`android.car` 走官方 `useLibrary` 路径（子计划 §6），属性级实测顺带纠正了三个不存在的属性名（子计划 §1.2）。JVM 91 例 + 仪器 17 例全绿。子计划 [mvp/step3-toolsystem-plan.md](./mvp/step3-toolsystem-plan.md)
 - [x] Step 4. Skill 机制 — 2026-09-14 补 permission / fallback / result_hint；**2026-09-27 落地**：声明式触发词命中、按 skill 收窄工具子集、非 query 档位不注册、未命中安静回退（JVM 91 例 + 仪器 16 例全绿）。子计划 [mvp/step4-skill-registry-plan.md](./mvp/step4-skill-registry-plan.md)
 - [~] Step 5. AOC 双向协作收口 — 2026-09-14 明确不依赖 UI；**2026-09-27 移出本期 MVP**（二期，依赖 Step 1）
-- [ ] Step 6. MCP 工具来源接入 — **2026-09-26 新增**（用户决策：进 MVP，只做 client over HTTP/SSE）
+- [~] Step 6. MCP 工具来源接入 — 2026-09-26 新增（用户决策：进 MVP，只做 client over HTTP/SSE）；**2026-09-28 客户端与适配层落地**（JVM 108 例全绿，`core/engine`/`core/skills`/`core/llm` 零改动）。**遗留：与真实 MCP server 的互通未验证**，现有测试用按规范手写的报文样例。子计划 [mvp/step6-mcp-tool-source-plan.md](./mvp/step6-mcp-tool-source-plan.md)
 
 > Step 1 与 Step 2 相互独立可并行开工；Step 3 依赖 Step 2，Step 5 依赖 Step 1 + Step 4，Step 6 依赖 Step 3（需要 `Tool` 抽象已就位）。
 > 2026-09-14：吸收 `../docs/car-agent-ecosystem-survey.md`；仍禁止按全文一次性实现，须先拆 `dev-plans/mvp/step<N>-*.md`。

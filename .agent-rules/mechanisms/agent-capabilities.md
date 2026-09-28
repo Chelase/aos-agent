@@ -19,7 +19,7 @@ AOS-Agent 是一个车载 AI Agent，具备工具调用、插件扩展、多步�
 | System | `system/vehicle/AndroidVehicleReader.kt` | 真车 Car API 读取（`useLibrary` 编译期 + 运行期探测降级） | 已实现（MVP Step 3，模拟器实测） |
 | System | `system/Capabilities.kt` | 运行环境能力探测（Car API / per-app locale / AppFunctions），工具与 UI 共用一份 | 已实现（MVP Step 3） |
 | Core | `core/skills/SkillRegistry.kt` + `SkillDefinition.kt` + `AssetSkillLoader.kt` | 技能定义解析、触发词命中、越权过滤；`assets/skills/<id>/skill.json` 为唯一配置源 | 已实现（MVP Step 4） |
-| Core | `core/tools/mcp/`（MCP client 工具来源） | 远端工具 → `Tool` 适配 | 待实现（Step 6） |
+| Core | `core/tools/mcp/`（MCP client 工具来源） | `StreamableHttpTransport` → `McpClient` → `McpToolAdapter` → `McpToolSource`，远端工具变成本地 `Tool` | 已实现（MVP Step 6；真实 server 互通待验证） |
 | Core | PluginManager.kt | 插件热加载与管理 | 待规划（Batch 3），参考 OpenClaw Plugin System |
 | Core | TaskPlanner.kt | 多步任务规划与执行 | 待规划，参考 OpenClaw / Hermes |
 | Tools | `core/tools/VehicleBasicTool.kt` | 唯一车辆只读工具，字段由 allowlist 决定 | 已实现（MVP Step 3） |
@@ -160,6 +160,9 @@ LLM 整合结果 -> 自然语言回复
 ## 维护方式
 
 - **新增工具**：实现 Tool 接口，在 ToolSystem 注册，定义 tool_describe。
+- **新增远端工具来源**：往 `McpServerStore` 加一条 `McpServerConfig`（id/url/token/默认权限），
+  由 `McpToolSource.load()` 产出 `Tool`；远端名会被改写成 `mcp_<server>_<tool>` 供模型选择，
+  调用时仍用原始名。加来源不改引擎与 Skill 层。
 - **新增插件**：编写 plugin.yaml + 实现代码，放入插件目录。
 - **验证**：与 Agent 对话 -> 工具调用正确 -> 回复合理。
 

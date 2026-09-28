@@ -13,8 +13,9 @@
 | [step2-agent-engine-plan.md](./step2-agent-engine-plan.md) | Step 2 本地 Agent 主循环（无头） | **已实现 2026-09-27**（真 endpoint 冒烟待授权） |
 | [step3-toolsystem-plan.md](./step3-toolsystem-plan.md) | Step 3 ToolSystem 与首批工具 | **已实现**（09-27 工具层；09-28 Car API 读取 + 属性级实测） |
 | [step4-skill-registry-plan.md](./step4-skill-registry-plan.md) | Step 4 Skill 机制 | **已实现 2026-09-27**（触发词命中 + 工具子集 + 越权过滤） |
+| [step6-mcp-tool-source-plan.md](./step6-mcp-tool-source-plan.md) | Step 6 MCP 工具来源 | 客户端与适配层**已实现 2026-09-28**；与真实 server 互通待补 |
 
-Step 5 的子计划在开工前创建（且已随 AOC 移出本期）。Step 2 / 3 / 4 已完成，本期只剩 Step 6（MCP 工具来源）。
+Step 5 的子计划在开工前创建（且已随 AOC 移出本期）。Step 2 / 3 / 4 / 6 已完成，本期 MVP 仅剩真实 MCP server 互通验证。
 
 ## 依赖顺序
 
