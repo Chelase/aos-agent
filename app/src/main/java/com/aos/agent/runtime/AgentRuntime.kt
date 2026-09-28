@@ -160,6 +160,9 @@ class AgentRuntime(context: Context) {
 
     // ---- 配置写入（界面用） ----
 
+    /** 给设置页回填当前配置；apiKey 是用户自己的凭据，只回到他自己的输入框。 */
+    suspend fun llmConfig(): LlmConfig? = llmConfigStore.current()
+
     suspend fun saveLlmConfig(baseUrl: String, model: String, apiKey: String) {
         llmConfigStore.save(
             LlmConfig(baseUrl = baseUrl.trim(), model = model.trim(), apiKey = apiKey.trim()),
@@ -170,6 +173,10 @@ class AgentRuntime(context: Context) {
         val current = mcpServerStore.servers()
         val replaced = current.filterNot { it.id == id } + McpServerConfig(id = id, url = url.trim())
         mcpServerStore.save(replaced)
+    }
+
+    suspend fun deleteMcpServer(id: String) {
+        mcpServerStore.save(mcpServerStore.servers().filterNot { it.id == id })
     }
 
     suspend fun mcpServers(): List<McpServerConfig> = mcpServerStore.servers()

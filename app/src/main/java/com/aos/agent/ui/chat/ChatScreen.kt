@@ -30,8 +30,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.aos.agent.R
 import com.aos.agent.runtime.RuntimeStatus
@@ -57,8 +55,7 @@ fun ChatScreen(
     busy: Boolean,
     onBackClick: () -> Unit,
     onSend: (String) -> Unit,
-    onSaveModelConfig: (baseUrl: String, model: String, apiKey: String) -> Unit,
-    onSaveMcpSource: (name: String, url: String) -> Unit,
+    onOpenSettings: () -> Unit,
 ) {
     var input by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
@@ -121,11 +118,10 @@ fun ChatScreen(
 
             Spacer(modifier = Modifier.width(AOSSpacing.lg))
 
-            StatusAndConfigColumn(
+            StatusColumn(
                 modifier = Modifier.weight(1f).fillMaxSize(),
                 status = status,
-                onSaveModelConfig = onSaveModelConfig,
-                onSaveMcpSource = onSaveMcpSource,
+                onOpenSettings = onOpenSettings,
             )
         }
     }
@@ -242,63 +238,23 @@ private fun InputRow(
 }
 
 @Composable
-private fun StatusAndConfigColumn(
+private fun StatusColumn(
     status: RuntimeStatus,
+    onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
-    onSaveModelConfig: (baseUrl: String, model: String, apiKey: String) -> Unit,
-    onSaveMcpSource: (name: String, url: String) -> Unit,
 ) {
-    var baseUrl by remember { mutableStateOf("") }
-    var model by remember { mutableStateOf("") }
-    var apiKey by remember { mutableStateOf("") }
-    var mcpName by remember { mutableStateOf("fixture") }
-    var mcpUrl by remember { mutableStateOf("http://localhost:9101/mcp") }
-    var savedHint by remember { mutableStateOf<String?>(null) }
     val none = stringResource(R.string.chat_none)
-    // 点击回调不是 Composable 上下文，资源串要先取好
-    val savedLabel = stringResource(R.string.chat_saved_hint)
 
     Column(
         modifier = modifier.verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(AOSSpacing.md),
     ) {
-        AOSSectionHeader(title = stringResource(R.string.chat_config_baseurl))
-        AOSCard(modifier = Modifier.fillMaxWidth()) {
-            ConfigField(stringResource(R.string.chat_config_baseurl), baseUrl, { baseUrl = it })
-            ConfigField(stringResource(R.string.chat_config_model), model, { model = it })
-            ConfigField(
-                stringResource(R.string.chat_config_key),
-                apiKey,
-                { apiKey = it },
-                password = true,
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(AOSSpacing.sm)) {
-                AOSSecondaryButton(
-                    text = stringResource(R.string.chat_config_save),
-                    onClick = {
-                        onSaveModelConfig(baseUrl, model, apiKey)
-                        savedHint = savedLabel
-                    },
-                )
-                AOSSecondaryButton(
-                    text = stringResource(R.string.chat_mcp_save),
-                    onClick = {
-                        onSaveMcpSource(mcpName, mcpUrl)
-                        savedHint = savedLabel
-                    },
-                )
-            }
-            ConfigField(stringResource(R.string.chat_mcp_name), mcpName, { mcpName = it })
-            ConfigField(stringResource(R.string.chat_mcp_url), mcpUrl, { mcpUrl = it })
-            savedHint?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = AOSTheme.statusSuccess,
-                )
-            }
-        }
-        AOSSectionHeader(title = stringResource(R.string.chat_status_model))
+        AOSSectionHeader(title = stringResource(R.string.chat_status_runtime))
+        // 未配模型时这是唯一的出路，放在状态卡上方，别让人先滚动再找
+        AOSSecondaryButton(
+            text = stringResource(R.string.chat_open_settings),
+            onClick = onOpenSettings,
+        )
         AOSCard(modifier = Modifier.fillMaxWidth()) {
             StatusLine(stringResource(R.string.chat_status_model), status.llmDescribe)
             StatusLine(
@@ -325,8 +281,6 @@ private fun StatusAndConfigColumn(
                 }.ifEmpty { none },
             )
         }
-
-
     }
 }
 
@@ -354,23 +308,3 @@ private fun StatusLine(label: String, value: String) {
     }
 }
 
-@Composable
-private fun ConfigField(
-    label: String,
-    value: String,
-    onValueChange: (String) -> Unit,
-    password: Boolean = false,
-) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        modifier = Modifier.fillMaxWidth(),
-        label = { Text(text = label, style = MaterialTheme.typography.labelSmall) },
-        singleLine = true,
-        visualTransformation = if (password) PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
-        keyboardOptions = KeyboardOptions(
-            keyboardType = if (password) KeyboardType.Password else KeyboardType.Uri,
-            imeAction = ImeAction.Next,
-        ),
-    )
-}

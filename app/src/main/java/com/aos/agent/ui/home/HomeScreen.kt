@@ -49,6 +49,7 @@ fun HomeScreen(
     languageSwitchable: Boolean,
     onEngineerModeClick: () -> Unit,
     onChatClick: () -> Unit,
+    onSettingsClick: () -> Unit,
     onLanguageToggle: () -> Unit,
 ) {
     Box(
@@ -78,6 +79,7 @@ fun HomeScreen(
             QuickActionsColumn(
                 onEngineerModeClick = onEngineerModeClick,
                 onChatClick = onChatClick,
+                onSettingsClick = onSettingsClick,
                 modifier = Modifier
                     .weight(0.40f)
                     .fillMaxHeight(),
@@ -143,6 +145,7 @@ private fun BrandColumn(
 private fun QuickActionsColumn(
     onEngineerModeClick: () -> Unit,
     onChatClick: () -> Unit,
+    onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -189,6 +192,18 @@ private fun QuickActionsColumn(
                 onClick = onEngineerModeClick,
                 modifier = Modifier.weight(1f),
             )
+        }
+        Spacer(modifier = Modifier.height(AOSSpacing.md))
+        // 第五项：设置。右侧留空保持两列栅格对齐，不塞假功能占位。
+        Row(horizontalArrangement = Arrangement.spacedBy(AOSSpacing.md)) {
+            AOSActionTile(
+                title = stringResource(R.string.action_settings),
+                badgeText = ready,
+                enabled = true,
+                onClick = onSettingsClick,
+                modifier = Modifier.weight(1f),
+            )
+            Spacer(modifier = Modifier.weight(1f))
         }
     }
 }

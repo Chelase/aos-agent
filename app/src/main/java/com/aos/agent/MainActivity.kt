@@ -12,6 +12,7 @@ import com.aos.agent.runtime.RuntimeStatus
 import com.aos.agent.ui.chat.ChatEntry
 import com.aos.agent.ui.chat.ChatScreen
 import com.aos.agent.ui.chat.ChatTranscript
+import com.aos.agent.ui.settings.SettingsScreen
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.Composable
@@ -45,7 +46,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class Destination { Home, Engineer, Chat }
+private enum class Destination { Home, Engineer, Chat, Settings }
 
 @Composable
 private fun AOSAgentApp(
@@ -68,6 +69,7 @@ private fun AOSAgentApp(
                 languageSwitchable = languageSwitchable,
                 onEngineerModeClick = { destination = Destination.Engineer },
                 onChatClick = { destination = Destination.Chat },
+                onSettingsClick = { destination = Destination.Settings },
                 onLanguageToggle = onLanguageToggle,
             )
 
@@ -79,6 +81,12 @@ private fun AOSAgentApp(
             Destination.Chat -> ChatConsole(
                 runtime = runtime,
                 onBackClick = { destination = Destination.Home },
+                onOpenSettings = { destination = Destination.Settings },
+            )
+
+            Destination.Settings -> SettingsHost(
+                runtime = runtime,
+                onBackClick = { destination = Destination.Chat },
             )
         }
     }
@@ -89,6 +97,7 @@ private fun AOSAgentApp(
 private fun ChatConsole(
     runtime: AgentRuntime,
     onBackClick: () -> Unit,
+    onOpenSettings: () -> Unit,
 ) {
     val entries = remember { mutableStateListOf<ChatEntry>() }
     var status by remember { mutableStateOf(RuntimeStatus.EMPTY) }
@@ -105,6 +114,7 @@ private fun ChatConsole(
         status = status,
         busy = busy,
         onBackClick = onBackClick,
+        onOpenSettings = onOpenSettings,
         onSend = { query ->
             scope.launch {
                 busy = true
@@ -117,17 +127,46 @@ private fun ChatConsole(
                 }
             }
         },
-        onSaveModelConfig = { baseUrl, model, apiKey ->
+    )
+}
+
+/** 设置宿主：读写模型与 MCP 配置，保存后立刻刷新运行时并回到控制台。 */
+@Composable
+private fun SettingsHost(
+    runtime: AgentRuntime,
+    onBackClick: () -> Unit,
+) {
+    var current by remember { mutableStateOf<com.aos.agent.core.llm.LlmConfig?>(null) }
+    var servers by remember { mutableStateOf<List<com.aos.agent.core.tools.mcp.McpServerConfig>>(emptyList()) }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        current = runtime.llmConfig()
+        servers = runtime.mcpServers()
+    }
+
+    SettingsScreen(
+        currentLlm = current?.let { Triple(it.baseUrl, it.model, it.apiKey) },
+        mcpServers = servers,
+        onBackClick = onBackClick,
+        onSaveModel = { baseUrl, model, apiKey ->
             scope.launch {
                 runtime.saveLlmConfig(baseUrl, model, apiKey)
-                status = runtime.status()
+                current = runtime.llmConfig()
             }
         },
-        onSaveMcpSource = { name, url ->
+        onSaveMcp = { name, url ->
             scope.launch {
                 runtime.saveMcpServer(name, url)
                 runtime.refresh()
-                status = runtime.status()
+                servers = runtime.mcpServers()
+            }
+        },
+        onDeleteMcp = { name ->
+            scope.launch {
+                runtime.deleteMcpServer(name)
+                runtime.refresh()
+                servers = runtime.mcpServers()
             }
         },
     )

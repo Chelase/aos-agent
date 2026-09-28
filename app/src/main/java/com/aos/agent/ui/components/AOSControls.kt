@@ -98,17 +98,18 @@ fun AOSPrimaryButton(
     }
 }
 
-/** 次按钮：透明底 + 品牌色描边。 */
+/** 次按钮：透明底 + 品牌色描边。禁用态降对比且不响应，原因由调用方在附近说明。 */
 @Composable
 fun AOSSecondaryButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (pressed) PRESS_SCALE else 1f,
+        targetValue = if (pressed && enabled) PRESS_SCALE else 1f,
         animationSpec = tween(PRESS_DURATION_MS),
         label = "secondaryButtonScale",
     )
@@ -120,10 +121,11 @@ fun AOSSecondaryButton(
             .clip(RoundedCornerShape(AOSSizing.cardCorner))
             .border(
                 width = AOSSizing.borderWidth,
-                color = AOSTheme.borderAccent,
+                color = if (enabled) AOSTheme.borderAccent else MaterialTheme.colorScheme.outlineVariant,
                 shape = RoundedCornerShape(AOSSizing.cardCorner),
             )
             .clickable(
+                enabled = enabled,
                 interactionSource = interactionSource,
                 indication = null,
                 onClick = onClick,
@@ -134,7 +136,11 @@ fun AOSSecondaryButton(
         Text(
             text = text,
             style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary,
+            color = if (enabled) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                AOSTheme.textTertiary
+            },
         )
     }
 }

@@ -83,4 +83,19 @@
     <string name="chat_none">(none)</string>
 
     <string name="chat_empty_hint">Ask something to start. Tool calls, skill matches and results appear line by line here.</string>
+    <string name="action_settings">Settings</string>
+    <string name="settings_title">Settings</string>
+    <string name="settings_subtitle">Model service and MCP tool sources</string>
+    <string name="settings_section_model">Model service</string>
+    <string name="settings_section_mcp">MCP tool sources</string>
+    <string name="settings_save_model">Save model config</string>
+    <string name="settings_mcp_save">Save source</string>
+    <string name="settings_mcp_delete">Delete source</string>
+    <string name="settings_mcp_empty">No MCP source added yet</string>
+    <string name="settings_key_hint">The API key lives only in the app private DataStore; logs and summaries never echo it</string>
+    <string name="settings_show_key">Show</string>
+    <string name="settings_hide_key">Hide</string>
+    <string name="settings_saved">Saved</string>
+    <string name="chat_status_runtime">Runtime</string>
+    <string name="chat_open_settings">Open settings</string>
 </resources>
