@@ -9,14 +9,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -33,20 +31,20 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.aos.agent.R
 import com.aos.agent.runtime.RuntimeStatus
-import com.aos.agent.ui.components.AOSCard
 import com.aos.agent.ui.components.AOSPrimaryButton
-import com.aos.agent.ui.components.AOSSectionHeader
 import com.aos.agent.ui.components.AOSSecondaryButton
 import com.aos.agent.ui.theme.AOSDataText
 import com.aos.agent.ui.theme.AOSSizing
 import com.aos.agent.ui.theme.AOSSpacing
 import com.aos.agent.ui.theme.AOSTheme
+import com.aos.agent.ui.theme.aosLegendStyle
 
 /**
- * Agent 控制台：左边对话流与工具轨迹，右边运行状态与配置。
+ * 对话页（design.md §6.3，v4.0 纯化）：单栏满宽——顶栏、对话流、输入行。
  *
- * 定位是调试与验证面，不是聊天产品——所以工具轨迹与"MCP 到底加载了几个工具"
- * 必须直接摊在屏幕上，而不是藏在日志里。
+ * 对话即对话：用户消息、助手回复与工具轨迹逐行滚动，不常驻运行状态面板；
+ * 配置入口在首页设置，不在本页。未配置模型等阻断态以警示行出现在输入区上方，
+ * 并指引到首页设置。
  */
 @Composable
 fun ChatScreen(
@@ -55,7 +53,6 @@ fun ChatScreen(
     busy: Boolean,
     onBackClick: () -> Unit,
     onSend: (String) -> Unit,
-    onOpenSettings: () -> Unit,
 ) {
     var input by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
@@ -73,57 +70,45 @@ fun ChatScreen(
         TopBar(onBackClick = onBackClick)
         Spacer(modifier = Modifier.height(AOSSpacing.lg))
 
-        Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
-            Column(modifier = Modifier.weight(2.1f).fillMaxSize()) {
-                LazyColumn(
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
-                    state = listState,
-                    verticalArrangement = Arrangement.spacedBy(AOSSpacing.sm),
-                ) {
-                    if (entries.isEmpty()) {
-                        item {
-                            Text(
-                                text = stringResource(R.string.chat_empty_hint),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = AOSTheme.textTertiary,
-                            )
-                        }
-                    }
-                    items(entries) { entry -> ChatRow(entry) }
-                    if (busy) {
-                        item {
-                            Text(
-                                text = stringResource(R.string.chat_sending),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = AOSTheme.textTertiary,
-                            )
-                        }
-                    }
+        LazyColumn(
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            state = listState,
+            verticalArrangement = Arrangement.spacedBy(AOSSpacing.sm),
+        ) {
+            if (entries.isEmpty()) {
+                item {
+                    Text(
+                        text = stringResource(R.string.chat_empty_hint),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = AOSTheme.textTertiary,
+                    )
                 }
-                Spacer(modifier = Modifier.height(AOSSpacing.sm))
-                InputRow(
-                    input = input,
-                    canSend = status.canSend && !busy,
-                    blockedReason = status.blockedReason,
-                    onInputChange = { input = it },
-                    onSend = {
-                        val query = input.trim()
-                        if (query.isNotEmpty() && status.canSend && !busy) {
-                            input = ""
-                            onSend(query)
-                        }
-                    },
-                )
             }
-
-            Spacer(modifier = Modifier.width(AOSSpacing.lg))
-
-            StatusColumn(
-                modifier = Modifier.weight(1f).fillMaxSize(),
-                status = status,
-                onOpenSettings = onOpenSettings,
-            )
+            items(entries) { entry -> ChatRow(entry) }
+            if (busy) {
+                item {
+                    Text(
+                        text = stringResource(R.string.chat_sending),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = AOSTheme.textTertiary,
+                    )
+                }
+            }
         }
+        Spacer(modifier = Modifier.height(AOSSpacing.sm))
+        InputRow(
+            input = input,
+            canSend = status.canSend && !busy,
+            blockedReason = status.blockedReason,
+            onInputChange = { input = it },
+            onSend = {
+                val query = input.trim()
+                if (query.isNotEmpty() && status.canSend && !busy) {
+                    input = ""
+                    onSend(query)
+                }
+            },
+        )
     }
 }
 
@@ -144,7 +129,7 @@ private fun TopBar(onBackClick: () -> Unit) {
             )
             Text(
                 text = stringResource(R.string.chat_subtitle),
-                style = MaterialTheme.typography.labelSmall,
+                style = aosLegendStyle,
                 color = AOSTheme.textTertiary,
             )
         }
@@ -225,6 +210,7 @@ private fun InputRow(
                     )
                 },
                 singleLine = true,
+                shape = RoundedCornerShape(AOSSizing.cardCorner),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                 keyboardActions = KeyboardActions(onSend = { onSend() }),
             )
@@ -236,75 +222,3 @@ private fun InputRow(
         }
     }
 }
-
-@Composable
-private fun StatusColumn(
-    status: RuntimeStatus,
-    onOpenSettings: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val none = stringResource(R.string.chat_none)
-
-    Column(
-        modifier = modifier.verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(AOSSpacing.md),
-    ) {
-        AOSSectionHeader(title = stringResource(R.string.chat_status_runtime))
-        // 未配模型时这是唯一的出路，放在状态卡上方，别让人先滚动再找
-        AOSSecondaryButton(
-            text = stringResource(R.string.chat_open_settings),
-            onClick = onOpenSettings,
-        )
-        AOSCard(modifier = Modifier.fillMaxWidth()) {
-            StatusLine(stringResource(R.string.chat_status_model), status.llmDescribe)
-            StatusLine(
-                stringResource(R.string.chat_status_skills),
-                status.skills.joinToString("\n").ifEmpty { none },
-            )
-            StatusLine(
-                stringResource(R.string.chat_status_tools),
-                status.localTools.plus(status.mcpTools).joinToString("\n").ifEmpty { none },
-            )
-            StatusLine(
-                stringResource(R.string.chat_status_vehicle),
-                status.vehicleReadable.joinToString("\n").ifEmpty { none },
-            )
-            StatusLine(
-                stringResource(R.string.chat_status_blocked),
-                status.vehicleSkipped.joinToString("\n").ifEmpty { none },
-            )
-            StatusLine(
-                stringResource(R.string.chat_status_mcp),
-                status.mcpSources.joinToString("\n") { source ->
-                    if (source.ok) "${source.serverId}: ${source.toolCount} 工具"
-                    else "${source.serverId}: 失败 ${source.detail ?: ""}"
-                }.ifEmpty { none },
-            )
-        }
-    }
-}
-
-@Composable
-private fun StatusLine(label: String, value: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = AOSSpacing.xs),
-        verticalAlignment = Alignment.Top,
-        horizontalArrangement = Arrangement.spacedBy(AOSSpacing.sm),
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = AOSTheme.textTertiary,
-            modifier = Modifier.width(112.dp),
-        )
-        Text(
-            text = value,
-            style = AOSDataText.standard,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.weight(1f),
-        )
-    }
-}
-

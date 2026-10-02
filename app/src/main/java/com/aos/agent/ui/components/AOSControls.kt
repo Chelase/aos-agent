@@ -1,6 +1,5 @@
 package com.aos.agent.ui.components
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -11,9 +10,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -39,10 +38,10 @@ import com.aos.agent.ui.theme.AOSSpacing
 import com.aos.agent.ui.theme.AOSTheme
 
 /**
- * 交互控件：按钮、状态标签、功能磁贴、语言开关。
- * 规范见 `.agent-rules/docs/原型/design.md` §5.1 / §5.2。
+ * 交互控件：按钮、状态标签（灯）、点标导航行、语言开关。
+ * 规范见 `.agent-rules/docs/原型/design.md` §5.1 / §5.2 / §5.10。
  *
- * 所有可点击控件最小高度为 [AOSSizing.touchTarget]（56dp），满足驾驶场景触控要求。
+ * 所有可点击控件最小高度为 [AOSSizing.touchTarget]（56dp）或 64dp 行高，满足驾驶场景触控要求。
  * 按压反馈统一为 0.97 缩放 / 100ms，符合 design.md §8.2。
  */
 
@@ -196,7 +195,10 @@ fun AOSStatusBadge(
     }
 }
 
-/** 状态圆点，配合文本表示运行态。 */
+/**
+ * 状态灯（灯语，design.md §5.9）：语义色圆点 + 同色微光晕。
+ * 光晕是灯的深度表达，不是装饰；状态色只以"灯"的形态出场。
+ */
 @Composable
 fun AOSStatusDot(
     tone: AOSStatusTone,
@@ -212,20 +214,29 @@ fun AOSStatusDot(
     }
     Box(
         modifier = modifier
-            .size(8.dp)
-            .clip(RoundedCornerShape(4.dp))
-            .background(color),
-    )
+            .size(16.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(color.copy(alpha = 0.18f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(color),
+        )
+    }
 }
 
 /**
- * 功能磁贴：首页 2x2 快捷入口。
+ * 点标导航行（design.md §5.10）：首页导航原语，"行即界面"。
  *
- * [enabled] 为 false 时渲染为未开放态——降低对比度并禁用点击，
- * 但仍然可见，让用户知道能力路线图，而不是假装功能已存在。
+ * 结构：`灯点(亮/熄) + 名称 + 尾部状态徽章`。就绪行点亮荧光柠檬并可点击；
+ * 未开放行灯点熄灭、降对比、禁用点击，但仍可见——让用户知道能力路线图，
+ * 而不是假装功能已存在。发丝分隔线由调用方的列表节奏提供。
  */
 @Composable
-fun AOSActionTile(
+fun AOSDestinationRow(
     title: String,
     badgeText: String,
     enabled: Boolean,
@@ -237,54 +248,49 @@ fun AOSActionTile(
     val scale by animateFloatAsState(
         targetValue = if (pressed && enabled) PRESS_SCALE else 1f,
         animationSpec = tween(PRESS_DURATION_MS),
-        label = "actionTileScale",
-    )
-    val borderColor by animateColorAsState(
-        targetValue = if (enabled) AOSTheme.borderAccent else MaterialTheme.colorScheme.outlineVariant,
-        animationSpec = tween(200),
-        label = "actionTileBorder",
+        label = "destinationRowScale",
     )
 
-    Box(
+    Row(
         modifier = modifier
             .scale(scale)
-            .defaultMinSize(minHeight = 96.dp)
-            .clip(RoundedCornerShape(AOSSizing.cardCorner))
-            .background(
-                if (enabled) MaterialTheme.colorScheme.surface
-                else MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
-            )
-            .border(
-                width = AOSSizing.borderWidth,
-                color = borderColor,
-                shape = RoundedCornerShape(AOSSizing.cardCorner),
-            )
+            .fillMaxWidth()
+            .heightIn(min = 64.dp)
             .clickable(
                 enabled = enabled,
                 interactionSource = interactionSource,
                 indication = null,
                 onClick = onClick,
             )
-            .padding(AOSSpacing.md),
+            .padding(vertical = AOSSpacing.md),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(AOSSpacing.md),
     ) {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(AOSSpacing.sm),
+        // 灯点：就绪=亮强调色（带光晕），未开放=熄灭降对比
+        Box(
+            modifier = Modifier
+                .size(16.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(if (enabled) AOSTheme.accentDim else Color.Transparent),
+            contentAlignment = Alignment.Center,
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                color = if (enabled) {
-                    MaterialTheme.colorScheme.onSurface
-                } else {
-                    AOSTheme.textTertiary
-                },
-            )
-            AOSStatusBadge(
-                text = badgeText,
-                tone = if (enabled) AOSStatusTone.SUCCESS else AOSStatusTone.NEUTRAL,
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(if (enabled) MaterialTheme.colorScheme.primary else AOSTheme.textTertiary.copy(alpha = 0.45f)),
             )
         }
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            color = if (enabled) MaterialTheme.colorScheme.onSurface else AOSTheme.textTertiary,
+            modifier = Modifier.weight(1f),
+        )
+        AOSStatusBadge(
+            text = badgeText,
+            tone = if (enabled) AOSStatusTone.SUCCESS else AOSStatusTone.NEUTRAL,
+        )
     }
 }
 

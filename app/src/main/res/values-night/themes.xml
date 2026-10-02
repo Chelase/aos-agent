@@ -1,8 +1,0 @@
-<resources>
-    <!-- 应用强制深色，夜间与日间取值一致，此处保持与 values/themes.xml 同步。 -->
-    <style name="Theme.AOSAgent" parent="@android:style/Theme.DeviceDefault.NoActionBar">
-        <item name="android:windowBackground">@color/aos_bg_primary</item>
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@color/aos_bg_primary</item>
-    </style>
-</resources>

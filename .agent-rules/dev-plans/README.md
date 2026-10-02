@@ -50,6 +50,11 @@
 - [extended-advanced-plan.md](./extended-advanced-plan.md) — 批次 3：扩展 / 复杂功能计划
 - [terminal-plan.md](./terminal-plan.md) — 终端模块专项计划（从属 Batch 2，不再作为当前优先批次单独提前执行）
 - [ui-design-system-plan.md](./ui-design-system-plan.md) — UI 设计系统落地与多语言（Batch 1 共用前置）
+- [ui-design-system-plan-phase2.md](./ui-design-system-plan-phase2.md) — UI 样式重构 v2.0 琥珀仪表（已被 v3.0/v4.0 接替，留档）
+- [ui-design-system-plan-phase3.md](./ui-design-system-plan-phase3.md) — UI 样式从零重构 v3.0 竞速荧光（已被 v4.0 接替，留档）
+- [ui-design-system-plan-phase4.md](./ui-design-system-plan-phase4.md) — UI 样式 v4.0 深空蓝白暗色单主题（已被 v5.0 接替，留档）
+- [ui-design-system-plan-phase5.md](./ui-design-system-plan-phase5.md) — UI v5.0 双主题：日间蓝白浅色（默认）+ 夜间深色，可切换（当前生效）
+- [voice-interaction-plan.md](./voice-interaction-plan.md) — 语音交互：ASR/TTS/语音指令（Phase A）+ 连续对话/离线唤醒（Phase B）+ 车机深度（Phase C），驾驶场景优先（计划已评审待排期）
 
 ### 子目录
 

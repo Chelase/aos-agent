@@ -18,8 +18,8 @@ object AOSSizing {
     /** 横屏安全区内边距，避开系统状态栏/导航栏。 */
     val safeZone = 24.dp
 
-    /** 卡片圆角与内边距（design.md §4.4）。 */
-    val cardCorner = 16.dp
+    /** 卡片圆角与内边距（design.md §4.4，v2.0 收紧为 12dp 仪表窗圆角）。 */
+    val cardCorner = 12.dp
     val cardPadding = 20.dp
 
     /** 交互控件最小高度，驾驶场景下限（design.md §1.2）。 */

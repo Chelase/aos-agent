@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
@@ -34,6 +35,7 @@ import com.aos.agent.R
 import com.aos.agent.core.tools.mcp.McpServerConfig
 import com.aos.agent.ui.components.AOSCard
 import com.aos.agent.ui.components.AOSDataRow
+import com.aos.agent.ui.components.AOSLanguageSwitch
 import com.aos.agent.ui.components.AOSSectionHeader
 import com.aos.agent.ui.components.AOSPrimaryButton
 import com.aos.agent.ui.components.AOSSecondaryButton
@@ -41,6 +43,7 @@ import com.aos.agent.ui.theme.AOSDataText
 import com.aos.agent.ui.theme.AOSSizing
 import com.aos.agent.ui.theme.AOSSpacing
 import com.aos.agent.ui.theme.AOSTheme
+import com.aos.agent.ui.theme.aosLegendStyle
 
 /**
  * 设置页：模型服务与 MCP 工具来源。
@@ -56,6 +59,8 @@ fun SettingsScreen(
     onSaveModel: (baseUrl: String, model: String, apiKey: String) -> Unit,
     onSaveMcp: (name: String, url: String) -> Unit,
     onDeleteMcp: (name: String) -> Unit,
+    darkTheme: Boolean = false,
+    onToggleTheme: () -> Unit = {},
 ) {
     var baseUrl by remember { mutableStateOf(currentLlm?.first.orEmpty()) }
     var model by remember { mutableStateOf(currentLlm?.second.orEmpty()) }
@@ -87,7 +92,7 @@ fun SettingsScreen(
                 )
                 Text(
                     text = stringResource(R.string.settings_subtitle),
-                    style = MaterialTheme.typography.labelSmall,
+                    style = aosLegendStyle,
                     color = AOSTheme.textTertiary,
                 )
             }
@@ -103,6 +108,24 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(AOSSpacing.lg),
         ) {
+            AOSSectionHeader(title = stringResource(R.string.settings_section_appearance))
+            AOSCard(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = stringResource(R.string.theme_label),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = AOSTheme.textTertiary,
+                )
+                Spacer(modifier = Modifier.height(AOSSpacing.sm))
+                // 复用语言开关形态：当前主题 | 目标主题，点击切换（design.md §6.2）
+                AOSLanguageSwitch(
+                    currentLabel = stringResource(if (darkTheme) R.string.theme_dark else R.string.theme_light),
+                    targetLabel = stringResource(if (darkTheme) R.string.theme_light else R.string.theme_dark),
+                    description = stringResource(R.string.theme_switch_description),
+                    onToggle = onToggleTheme,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+
             AOSSectionHeader(title = stringResource(R.string.settings_section_model))
             AOSCard(modifier = Modifier.fillMaxWidth()) {
                 Field(
@@ -220,6 +243,7 @@ private fun Field(
             .padding(bottom = AOSSpacing.sm),
         label = { Text(text = label, style = MaterialTheme.typography.labelSmall) },
         singleLine = true,
+        shape = RoundedCornerShape(AOSSizing.cardCorner),
         visualTransformation = visual,
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = ImeAction.Next),
     )

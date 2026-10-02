@@ -1,10 +1,17 @@
 <resources>
-    <!-- 系统级兜底主题。Compose 内的视觉由 AOSAgentTheme 定义，
-         此处只保证启动窗口与系统栏不出现浅色闪屏。 -->
-    <!-- NoActionBar：DeviceDefault 默认带浅色 ActionBar，与深色设计冲突，且 Compose 自绘顶栏 -->
+    <!-- 系统级兜底主题。Compose 内的视觉由 AOSAgentTheme(darkTheme) 定义，
+         此处只保证启动窗口背景与应用主题一致，避免启动闪屏错色。
+         MainActivity 在 setContentView 前按用户主题偏好 setTheme 二选一（design.md §9.3）。 -->
+    <!-- NoActionBar：DeviceDefault 默认带 ActionBar，与自绘顶栏冲突 -->
     <style name="Theme.AOSAgent" parent="@android:style/Theme.DeviceDefault.NoActionBar">
         <item name="android:windowBackground">@color/aos_bg_primary</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@color/aos_bg_primary</item>
+    </style>
+
+    <style name="Theme.AOSAgent.Dark" parent="@android:style/Theme.DeviceDefault.NoActionBar">
+        <item name="android:windowBackground">@color/aos_bg_primary_dark</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@color/aos_bg_primary_dark</item>
     </style>
 </resources>

@@ -8,6 +8,8 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
-    <!-- 设计系统色，与 ui/theme/Color.kt 的 AOSBgPrimary 一致 -->
-    <color name="aos_bg_primary">#FF0B1120</color>
+    <!-- 设计系统色，与 ui/theme/Color.kt 对应主题的 AOSBgPrimary 一致（v5.0 双主题）。
+         主资源=日间浅色；aos_bg_primary_dark 供 Theme.AOSAgent.Dark 启动窗口用。 -->
+    <color name="aos_bg_primary">#FFF5F8FC</color>
+    <color name="aos_bg_primary_dark">#FF0E1116</color>
 </resources>

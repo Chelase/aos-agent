@@ -25,13 +25,14 @@ import com.aos.agent.ui.theme.AOSDataText
 import com.aos.agent.ui.theme.AOSSizing
 import com.aos.agent.ui.theme.AOSSpacing
 import com.aos.agent.ui.theme.AOSTheme
+import com.aos.agent.ui.theme.aosLegendStyle
 
 /**
- * 承载面组件：卡片、区块标题、数据行。
- * 规范见 `.agent-rules/docs/原型/design.md` §4.4 / §5.3。
+ * 承载面组件：卡片、区块图例、数据行。
+ * 规范见 `.agent-rules/docs/原型/design.md` §4.4 / §5.3 / §3.2 Legend。
  */
 
-/** 标准卡片：bg-secondary 底 + subtle 描边 + 16dp 圆角。 */
+/** 标准卡片：bg-secondary 底 + 发丝级描边 + 12dp 仪表窗圆角。 */
 @Composable
 fun AOSCard(
     modifier: Modifier = Modifier,
@@ -52,8 +53,9 @@ fun AOSCard(
 }
 
 /**
- * 区块标题：左侧品牌色竖条 + 全大写标签。
- * 竖条是全局识别标记，所有分组标题共用，避免各页面各写一套。
+ * 区块图例（Legend）：左侧品牌刻度短条 + 加字距图例文字。
+ * 像仪表盘上的刻度图例，是本设计语言的签名排版（design.md §3.2），
+ * 所有分组标题共用，避免各页面各写一套。
  */
 @Composable
 fun AOSSectionHeader(
@@ -73,7 +75,7 @@ fun AOSSectionHeader(
         Spacer(modifier = Modifier.width(AOSSpacing.sm))
         Text(
             text = title,
-            style = MaterialTheme.typography.labelSmall,
+            style = aosLegendStyle,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }

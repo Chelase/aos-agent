@@ -7,200 +7,71 @@
 ---
 
 **Project:** AOSAgent
-**Generated:** 2026-07-08 21:58:19
-**Category:** Space Tech / Aerospace
+**Generated:** 2026-10-02（v5.0 晴空仪表：蓝白浅色日间主脸（默认）+ 深空蓝白夜间主题，设置页切换）
+**Category:** Native Cockpit Blue / Day & Night Dual Theme
 
 ---
 
 ## Global Rules
 
-### Color Palette
+### Color Palette（成对 token，经 AOSAgentTheme(darkTheme) 下发）
 
-| Role | Hex | CSS Variable |
-|------|-----|--------------|
-| Primary | `#1E293B` | `--color-primary` |
-| Secondary | `#334155` | `--color-secondary` |
-| CTA/Accent | `#22C55E` | `--color-cta` |
-| Background | `#0F172A` | `--color-background` |
-| Text | `#F8FAFC` | `--color-text` |
+| Role | Day (Light, default) | Night (Dark) | CSS Variable |
+|------|---------------------|--------------|--------------|
+| Background | `#F5F8FC` | `#0E1116` | `--color-background` |
+| Primary (surface) | `#FFFFFF` | `#161B22` | `--color-primary` |
+| Secondary | `#EDF2F8` | `#1D242D` | `--color-secondary` |
+| CTA/Accent | `#2E6FD8` | `#5B9BFF` | `--color-cta` |
+| Text | `#10151C` | `#F2F5F9` | `--color-text` |
 
-**Color Notes:** Dark tech + status green
+**Color Notes:** 仪表蓝唯一强调；白/浅蓝灰日间，深蓝黑夜间。状态色只做灯点/徽章/轨迹标记：success `#1E7A34`/`#7CC47F` · warning `#B45309`/`#E8A33D` · error `#C23425`/`#EA6E5E` · info `#4A6584`/`#8A9BB0`（日/夜）。装饰性常亮灯点一屏 ≤ 3（承载状态的行灯不计入）。
 
 ### Typography
 
-- **Heading Font:** Share Tech Mono
-- **Body Font:** Fira Code
-- **Mood:** tech, futuristic, hud, sci-fi, data, monospaced, precise
-- **Google Fonts:** [Share Tech Mono + Fira Code](https://fonts.google.com/share?selection.family=Fira+Code:wght@300;400;500;600;700|Share+Tech+Mono)
+- **Heading/Body:** 几何无衬线（目标 Outfit，暂用系统 sans-serif）；数据一律等宽（目标 JetBrains Mono，暂用系统 monospace）
+- **约束:** 目标字体无中文字形，打包含 CJK 覆盖的字体前不得替换系统字族
+- **Type Scale:** Display 32sp/700/-0.01em · Headline 24sp/600 · Title 18sp/600 · Body 15sp/400 · Caption 13sp/400 · Legend 13sp/500 + 0.1em 字距 · Data 14sp mono · Data Large 20sp mono（字号字重不随主题）
 
-**CSS Import:**
-```css
-@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap');
-```
+### Spacing
 
-### Spacing Variables
+`--space-xs 4dp` · `sm 8dp` · `md 16dp` · `lg 24dp` · `xl 32dp`
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `--space-xs` | `4px` / `0.25rem` | Tight gaps |
-| `--space-sm` | `8px` / `0.5rem` | Icon gaps, inline spacing |
-| `--space-md` | `16px` / `1rem` | Standard padding |
-| `--space-lg` | `24px` / `1.5rem` | Section padding |
-| `--space-xl` | `32px` / `2rem` | Large gaps |
-| `--space-2xl` | `48px` / `3rem` | Section margins |
-| `--space-3xl` | `64px` / `4rem` | Hero padding |
+### Shape & Depth
 
-### Shadow Depths
-
-| Level | Value | Usage |
-|-------|-------|-------|
-| `--shadow-sm` | `0 1px 2px rgba(0,0,0,0.05)` | Subtle lift |
-| `--shadow-md` | `0 4px 6px rgba(0,0,0,0.1)` | Cards, buttons |
-| `--shadow-lg` | `0 10px 15px rgba(0,0,0,0.1)` | Modals, dropdowns |
-| `--shadow-xl` | `0 20px 25px rgba(0,0,0,0.15)` | Hero images, featured cards |
+`--radius-card 12dp` · `--radius-badge 14dp` · hairline 描边（日间 `rgba(16,21,28,0.08)` / 夜间 `rgba(242,245,249,0.08)`）· `--border-accent 40% 蓝` · 卡片投影随主题 · 光晕仅状态灯点允许
 
 ---
 
-## Component Specs
+## Component Specs（Compose 语义，实现见 `ui/components/`）
 
-### Buttons
-
-```css
-/* Primary Button */
-.btn-primary {
-  background: #22C55E;
-  color: white;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-weight: 600;
-  transition: all 200ms ease;
-  cursor: pointer;
-}
-
-.btn-primary:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
-}
-
-/* Secondary Button */
-.btn-secondary {
-  background: transparent;
-  color: #1E293B;
-  border: 2px solid #1E293B;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-weight: 600;
-  transition: all 200ms ease;
-  cursor: pointer;
-}
-```
-
-### Cards
-
-```css
-.card {
-  background: #0F172A;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: var(--shadow-md);
-  transition: all 200ms ease;
-  cursor: pointer;
-}
-
-.card:hover {
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-2px);
-}
-```
-
-### Inputs
-
-```css
-.input {
-  padding: 12px 16px;
-  border: 1px solid #E2E8F0;
-  border-radius: 8px;
-  font-size: 16px;
-  transition: border-color 200ms ease;
-}
-
-.input:focus {
-  border-color: #1E293B;
-  outline: none;
-  box-shadow: 0 0 0 3px #1E293B20;
-}
-```
-
-### Modals
-
-```css
-.modal-overlay {
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-}
-
-.modal {
-  background: white;
-  border-radius: 16px;
-  padding: 32px;
-  box-shadow: var(--shadow-xl);
-  max-width: 500px;
-  width: 90%;
-}
-```
-
----
-
-## Style Guidelines
-
-**Style:** Cyberpunk UI
-
-**Keywords:** Neon, dark mode, terminal, HUD, sci-fi, glitch, dystopian, futuristic, matrix, tech noir
-
-**Best For:** Gaming platforms, tech products, crypto apps, sci-fi applications, developer tools, entertainment
-
-**Key Effects:** Neon glow (text-shadow), glitch animations (skew/offset), scanlines (::before overlay), terminal fonts
-
-### Page Pattern
-
-**Pattern Name:** Horizontal Scroll Journey
-
-- **Conversion Strategy:** Immersive product discovery. High engagement. Keep navigation visible.
-28,Bento Grid Showcase,bento,  grid,  features,  modular,  apple-style,  showcase", 1. Hero, 2. Bento Grid (Key Features), 3. Detail Cards, 4. Tech Specs, 5. CTA, Floating Action Button or Bottom of Grid, Card backgrounds: #F5F5F7 or Glass. Icons: Vibrant brand colors. Text: Dark., Hover card scale (1.02), video inside cards, tilt effect, staggered reveal, Scannable value props. High information density without clutter. Mobile stack.
-29,Interactive 3D Configurator,3d,  configurator,  customizer,  interactive,  product", 1. Hero (Configurator), 2. Feature Highlight (synced), 3. Price/Specs, 4. Purchase, Inside Configurator UI + Sticky Bottom Bar, Neutral studio background. Product: Realistic materials. UI: Minimal overlay., Real-time rendering, material swap animation, camera rotate/zoom, light reflection, Increases ownership feeling. 360 view reduces return rates. Direct add-to-cart.
-30,AI-Driven Dynamic Landing,ai,  dynamic,  personalized,  adaptive,  generative", 1. Prompt/Input Hero, 2. Generated Result Preview, 3. How it Works, 4. Value Prop, Input Field (Hero) + 'Try it' Buttons, Adaptive to user input. Dark mode for compute feel. Neon accents., Typing text effects, shimmering generation loaders, morphing layouts, Immediate value demonstration. 'Show, don't tell'. Low friction start.
-- **CTA Placement:** Floating Sticky CTA or End of Horizontal Track
-- **Section Order:** 1. Intro (Vertical), 2. The Journey (Horizontal Track), 3. Detail Reveal, 4. Vertical Footer
+### Lume Point（状态灯点）：亮 = accent/语义色 8dp + 同色 18% 光晕；熄 = text-tertiary 实心
+### DestinationRow：满宽 ≥64dp，`灯点 + 名称 + 状态徽章`；就绪点亮蓝、可点；未开放点熄、禁用 + NEUTRAL 徽章
+### Primary Button：日间蓝底白字（#2E6FD8/#FFF），夜间蓝底深蓝墨字（#5B9BFF/#0A1428）；Secondary 透明底蓝描边
+### Cards：surface 底、12dp 圆角、20dp 内边距、发丝描边；禁止嵌套
+### Data Row：左 Caption 标签 + 右 14sp 等宽值右对齐，行距 12dp
+### Section Header（Legend）：3dp 蓝刻度短条 + 13sp/500 + 0.1em 字距
+### Status Badge：28dp 全圆，语义色 15% 底 + 同色文字
+### Inputs：tertiary 底、发丝描边、聚焦转 accent 描边、12dp 圆角
+### Chat Page：单栏满宽（TopBar → 对话流 → 输入行），不常驻状态面板，无设置入口
+### Theme Switch（设置页"外观"卡）：复用语言开关形态，`当前主题 | 目标主题`，切换持久化并重建
 
 ---
 
 ## Anti-Patterns (Do NOT Use)
 
-- ❌ Flat design without depth
-- ❌ Text-heavy pages
-
-### Additional Forbidden Patterns
-
-- ❌ **Emojis as icons** — Use SVG icons (Heroicons, Lucide, Simple Icons)
-- ❌ **Missing cursor:pointer** — All clickable elements must have cursor:pointer
-- ❌ **Layout-shifting hovers** — Avoid scale transforms that shift layout
-- ❌ **Low contrast text** — Maintain 4.5:1 minimum contrast ratio
-- ❌ **Instant state changes** — Always use transitions (150-300ms)
-- ❌ **Invisible focus states** — Focus states must be visible for a11y
+- ❌ 组件/页面直引 `ui/theme/Color.kt` 的具体色值常量（必须经 MaterialTheme / AOSTheme）
+- ❌ 只给一套主题适配（两套都必须完整验收）
+- ❌ 状态色做大面积底色；卡片嵌卡片；Emoji 当图标
+- ❌ 对话页常驻状态面板或页内设置入口
+- ❌ 低对比文本（两主题正文/徽章 ≥ 4.5:1）
+- ❌ 触控目标 < 56dp；瞬间状态切换；除灯点光晕/呼吸外的循环装饰动画
 
 ---
 
 ## Pre-Delivery Checklist
 
-Before delivering any UI code, verify:
-
-- [ ] No emojis used as icons (use SVG instead)
-- [ ] All icons from consistent icon set (Heroicons/Lucide)
-- [ ] `cursor-pointer` on all clickable elements
-- [ ] Hover states with smooth transitions (150-300ms)
-- [ ] Light mode: text contrast 4.5:1 minimum
-- [ ] Focus states visible for keyboard navigation
-- [ ] `prefers-reduced-motion` respected
-- [ ] Responsive: 375px, 768px, 1024px, 1440px
-- [ ] No content hidden behind fixed navbars
-- [ ] No horizontal scroll on mobile
+- [ ] 视觉值全部来自 token，页面无裸色值
+- [ ] 文案走 Android 资源，中英成对
+- [ ] 触控 ≥ 56dp；两主题对比度 ≥ 4.5:1
+- [ ] 日间/夜间切换：持久化、跨重启、启动不闪错色
+- [ ] AAOS 模拟器横屏两套主题分别验收
