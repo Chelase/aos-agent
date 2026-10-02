@@ -99,7 +99,7 @@
 
 ## 验收清单
 
-- [ ] 真实 shell 终端可用
+- [x] 真实 shell 终端可用
 - [ ] Agent 文本对话可用
 - [ ] 至少两个工具可被 Agent 调用
 - [ ] 连续语音对话可用
@@ -115,7 +115,7 @@
 
 ## 进度
 
-- [ ] Step 1. 接入真实 CLI 终端
+- [x] Step 1. 接入真实 CLI 终端 — 2026-10-02（Phase 1，见 [terminal-plan.md](./terminal-plan.md) 归档；Step 2/3 已提前并入 MVP）
 - [ ] Step 2. 建立 Agent 对话主循环
 - [ ] Step 3. 建立工具系统与多步任务规划
 - [ ] Step 4. 建立连续语音对话能力

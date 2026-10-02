@@ -17,6 +17,7 @@
 ## 当前子计划
 
 - [step1-foreground-service-plan.md](./step1-foreground-service-plan.md) — Step 1：稳定开机自启与前台服务
+- [step2-system-panel-plan.md](./step2-system-panel-plan.md) — Step 2：建立基础系统感知面板
 
 ## 命名约定
 

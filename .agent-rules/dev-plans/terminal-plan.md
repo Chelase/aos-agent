@@ -6,11 +6,32 @@
 
 ## 当前阶段
 
-本计划从属于 `core-agent-plan.md`（Batch 2：核心功能）。
+本计划从属于 `core-agent-plan.md`（Batch 2：核心功能），并作为该计划 Step 1 的子计划直接执行。
 
-它描述的是**当项目进入核心功能批次之后**，如何专项推进真实 shell 终端；不再表示“项目最早阶段就立刻实现终端”。
+MVP 专项（`mvp-core-plan.md`）已于 2026-10 完成，本计划 **Phase 1（核心终端）自 2026-10-02 起实施**。
+Phase 2/3 仍只留计划不编码。
 
-当前策略仍然是直接基于 Termux 架构构建真实 shell 终端，跳过“内置命令”过渡方案，但执行时机以后续批次计划为准。
+### Phase 1 实施决策（2026-10-02）
+
+| 决策 | 内容 | 原因 |
+|---|---|---|
+| 源码引入方式 | 直接下载 termux-app v0.118.1 tag 的 `terminal-emulator` 模块源码，包名整体改 `com.aos.agent.terminal` | 无 Maven 包；整目录拷贝后 sed 改包名，文件清单见下 |
+| `TerminalSession` 保留 Java | 不改写为 Kotlin，仅改包名与 JNI 库名（`libpty.so`） | 原计划「改写为 Kotlin」风险高（约 600 行线程模型），保留 Java 便于后续从 Termux 上游同步；其余新增层（Canvas/ViewModel）为 Kotlin |
+| JNI 代码位置 | `app/src/main/cpp/pty.c` + 同目录 `CMakeLists.txt`（而非 `natives/pty/`） | AGP 默认 externalNativeBuild 目录，零额外配置 |
+| 渲染 | Compose `Canvas` + `drawIntoCanvas` 走 `Paint` 绘制字符网格，`FontFamily.Monospace`；不引 Termux `terminal-view` | 机制文档要求 Compose 渲染；native Canvas 性能可控 |
+| 配色 | 终端背景取 `MaterialTheme.colorScheme.surface`、默认前景取 `onSurface`，ANSI 16 色用 Termux 默认调色板，光标取 `AOSTheme` 主色 | 遵守 ui-design-system 约束 7（组件禁止直引 Color.kt）；ANSI 色属内容色例外 |
+| 输入 | 底部 InputBar（单行输入 + 发送，含换行即多行粘贴）+ Tab / Ctrl+C 快捷键按钮；画布纵向拖拽翻回滚 | Phase 1 范围，不做软键盘终端仿真 |
+
+Phase 1 文件清单：
+
+| 文件 | 动作 |
+|---|---|
+| `terminal/*.java`（Termux 10 文件） | 引入，改包名，`JNI.java` 指向 `libpty` |
+| `cpp/pty.c`、`cpp/CMakeLists.txt` | 新增 |
+| `app/build.gradle.kts` | 加 externalNativeBuild/ndkVersion |
+| `terminal/TerminalViewModel.kt`、`terminal/TerminalCanvas.kt`、`ui/terminal/TerminalScreen.kt` | 新增 |
+| `ui/home/HomeScreen.kt` | 放开终端入口 |
+| `res/values*/strings.xml` | 文案成对新增 |
 
 ## 改动范围
 
@@ -104,12 +125,12 @@ Termux 的 `terminal-emulator` 模块没有发布 Maven 包。方式选择：
 
 ## 验收清单
 
-- [ ] 终端显示 shell prompt
-- [ ] 可执行 `echo`、`ls`、`cat` 等基础命令
-- [ ] 终端输入无延迟
-- [ ] 长输出可滚动查看
-- [ ] 多行粘贴正常
-- [ ] `exit` 正常关闭终端
+- [x] 终端显示 shell prompt
+- [x] 可执行 `echo`、`ls`、`cat` 等基础命令
+- [x] 终端输入无延迟
+- [x] 长输出可滚动查看
+- [x] 多行粘贴正常（发送前 `\n` → `\r`）
+- [x] `exit` 正常关闭终端（并给出退出码与重新启动入口）
 
 ## 不在本期做的事
 
@@ -120,9 +141,32 @@ Termux 的 `terminal-emulator` 模块没有发布 Maven 包。方式选择：
 
 ## 进度
 
-- [ ] 步骤 1: 引入 Termux 源码
-- [ ] 步骤 2: JNI PTY 层
-- [ ] 步骤 3: TerminalSession 适配
-- [ ] 步骤 4: TerminalCanvas 渲染
-- [ ] 步骤 5: TerminalViewModel
-- [ ] 步骤 6: 端到端验证
+- [x] 步骤 1: 引入 Termux 源码 — 2026-10-02（v0.118.1 `terminal-emulator` 14 文件，包名改 `com.aos.agent.terminal`）
+- [x] 步骤 2: JNI PTY 层 — 2026-10-02（`app/src/main/cpp/pty.c` + CMake，`libpty.so` 出 arm64-v8a / x86_64）
+- [x] 步骤 3: TerminalSession 适配 — 2026-10-02（保留 Java，仅改包名与 `loadLibrary("pty")`）
+- [x] 步骤 4: 渲染层 — 2026-10-02（**改为 Compose `Text` 逐行 + Canvas 光标**，原因见机制文档关键约束 6）
+- [x] 步骤 5: TerminalViewModel — 2026-10-02（`AndroidViewModel` + `StateFlow`，会话挂 Activity 作用域，语言/主题切换不掉线）
+- [x] 步骤 6: 端到端验证 — 2026-10-02（AAOS API 36 x86_64 模拟器实测，见下）
+
+## 归档
+
+**完成日期：** 2026-10-02（Phase 1）
+
+**端到端实测（Automotive_1408p_landscape_with_Google_Play）：**
+
+| 项 | 结果 |
+|---|---|
+| 提示符 | `:/data/user/10/com.aos.agent/files $` + 块光标 |
+| `echo hello` | 回显 `hello` + 新提示符 |
+| `ls h`（不存在路径） | `ls: h: No such file or directory` |
+| 历史滚动 | 多条命令记录保留在屏，拖拽翻回滚可用 |
+| `exit` | 徽章转「未运行」+ 卡片「会话已结束（退出码 0）」+「重新启动」可再开 shell |
+| 重进页面 | 自动拉起新会话（`Starting → Running`） |
+
+**遗留问题：**
+- 逐 cell ANSI 属性色/粗斜体/下划线未实现（Phase 2），当前整行单色绘制
+- 无软键盘终端仿真（仅 InputBar + Tab/Ctrl+C/Esc 快捷键），物理键盘 `KeyEvent` 未接
+- 拖拽翻回滚后新输出会跳回最新行（Phase 1 简化，未做「阅读时保持位置」）
+- 选区/复制粘贴、多 Session、颜色主题切换均在 Phase 2
+
+**回写机制文档：** `../mechanisms/terminal-architecture.md`（文件清单、渲染路径变更、新增约束）。
