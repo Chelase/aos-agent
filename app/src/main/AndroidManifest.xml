@@ -12,6 +12,21 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- 语音对话：录音只进系统识别管道，应用不落盘（隐私边界见设置页文案与 mechanisms/voice-interaction.md） -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!-- Android 11+ 包可见性：不声明就探测不到语音识别服务，会被误判成"本机无语音" -->
+    <queries>
+        <intent>
+            <action android:name="android.speech.action.RECOGNIZE_SPEECH" />
+        </intent>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+    </queries>
 
     <!-- 车辆只读属性。分级见 dev-plans/mvp/step3-toolsystem-plan.md §1.1：
          normal 声明即可用；dangerous 需运行时授予，量产车机可能没有授权 UI。 -->

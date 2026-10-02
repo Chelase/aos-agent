@@ -61,6 +61,32 @@
     <string name="panel_updated_at">Updated at %1$s</string>
     <string name="panel_action_refresh">Refresh</string>
     <string name="value_unavailable">Unavailable</string>
+
+    <!-- Voice: phase labels, failure reasons, command acknowledgements -->
+    <string name="voice_action_listen">Speak</string>
+    <string name="voice_action_listening">Listening… (tap to stop)</string>
+    <string name="voice_action_thinking">Thinking…</string>
+    <string name="voice_action_speaking">Speaking… (tap to interrupt)</string>
+    <string name="voice_err_no_service">No speech recognition service on this device</string>
+    <string name="voice_err_permission">Microphone permission not granted</string>
+    <string name="voice_err_audio_busy">Microphone is busy, try again</string>
+    <string name="voice_notice_no_match">Didn\'t catch that, please say it again</string>
+    <string name="voice_notice_timeout">Heard no speech</string>
+    <string name="voice_notice_failed">Recognition failed, please retry</string>
+    <string name="voice_notice_thinking">Still working on the last question</string>
+    <string name="voice_notice_interrupted">Playback stopped</string>
+    <string name="voice_ack_new_session">Started a new session</string>
+    <string name="voice_ack_open_settings">Opening settings</string>
+    <string name="voice_ack_close_settings">Settings closed</string>
+    <string name="voice_ack_go_home">Back to home</string>
+    <string name="voice_ack_use_mcp">Listing MCP tool sources</string>
+    <string name="voice_ack_use_skill">Ran skill \"%1$s\"</string>
+    <string name="voice_skill_missing">No such skill: %1$s</string>
+    <string name="voice_heard">Heard: %1$s</string>
+    <string name="settings_section_voice">Voice</string>
+    <string name="settings_voice_tts">Speak answers</string>
+    <string name="settings_voice_continuous">Continuous conversation</string>
+    <string name="settings_voice_privacy">Audio stays in the on-device recognition pipeline — never stored or uploaded; only the recognized text reaches the model.</string>
     <string name="section_system">System</string>
     <string name="section_device">Device</string>
     <string name="section_platform">Platform</string>

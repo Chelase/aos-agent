@@ -63,6 +63,69 @@
     <string name="panel_updated_at">更新于 %1$s</string>
     <string name="panel_action_refresh">刷新</string>
     <string name="value_unavailable">不可用</string>
+
+    <!-- 语音交互：状态灯文案、失败原因、指令回执 -->
+    <string name="voice_action_listen">说话</string>
+    <string name="voice_action_listening">聆听中…（点按结束）</string>
+    <string name="voice_action_thinking">思考中…</string>
+    <string name="voice_action_speaking">播报中…（点按打断）</string>
+    <string name="voice_err_no_service">本机没有语音识别服务，暂不能用语音</string>
+    <string name="voice_err_permission">未授予麦克风权限，语音不可用</string>
+    <string name="voice_err_audio_busy">麦克风被占用，稍后再试</string>
+    <string name="voice_notice_no_match">没听清，请再说一次</string>
+    <string name="voice_notice_timeout">没听到说话</string>
+    <string name="voice_notice_failed">识别失败，请重试</string>
+    <string name="voice_notice_thinking">正在处理上一问，请稍候</string>
+    <string name="voice_notice_interrupted">已打断播报</string>
+    <string name="voice_ack_new_session">已新开会话</string>
+    <string name="voice_ack_open_settings">正在打开设置</string>
+    <string name="voice_ack_close_settings">已关闭设置</string>
+    <string name="voice_ack_go_home">已返回首页</string>
+    <string name="voice_ack_use_mcp">正在列出 MCP 工具来源</string>
+    <string name="voice_ack_use_skill">已按技能「%1$s」执行</string>
+    <string name="voice_skill_missing">没有这个技能：%1$s</string>
+    <string name="voice_heard">听到：%1$s</string>
+    <string name="settings_section_voice">语音</string>
+    <string name="settings_voice_tts">语音播报回答</string>
+    <string name="settings_voice_continuous">连续对话</string>
+    <string name="settings_voice_privacy">录音只进识别管道，不保存也不上传；只有识别出的文本交给模型。</string>
+
+    <!-- 语音指令词表：有意同时收中英文，与界面语言无关，故只在默认资源里定义一份。 -->
+    <string-array name="voice_cmd_new_session" translatable="false">
+        <item>新开会话</item>
+        <item>重新开始</item>
+        <item>清空对话</item>
+        <item>new session</item>
+        <item>clear chat</item>
+        <item>start over</item>
+    </string-array>
+    <string-array name="voice_cmd_open_settings" translatable="false">
+        <item>打开设置</item>
+        <item>进入设置</item>
+        <item>open settings</item>
+    </string-array>
+    <string-array name="voice_cmd_close_settings" translatable="false">
+        <item>关闭设置</item>
+        <item>退出设置</item>
+        <item>close settings</item>
+    </string-array>
+    <string-array name="voice_cmd_go_home" translatable="false">
+        <item>返回首页</item>
+        <item>回到首页</item>
+        <item>go home</item>
+    </string-array>
+    <string-array name="voice_cmd_use_mcp" translatable="false">
+        <item>使用MCP</item>
+        <item>打开MCP</item>
+        <item>用MCP工具</item>
+        <item>use mcp</item>
+    </string-array>
+    <string-array name="voice_cmd_use_skill_prefix" translatable="false">
+        <item>使用技能</item>
+        <item>用技能</item>
+        <item>调用技能</item>
+        <item>use skill</item>
+    </string-array>
     <string name="section_system">系统</string>
     <string name="section_device">设备</string>
     <string name="section_platform">平台</string>

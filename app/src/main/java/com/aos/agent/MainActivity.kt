@@ -1,12 +1,18 @@
 package com.aos.agent
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.lazy.items
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aos.agent.runtime.AgentRuntime
 import com.aos.agent.runtime.RuntimeStatus
 import com.aos.agent.ui.chat.ChatEntry
@@ -21,23 +27,37 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
+import androidx.core.content.ContextCompat
+import com.aos.agent.core.engine.AgentEvent
 import com.aos.agent.core.llm.LlmConfig
 import com.aos.agent.core.tools.mcp.McpServerConfig
+import com.aos.agent.core.voice.VoiceCommand
 import com.aos.agent.data.store.ThemeStore
+import com.aos.agent.data.store.VoiceSettingsStore
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import com.aos.agent.i18n.AppLocaleController
 import com.aos.agent.i18n.localeStoreFor
 import com.aos.agent.system.AndroidSystemInfoReader
+import com.aos.agent.system.CarUxRestrictionsReader
 import com.aos.agent.system.SystemInfoProvider
+import com.aos.agent.system.voice.AndroidSpeechSynthesizer
+import com.aos.agent.system.voice.AndroidSpeechTranscriber
 import com.aos.agent.terminal.TerminalViewModel
 import com.aos.agent.ui.engineer.EngineerModeScreen
 import com.aos.agent.ui.home.HomeScreen
 import com.aos.agent.ui.systempanel.SystemPanelScreen
 import com.aos.agent.ui.terminal.TerminalScreen
 import com.aos.agent.ui.theme.AOSAgentTheme
+import com.aos.agent.ui.voice.VoiceController
+import com.aos.agent.ui.voice.voiceVocabularyFrom
 
 class MainActivity : ComponentActivity() {
+
+    private lateinit var voiceController: VoiceController
+    private lateinit var voiceSettingsStore: VoiceSettingsStore
+    private val uxRestrictions by lazy { CarUxRestrictionsReader(this) }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // 主题在 setContentView 前定死：先选对窗口背景样式，避免启动闪屏错色（design.md §9.3）。
         val themeStore = ThemeStore(this)
@@ -50,10 +70,27 @@ class MainActivity : ComponentActivity() {
         val systemInfoProvider = SystemInfoProvider(AndroidSystemInfoReader(this))
         // 终端会话挂 ViewModel：语言/主题切换重建 Activity 后 shell 不掉
         val terminalViewModel = ViewModelProvider(this)[TerminalViewModel::class.java]
+
+        voiceSettingsStore = VoiceSettingsStore(this)
+        // 识别器与 TTS 都绑定主线程与 Activity 生命周期，随 Activity 创建/释放
+        voiceController = VoiceController(
+            transcriber = AndroidSpeechTranscriber(this),
+            synthesizer = AndroidSpeechSynthesizer(this),
+            vocabulary = voiceVocabularyFrom(this),
+            settings = voiceSettingsStore.settings,
+            hasPermission = {
+                ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
+                    PackageManager.PERMISSION_GRANTED
+            },
+        )
+        uxRestrictions.start()
+
         setContent {
             AOSAgentApp(
                 systemInfoProvider = systemInfoProvider,
                 terminalViewModel = terminalViewModel,
+                voiceController = voiceController,
+                voiceSettingsStore = voiceSettingsStore,
                 languageSwitchable = localeController.canSwitch,
                 onLanguageToggle = { localeController.toggle() },
                 darkTheme = darkTheme,
@@ -66,6 +103,12 @@ class MainActivity : ComponentActivity() {
             )
         }
     }
+
+    override fun onDestroy() {
+        voiceController.release()
+        uxRestrictions.close()
+        super.onDestroy()
+    }
 }
 
 private enum class Destination { Home, Engineer, Chat, Settings, Terminal, SystemPanel }
@@ -74,6 +117,8 @@ private enum class Destination { Home, Engineer, Chat, Settings, Terminal, Syste
 private fun AOSAgentApp(
     systemInfoProvider: SystemInfoProvider,
     terminalViewModel: TerminalViewModel,
+    voiceController: VoiceController,
+    voiceSettingsStore: VoiceSettingsStore,
     languageSwitchable: Boolean,
     onLanguageToggle: () -> Unit,
     darkTheme: Boolean,
@@ -117,11 +162,14 @@ private fun AOSAgentApp(
 
             Destination.Chat -> ChatConsole(
                 runtime = runtime,
+                voice = voiceController,
                 onBackClick = { destination = Destination.Home },
+                onOpenSettings = { destination = Destination.Settings },
             )
 
             Destination.Settings -> SettingsHost(
                 runtime = runtime,
+                voiceSettingsStore = voiceSettingsStore,
                 darkTheme = darkTheme,
                 onToggleTheme = onToggleTheme,
                 onBackClick = { destination = Destination.Home },
@@ -130,52 +178,111 @@ private fun AOSAgentApp(
     }
 }
 
-/** 控制台宿主：持有对话状态并把引擎事件折叠进去；引擎本身不知道界面存在。 */
+/**
+ * 控制台宿主：持有对话状态并把引擎事件折叠进去；引擎本身不知道界面存在。
+ *
+ * 语音与键盘共用同一条发送通路：识别出的普通提问走 [submit]，命中本地指令的
+ * 就地执行（清对话、跳页面），不进模型。
+ */
 @Composable
 private fun ChatConsole(
     runtime: AgentRuntime,
+    voice: VoiceController,
     onBackClick: () -> Unit,
+    onOpenSettings: () -> Unit,
 ) {
     val entries = remember { mutableStateListOf<ChatEntry>() }
     var status by remember { mutableStateOf(RuntimeStatus.EMPTY) }
     var busy by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val voiceState by voice.state.collectAsStateWithLifecycle()
+    val noPermission = stringResource(R.string.voice_err_permission)
+    val skillMissing = { name: String -> context.getString(R.string.voice_skill_missing, name) }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        voice.refreshAvailability()
+        if (!granted) entries += ChatEntry.Note(noPermission)
+    }
+
+    fun submit(query: String) {
+        if (busy) return
+        scope.launch {
+            busy = true
+            voice.onTurnStarted()
+            ChatTranscript.startTurn(entries, query, runtime.matchedSkill(query)?.name)
+            try {
+                runtime.send(query).collect { event ->
+                    ChatTranscript.apply(entries, event)
+                    when (event) {
+                        is AgentEvent.Completed -> voice.onAnswer(event.text)
+                        is AgentEvent.Failed -> voice.onTurnFailed()
+                        else -> Unit
+                    }
+                }
+            } catch (ignored: Exception) {
+                voice.onTurnFailed()
+            } finally {
+                busy = false
+                status = runtime.status()
+            }
+        }
+    }
+
+    fun runCommand(command: VoiceCommand) {
+        when (command) {
+            VoiceCommand.NewSession -> entries.clear()
+            VoiceCommand.OpenSettings, VoiceCommand.UseMcp -> onOpenSettings()
+            VoiceCommand.CloseSettings, VoiceCommand.GoHome -> onBackClick()
+            is VoiceCommand.UseSkill -> {
+                val named = runtime.skillNames().firstOrNull { it.equals(command.skill, ignoreCase = true) }
+                if (named != null) submit(named) else entries += ChatEntry.Note(skillMissing(command.skill))
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         runtime.refresh()
         status = runtime.status()
+        voice.refreshAvailability()
+    }
+
+    // 每次重组都重绑，避免回调里留住上一轮的 entries / busy
+    SideEffect {
+        voice.onQuery = { text -> submit(text) }
+        voice.onCommand = { command -> runCommand(command) }
     }
 
     ChatScreen(
         entries = entries,
         status = status,
         busy = busy,
+        voiceState = voiceState,
         onBackClick = onBackClick,
-        onSend = { query ->
-            scope.launch {
-                busy = true
-                ChatTranscript.startTurn(entries, query, runtime.matchedSkill(query)?.name)
-                try {
-                    runtime.send(query).collect { event -> ChatTranscript.apply(entries, event) }
-                } finally {
-                    busy = false
-                    status = runtime.status()
-                }
+        onSend = { query -> submit(query) },
+        onVoiceToggle = {
+            if (voiceState.needsPermission) {
+                permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            } else {
+                voice.toggle()
             }
         },
     )
 }
 
-/** 设置宿主：读写外观、模型与 MCP 配置，保存后立刻刷新运行时并回到首页。 */
+/** 设置宿主：读写外观、模型、MCP 与语音偏好，保存后立刻刷新运行时并回到首页。 */
 @Composable
 private fun SettingsHost(
     runtime: AgentRuntime,
+    voiceSettingsStore: VoiceSettingsStore,
     darkTheme: Boolean,
     onToggleTheme: () -> Unit,
     onBackClick: () -> Unit,
 ) {
     var current by remember { mutableStateOf<com.aos.agent.core.llm.LlmConfig?>(null) }
     var servers by remember { mutableStateOf<List<com.aos.agent.core.tools.mcp.McpServerConfig>>(emptyList()) }
+    val voiceSettings by voiceSettingsStore.settings.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
@@ -187,7 +294,10 @@ private fun SettingsHost(
         currentLlm = current?.let { Triple(it.baseUrl, it.model, it.apiKey) },
         mcpServers = servers,
         darkTheme = darkTheme,
+        voiceSettings = voiceSettings,
         onToggleTheme = onToggleTheme,
+        onToggleTts = { enabled -> scope.launch { voiceSettingsStore.setTtsEnabled(enabled) } },
+        onToggleContinuous = { enabled -> scope.launch { voiceSettingsStore.setContinuous(enabled) } },
         onBackClick = onBackClick,
         onSaveModel = { baseUrl, model, apiKey ->
             scope.launch {

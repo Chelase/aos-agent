@@ -137,6 +137,9 @@ class AgentRuntime(context: Context) {
     /** 命中的 skill，供界面显示"这一轮走了哪个 skill"。 */
     fun matchedSkill(query: String): SkillDefinition? = skillRegistry.match(query)
 
+    /** 已加载的技能名，语音指令「使用技能 X」按此校验用户点名的技能是否存在。 */
+    fun skillNames(): List<String> = skillRegistry.skills.map { it.name }
+
     fun availableToolNames(): Set<String> = toolSystem.all.map { it.name }.toSet()
 
     suspend fun send(query: String): Flow<AgentEvent> {

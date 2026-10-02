@@ -1,6 +1,7 @@
 package com.aos.agent.ui.settings
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -16,6 +18,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -33,9 +36,11 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.aos.agent.R
 import com.aos.agent.core.tools.mcp.McpServerConfig
+import com.aos.agent.data.store.VoiceSettings
 import com.aos.agent.ui.components.AOSCard
 import com.aos.agent.ui.components.AOSDataRow
 import com.aos.agent.ui.components.AOSLanguageSwitch
+import com.aos.agent.ui.components.AOSRowDivider
 import com.aos.agent.ui.components.AOSSectionHeader
 import com.aos.agent.ui.components.AOSPrimaryButton
 import com.aos.agent.ui.components.AOSSecondaryButton
@@ -60,7 +65,10 @@ fun SettingsScreen(
     onSaveMcp: (name: String, url: String) -> Unit,
     onDeleteMcp: (name: String) -> Unit,
     darkTheme: Boolean = false,
+    voiceSettings: VoiceSettings = VoiceSettings(),
     onToggleTheme: () -> Unit = {},
+    onToggleTts: (Boolean) -> Unit = {},
+    onToggleContinuous: (Boolean) -> Unit = {},
 ) {
     var baseUrl by remember { mutableStateOf(currentLlm?.first.orEmpty()) }
     var model by remember { mutableStateOf(currentLlm?.second.orEmpty()) }
@@ -223,7 +231,53 @@ fun SettingsScreen(
                     color = AOSTheme.statusSuccess,
                 )
             }
+
+            AOSSectionHeader(title = stringResource(R.string.settings_section_voice))
+            AOSCard(modifier = Modifier.fillMaxWidth()) {
+                VoiceSwitchRow(
+                    label = stringResource(R.string.settings_voice_tts),
+                    checked = voiceSettings.ttsEnabled,
+                    onCheckedChange = onToggleTts,
+                )
+                AOSRowDivider()
+                VoiceSwitchRow(
+                    label = stringResource(R.string.settings_voice_continuous),
+                    checked = voiceSettings.continuous,
+                    onCheckedChange = onToggleContinuous,
+                )
+                Spacer(modifier = Modifier.height(AOSSpacing.sm))
+                Text(
+                    text = stringResource(R.string.settings_voice_privacy),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
+    }
+}
+
+/** 语音开关行：整行可点，开关状态即结果，不额外做确认弹窗。 */
+@Composable
+private fun VoiceSwitchRow(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = AOSSizing.touchTarget)
+            .clickable { onCheckedChange(!checked) }
+            .padding(vertical = AOSSpacing.xs),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 

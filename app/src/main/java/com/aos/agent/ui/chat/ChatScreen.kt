@@ -37,6 +37,9 @@ import com.aos.agent.ui.theme.AOSDataText
 import com.aos.agent.ui.theme.AOSSizing
 import com.aos.agent.ui.theme.AOSSpacing
 import com.aos.agent.ui.theme.AOSTheme
+import com.aos.agent.ui.voice.VoiceMicButton
+import com.aos.agent.ui.voice.VoiceStatusLine
+import com.aos.agent.ui.voice.VoiceUiState
 import com.aos.agent.ui.theme.aosLegendStyle
 
 /**
@@ -44,18 +47,26 @@ import com.aos.agent.ui.theme.aosLegendStyle
  *
  * 对话即对话：用户消息、助手回复与工具轨迹逐行滚动，不常驻运行状态面板；
  * 配置入口在首页设置，不在本页。未配置模型等阻断态以警示行出现在输入区上方，
- * 并指引到首页设置。
+ * 并指引到首页设置。输入行左侧是麦克风：语音与键盘是同一条通路的两种输入，
+ * 识别中的部分结果直接进输入框（所见即所发）。
  */
 @Composable
 fun ChatScreen(
     entries: List<ChatEntry>,
     status: RuntimeStatus,
     busy: Boolean,
+    voiceState: VoiceUiState,
     onBackClick: () -> Unit,
     onSend: (String) -> Unit,
+    onVoiceToggle: () -> Unit,
 ) {
     var input by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
+
+    // 语音部分结果直接落到输入框，用户可以在发送前改字
+    LaunchedEffect(voiceState.partial) {
+        if (voiceState.partial.isNotBlank()) input = voiceState.partial
+    }
 
     LaunchedEffect(entries.size, busy) {
         if (entries.isNotEmpty()) listState.animateScrollToItem(entries.lastIndex)
@@ -96,10 +107,12 @@ fun ChatScreen(
             }
         }
         Spacer(modifier = Modifier.height(AOSSpacing.sm))
+        VoiceStatusLine(state = voiceState, modifier = Modifier.padding(bottom = AOSSpacing.xs))
         InputRow(
             input = input,
             canSend = status.canSend && !busy,
             blockedReason = status.blockedReason,
+            voiceState = voiceState,
             onInputChange = { input = it },
             onSend = {
                 val query = input.trim()
@@ -108,6 +121,7 @@ fun ChatScreen(
                     onSend(query)
                 }
             },
+            onVoiceToggle = onVoiceToggle,
         )
     }
 }
@@ -181,8 +195,10 @@ private fun InputRow(
     input: String,
     canSend: Boolean,
     blockedReason: String?,
+    voiceState: VoiceUiState,
     onInputChange: (String) -> Unit,
     onSend: () -> Unit,
+    onVoiceToggle: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         blockedReason?.let {
@@ -198,6 +214,11 @@ private fun InputRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(AOSSpacing.sm),
         ) {
+            VoiceMicButton(
+                phase = voiceState.phase,
+                enabled = voiceState.usable,
+                onClick = onVoiceToggle,
+            )
             OutlinedTextField(
                 value = input,
                 onValueChange = onInputChange,
