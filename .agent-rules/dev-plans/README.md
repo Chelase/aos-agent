@@ -54,7 +54,7 @@
 - [ui-design-system-plan-phase3.md](./ui-design-system-plan-phase3.md) — UI 样式从零重构 v3.0 竞速荧光（已被 v4.0 接替，留档）
 - [ui-design-system-plan-phase4.md](./ui-design-system-plan-phase4.md) — UI 样式 v4.0 深空蓝白暗色单主题（已被 v5.0 接替，留档）
 - [ui-design-system-plan-phase5.md](./ui-design-system-plan-phase5.md) — UI v5.0 双主题：日间蓝白浅色（默认）+ 夜间深色，可切换（当前生效）
-- [voice-interaction-plan.md](./voice-interaction-plan.md) — 语音交互：ASR/TTS/语音指令（Phase A）+ 连续对话/离线唤醒（Phase B）+ 车机深度（Phase C），驾驶场景优先（计划已评审待排期）
+- [voice-interaction-plan.md](./voice-interaction-plan.md) — 语音交互：ASR/TTS/语音指令（Phase A **已交付 2026-10-02**）+ 连续对话/离线唤醒（Phase B）+ 车机深度（Phase C），驾驶场景优先
 
 ### 子目录
 

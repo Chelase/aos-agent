@@ -2,7 +2,7 @@
 
 > **统一愿景对齐**：与 `../docs/unified-ecosystem-vision.md` 一致。语音交互是 aos-agent 车机端本地 UX 层：音频不出车机（KWS 唤醒词本地跑、识别文本才进 Agent 引擎），不改变 AOC 单一人格出口，不自研跨设备协议。
 >
-> 配套机制文档：实现交付后按 `../rules/complex-feature-mechanism.md` 补 `../mechanisms/voice-interaction.md`（本期计划先行，机制文档随 Phase A 落地同步生成）。
+> 配套机制文档：`../mechanisms/voice-interaction.md`（Phase A 已于 2026-10-02 落地并生成）
 >
 > 设计依据：`../docs/原型/design.md` §6.5 驾驶模式遮罩、§9 驾驶模式规范（语音优先、行驶中禁键盘输入、触控 ≥72dp）。
 
@@ -93,12 +93,48 @@
 
 ## 验收清单（Phase A 出口）
 
-- [ ] 模拟器全链路：说 → 识别上屏 → 发送 → 回复 → TTS 播报，全程不碰键盘
-- [ ] `VoiceCommandParser` 单测 ≥10 用例全绿；`./gradlew :app:testDebugUnitTest` 全绿
-- [ ] 无语音服务环境渲染禁用态 + 原因（不伪造能力）
-- [ ] 音频焦点被导航/媒体抢占时识别暂停、恢复后继续
-- [ ] 新增文案中英成对；`assembleDebug` 通过
-- [ ] 行驶模拟（RESTRICTED）下麦克风按钮 ≥72dp、无键盘依赖
+- [~] 模拟器全链路：说 → 识别上屏 → 发送 → 回复 → TTS 播报，全程不碰键盘
+      **部分验证**：点麦克风确实起了系统识别器并回到界面回执；模拟器无麦克风音频
+      （emulator 日志 `Voice is not capturing`），"说→出字"这一段只能真机验。
+- [x] `VoiceCommandParser` 单测 ≥10 用例全绿（10 例）；另加状态机 16 例，共 26 例；`:app:testDebugUnitTest` 全绿
+- [x] 无语音服务/未授权环境渲染禁用态 + 原因（实测：未授权时按钮灰、状态行显示"未授予麦克风权限，语音不可用"）
+- [~] 音频焦点被导航/媒体抢占时识别暂停、恢复后继续
+      **仅代码接通**（播报侧成对申请/放弃焦点），未用真实媒体流验证。
+- [x] 新增文案中英成对；`assembleDebug` 通过
+- [ ] 行驶模拟（RESTRICTED）下麦克风按钮 ≥72dp、无键盘依赖（本期只接了读取，未改布局）
+
+## 进度
+
+- [x] 现状盘点（语音零实现、CarUxRestrictions 未接入）
+- [x] 方案决策记录（ASR/TTS/KWS/指令解析/音频焦点）
+- [x] Phase A 实施 — 2026-10-02（用户确认排期后开工）
+- [ ] Phase B（离线唤醒词 Vosk + 驾驶全屏遮罩）
+- [ ] Phase C
+
+## 归档
+
+**Phase A 完成日期：** 2026-10-02
+
+**交付：** `core/voice`（指令模型 + 纯函数解析 + 通道接口）、`system/voice`（SpeechRecognizer / TextToSpeech
+封装 + 焦点）、`ui/voice`（状态机 + 灯语麦克风控件 + 状态行 + 词表装配）、`data/store/VoiceSettingsStore`、
+`system/CarUxRestrictionsReader`（只读）；对话页输入行接麦克风，设置页加「语音」两张开关。
+
+**实测记录（AAOS API 36 x86_64 模拟器）：**
+- 未授权：按钮灰 + 状态行"未授予麦克风权限，语音不可用"（禁用态带原因，未伪造能力）。
+- 授权后：按钮点亮（蓝色话筒 + 强调描边），点按起了系统识别器，回落到"麦克风被占用，稍后再试"回执，
+  状态回 IDLE 不卡死。
+- 设置页「语音播报回答」「连续对话」开关渲染正常，拨动后离开再进仍保留（DataStore 往返）。
+- **坑**：AAOS 是双用户（user 0 / user 10），应用跑在 user 10，`adb shell pm grant` 默认只授 user 0，
+  症状是"授了权界面还说没权限"，要 `pm grant --user 10`。
+
+**遗留问题：**
+- 「说→出字」与播报可听需真机或带麦克风环境验证；本地指令 5 条动作已接通但未逐条语音实测。
+- 打断（barge-in）目前是"点按打断"，未做检测到人声自动停播（需要一路常听，与隐私边界冲突，另案）。
+- 唤醒词（Vosk 离线 KWS + 首启模型下载）与行驶全屏遮罩属 Phase B，本期未动。
+- 权限弹窗在本 AAOS 镜像不弹出（车机通常由厂商授权），授权路径未在界面侧验证，仅验证了已授权/未授权两态。
+
+**回写机制文档：** 新增 `../mechanisms/voice-interaction.md`，并同步 `mechanisms/README.md` 与
+`.agent-rules/README.md` §6 双索引。
 
 ## 不在本期做的事
 
@@ -106,10 +142,3 @@
 - 不上传任何音频；识别走系统 Google 服务（隐私边界在 Phase A 文案中说明）
 - 不做 TTS 音色定制、不做打断手势之外的旋钮交互
 - 不改 AOC 协议
-
-## 进度
-
-- [x] 现状盘点（语音零实现、CarUxRestrictions 未接入）
-- [x] 方案决策记录（ASR/TTS/KWS/指令解析/音频焦点）
-- [ ] Phase A 实施（待用户确认排期后开始）
-- [ ] Phase B / Phase C

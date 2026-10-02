@@ -94,6 +94,7 @@
 - [ui-design-system.md](./ui-design-system.md) — UI 设计 token、共享组件库与中英双语机制
 - [boot-and-foreground-service.md](./boot-and-foreground-service.md) — 开机自启广播链路与前台服务保活
 - [aoc-integration.md](./aoc-integration.md) — AOC 生态接入契约（Entry 模式 HTTP 协议、身份、skill 请求回传）
+- [voice-interaction.md](./voice-interaction.md) — 语音交互机制（识别/播报/本地指令/连续对话/音频焦点）
 
 
 
