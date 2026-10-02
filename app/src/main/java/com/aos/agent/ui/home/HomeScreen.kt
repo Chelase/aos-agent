@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -24,9 +25,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.aos.agent.R
 import com.aos.agent.system.SystemInfo
-import com.aos.agent.ui.components.AOSActionTile
 import com.aos.agent.ui.components.AOSCard
 import com.aos.agent.ui.components.AOSDataRow
+import com.aos.agent.ui.components.AOSDestinationRow
 import com.aos.agent.ui.components.AOSLanguageSwitch
 import com.aos.agent.ui.components.AOSLogo
 import com.aos.agent.ui.components.AOSSectionHeader
@@ -49,6 +50,8 @@ fun HomeScreen(
     languageSwitchable: Boolean,
     onEngineerModeClick: () -> Unit,
     onChatClick: () -> Unit,
+    onTerminalClick: () -> Unit,
+    onSystemPanelClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onLanguageToggle: () -> Unit,
 ) {
@@ -73,15 +76,17 @@ fun HomeScreen(
             BrandColumn(
                 systemInfo = systemInfo,
                 modifier = Modifier
-                    .weight(0.35f)
+                    .weight(0.30f)
                     .fillMaxHeight(),
             )
             QuickActionsColumn(
                 onEngineerModeClick = onEngineerModeClick,
                 onChatClick = onChatClick,
+                onTerminalClick = onTerminalClick,
+                onSystemPanelClick = onSystemPanelClick,
                 onSettingsClick = onSettingsClick,
                 modifier = Modifier
-                    .weight(0.40f)
+                    .weight(0.42f)
                     .fillMaxHeight(),
             )
             GlanceColumn(
@@ -91,7 +96,7 @@ fun HomeScreen(
                 languageSwitchable = languageSwitchable,
                 onLanguageToggle = onLanguageToggle,
                 modifier = Modifier
-                    .weight(0.25f)
+                    .weight(0.28f)
                     .fillMaxHeight(),
             )
         }
@@ -145,6 +150,8 @@ private fun BrandColumn(
 private fun QuickActionsColumn(
     onEngineerModeClick: () -> Unit,
     onChatClick: () -> Unit,
+    onTerminalClick: () -> Unit,
+    onSystemPanelClick: () -> Unit,
     onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -155,57 +162,69 @@ private fun QuickActionsColumn(
         AOSSectionHeader(title = stringResource(R.string.home_quick_actions))
         Spacer(modifier = Modifier.height(AOSSpacing.md))
 
-        val comingSoon = stringResource(R.string.badge_coming_soon)
         val ready = stringResource(R.string.badge_ready)
 
-        // 2x2 网格。终端 / 对话属 Batch 2，系统面板属 Batch 1 Step 2，
-        // 目前只有工程师模式已交付，其余渲染为未开放态。
-        Row(horizontalArrangement = Arrangement.spacedBy(AOSSpacing.md)) {
-            AOSActionTile(
-                title = stringResource(R.string.action_terminal),
-                badgeText = comingSoon,
-                enabled = false,
-                onClick = {},
-                modifier = Modifier.weight(1f),
-            )
-            AOSActionTile(
-                title = stringResource(R.string.action_chat),
-                badgeText = ready,
-                enabled = true,
-                onClick = onChatClick,
-                modifier = Modifier.weight(1f),
-            )
-        }
-        Spacer(modifier = Modifier.height(AOSSpacing.md))
-        Row(horizontalArrangement = Arrangement.spacedBy(AOSSpacing.md)) {
-            AOSActionTile(
-                title = stringResource(R.string.action_system_panel),
-                badgeText = comingSoon,
-                enabled = false,
-                onClick = {},
-                modifier = Modifier.weight(1f),
-            )
-            AOSActionTile(
-                title = stringResource(R.string.action_engineer_mode),
-                badgeText = ready,
-                enabled = true,
-                onClick = onEngineerModeClick,
-                modifier = Modifier.weight(1f),
-            )
-        }
-        Spacer(modifier = Modifier.height(AOSSpacing.md))
-        // 第五项：设置。右侧留空保持两列栅格对齐，不塞假功能占位。
-        Row(horizontalArrangement = Arrangement.spacedBy(AOSSpacing.md)) {
-            AOSActionTile(
-                title = stringResource(R.string.action_settings),
-                badgeText = ready,
-                enabled = true,
-                onClick = onSettingsClick,
-                modifier = Modifier.weight(1f),
-            )
-            Spacer(modifier = Modifier.weight(1f))
-        }
+        // 点标导航行（design.md §5.10）：行即界面。
+        // 终端（Batch 2 Step 1）/ 系统面板（Batch 1 Step 2）/ 对话 / 工程师模式 / 设置均已交付。
+        DestinationRow(
+            title = stringResource(R.string.action_terminal),
+            badgeText = ready,
+            enabled = true,
+            onClick = onTerminalClick,
+        )
+        RowDivider()
+        DestinationRow(
+            title = stringResource(R.string.action_chat),
+            badgeText = ready,
+            enabled = true,
+            onClick = onChatClick,
+        )
+        RowDivider()
+        DestinationRow(
+            title = stringResource(R.string.action_system_panel),
+            badgeText = ready,
+            enabled = true,
+            onClick = onSystemPanelClick,
+        )
+        RowDivider()
+        DestinationRow(
+            title = stringResource(R.string.action_engineer_mode),
+            badgeText = ready,
+            enabled = true,
+            onClick = onEngineerModeClick,
+        )
+        RowDivider()
+        DestinationRow(
+            title = stringResource(R.string.action_settings),
+            badgeText = ready,
+            enabled = true,
+            onClick = onSettingsClick,
+        )
     }
+}
+
+@Composable
+private fun DestinationRow(
+    title: String,
+    badgeText: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    AOSDestinationRow(
+        title = title,
+        badgeText = badgeText,
+        enabled = enabled,
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+    )
+}
+
+@Composable
+private fun RowDivider() {
+    HorizontalDivider(
+        thickness = AOSSizing.borderWidth,
+        color = MaterialTheme.colorScheme.outlineVariant,
+    )
 }
 
 @Composable

@@ -21,40 +21,65 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
+import com.aos.agent.core.llm.LlmConfig
+import com.aos.agent.core.tools.mcp.McpServerConfig
+import com.aos.agent.data.store.ThemeStore
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import com.aos.agent.i18n.AppLocaleController
 import com.aos.agent.i18n.localeStoreFor
 import com.aos.agent.system.AndroidSystemInfoReader
 import com.aos.agent.system.SystemInfoProvider
+import com.aos.agent.terminal.TerminalViewModel
 import com.aos.agent.ui.engineer.EngineerModeScreen
 import com.aos.agent.ui.home.HomeScreen
+import com.aos.agent.ui.systempanel.SystemPanelScreen
+import com.aos.agent.ui.terminal.TerminalScreen
 import com.aos.agent.ui.theme.AOSAgentTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        // 主题在 setContentView 前定死：先选对窗口背景样式，避免启动闪屏错色（design.md §9.3）。
+        val themeStore = ThemeStore(this)
+        val darkTheme = themeStore.isDarkBlocking()
+        setTheme(if (darkTheme) R.style.Theme_AOSAgent_Dark else R.style.Theme_AOSAgent)
         super.onCreate(savedInstanceState)
 
         // 首启语言兜底在 AOSAgentApplication 完成，此处只负责切换入口。
         val localeController = AppLocaleController(localeStoreFor(this))
         val systemInfoProvider = SystemInfoProvider(AndroidSystemInfoReader(this))
+        // 终端会话挂 ViewModel：语言/主题切换重建 Activity 后 shell 不掉
+        val terminalViewModel = ViewModelProvider(this)[TerminalViewModel::class.java]
         setContent {
             AOSAgentApp(
                 systemInfoProvider = systemInfoProvider,
+                terminalViewModel = terminalViewModel,
                 languageSwitchable = localeController.canSwitch,
                 onLanguageToggle = { localeController.toggle() },
+                darkTheme = darkTheme,
+                onToggleTheme = {
+                    lifecycleScope.launch {
+                        themeStore.saveDark(!darkTheme)
+                        recreate()
+                    }
+                },
             )
         }
     }
 }
 
-private enum class Destination { Home, Engineer, Chat, Settings }
+private enum class Destination { Home, Engineer, Chat, Settings, Terminal, SystemPanel }
 
 @Composable
 private fun AOSAgentApp(
     systemInfoProvider: SystemInfoProvider,
+    terminalViewModel: TerminalViewModel,
     languageSwitchable: Boolean,
     onLanguageToggle: () -> Unit,
+    darkTheme: Boolean,
+    onToggleTheme: () -> Unit,
 ) {
-    AOSAgentTheme {
+    AOSAgentTheme(darkTheme = darkTheme) {
         var destination by remember { mutableStateOf(Destination.Home) }
         val systemInfo = remember { systemInfoProvider.collect() }
         val context = LocalContext.current
@@ -69,6 +94,8 @@ private fun AOSAgentApp(
                 languageSwitchable = languageSwitchable,
                 onEngineerModeClick = { destination = Destination.Engineer },
                 onChatClick = { destination = Destination.Chat },
+                onTerminalClick = { destination = Destination.Terminal },
+                onSystemPanelClick = { destination = Destination.SystemPanel },
                 onSettingsClick = { destination = Destination.Settings },
                 onLanguageToggle = onLanguageToggle,
             )
@@ -78,15 +105,26 @@ private fun AOSAgentApp(
                 onBackClick = { destination = Destination.Home },
             )
 
+            Destination.Terminal -> TerminalScreen(
+                viewModel = terminalViewModel,
+                onBackClick = { destination = Destination.Home },
+            )
+
+            Destination.SystemPanel -> SystemPanelScreen(
+                provider = systemInfoProvider,
+                onBackClick = { destination = Destination.Home },
+            )
+
             Destination.Chat -> ChatConsole(
                 runtime = runtime,
                 onBackClick = { destination = Destination.Home },
-                onOpenSettings = { destination = Destination.Settings },
             )
 
             Destination.Settings -> SettingsHost(
                 runtime = runtime,
-                onBackClick = { destination = Destination.Chat },
+                darkTheme = darkTheme,
+                onToggleTheme = onToggleTheme,
+                onBackClick = { destination = Destination.Home },
             )
         }
     }
@@ -97,7 +135,6 @@ private fun AOSAgentApp(
 private fun ChatConsole(
     runtime: AgentRuntime,
     onBackClick: () -> Unit,
-    onOpenSettings: () -> Unit,
 ) {
     val entries = remember { mutableStateListOf<ChatEntry>() }
     var status by remember { mutableStateOf(RuntimeStatus.EMPTY) }
@@ -114,7 +151,6 @@ private fun ChatConsole(
         status = status,
         busy = busy,
         onBackClick = onBackClick,
-        onOpenSettings = onOpenSettings,
         onSend = { query ->
             scope.launch {
                 busy = true
@@ -130,10 +166,12 @@ private fun ChatConsole(
     )
 }
 
-/** 设置宿主：读写模型与 MCP 配置，保存后立刻刷新运行时并回到控制台。 */
+/** 设置宿主：读写外观、模型与 MCP 配置，保存后立刻刷新运行时并回到首页。 */
 @Composable
 private fun SettingsHost(
     runtime: AgentRuntime,
+    darkTheme: Boolean,
+    onToggleTheme: () -> Unit,
     onBackClick: () -> Unit,
 ) {
     var current by remember { mutableStateOf<com.aos.agent.core.llm.LlmConfig?>(null) }
@@ -148,6 +186,8 @@ private fun SettingsHost(
     SettingsScreen(
         currentLlm = current?.let { Triple(it.baseUrl, it.model, it.apiKey) },
         mcpServers = servers,
+        darkTheme = darkTheme,
+        onToggleTheme = onToggleTheme,
         onBackClick = onBackClick,
         onSaveModel = { baseUrl, model, apiKey ->
             scope.launch {

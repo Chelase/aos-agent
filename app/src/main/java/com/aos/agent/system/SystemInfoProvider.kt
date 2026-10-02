@@ -1,9 +1,12 @@
 package com.aos.agent.system
 
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.os.BatteryManager
 import android.os.Build
 
 /**
@@ -28,14 +31,48 @@ interface SystemInfoReader {
     fun device(): String
     fun isAutomotive(): Boolean
     fun networkTransport(): NetworkTransport
+    fun battery(): BatterySnapshot
+}
+
+/**
+ * 电池瞬时状态。字段为 null 表示本次读取不可用（无广播、字段缺失），UI 渲染「不可用」，
+ * 与「确实在放电」的 false 区分。
+ */
+data class BatterySnapshot(
+    val levelPercent: Int?,
+    val charging: Boolean?,
+) {
+    companion object {
+        /**
+         * 纯函数：从 ACTION_BATTERY_CHANGED 的关键字段解析，便于无 Android 环境单测。
+         * status 用 [BatteryManager] 常量（编译期内联，单测可用）。
+         */
+        fun from(status: Int?, level: Int?, scale: Int?): BatterySnapshot {
+            val percent = if (level != null && scale != null && scale > 0) {
+                (level * 100 / scale).coerceIn(0, 100)
+            } else {
+                null
+            }
+            val charging = when (status) {
+                BatteryManager.BATTERY_STATUS_CHARGING,
+                BatteryManager.BATTERY_STATUS_FULL,
+                -> true
+                BatteryManager.BATTERY_STATUS_DISCHARGING,
+                BatteryManager.BATTERY_STATUS_NOT_CHARGING,
+                -> false
+                else -> null
+            }
+            return BatterySnapshot(percent, charging)
+        }
+    }
 }
 
 /**
  * 一次性采集的系统信息快照。
  *
- * [networkTransport] 是动态值，本快照只反映采集瞬间的状态，不会自动刷新；
- * [summary] 因此只包含静态设备信息，避免在首页展示过期网络状态。
- * 定时刷新机制属 Batch 1 Step 2（系统感知面板）。
+ * [networkTransport] 与 [battery] 是动态值，本快照只反映采集瞬间的状态；
+ * 系统面板页负责定时重采（Batch 1 Step 2）。[summary] 只包含静态设备信息，
+ * 避免在首页展示过期网络状态。
  */
 data class SystemInfo(
     val androidVersion: String,
@@ -46,6 +83,7 @@ data class SystemInfo(
     val device: String,
     val isAutomotive: Boolean,
     val networkTransport: NetworkTransport,
+    val battery: BatterySnapshot = BatterySnapshot(null, null),
 ) {
     val summary: String = buildString {
         append("Android ")
@@ -87,6 +125,17 @@ class AndroidSystemInfoReader(
         }
     }
 
+    override fun battery(): BatterySnapshot {
+        // 粘性广播无需注册常驻 receiver，读取瞬间状态即可（无权限要求）
+        val intent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+            ?: return BatterySnapshot(null, null)
+        return BatterySnapshot.from(
+            status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1).takeIf { it != -1 },
+            level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1).takeIf { it != -1 },
+            scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1).takeIf { it != -1 },
+        )
+    }
+
     private fun String?.orUnavailable(): String = takeIf { !it.isNullOrBlank() } ?: "Unavailable"
 }
 
@@ -103,6 +152,7 @@ class SystemInfoProvider(
             device = safeValue(reader.device()),
             isAutomotive = reader.isAutomotive(),
             networkTransport = reader.networkTransport(),
+            battery = reader.battery(),
         )
     }
 

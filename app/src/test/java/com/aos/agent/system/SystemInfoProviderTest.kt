@@ -1,7 +1,9 @@
 package com.aos.agent.system
 
+import android.os.BatteryManager
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class SystemInfoProviderTest {
@@ -16,6 +18,7 @@ class SystemInfoProviderTest {
         private val deviceName: String = "",
         private val automotive: Boolean = false,
         private val transport: NetworkTransport = NetworkTransport.UNAVAILABLE,
+        private val batterySnapshot: BatterySnapshot = BatterySnapshot(null, null),
     ) : SystemInfoReader {
         override fun androidVersion(): String = version
         override fun sdkInt(): Int = sdk
@@ -25,6 +28,7 @@ class SystemInfoProviderTest {
         override fun device(): String = deviceName
         override fun isAutomotive(): Boolean = automotive
         override fun networkTransport(): NetworkTransport = transport
+        override fun battery(): BatterySnapshot = batterySnapshot
     }
 
     @Test
@@ -77,5 +81,63 @@ class SystemInfoProviderTest {
             "Android 14 (SDK 34) · SAIC-GM-Wuling / 星光 · Automotive=true",
             info.summary,
         )
+    }
+
+    @Test
+    fun collect_carriesBatterySnapshotThrough() {
+        val info = SystemInfoProvider(
+            FakeReader(batterySnapshot = BatterySnapshot(66, true)),
+        ).collect()
+
+        assertEquals(66, info.battery.levelPercent)
+        assertEquals(true, info.battery.charging)
+    }
+
+    @Test
+    fun collect_batteryDefaultsToUnavailableWithoutReaderData() {
+        val info = SystemInfoProvider(FakeReader()).collect()
+
+        assertNull(info.battery.levelPercent)
+        assertNull(info.battery.charging)
+    }
+
+    @Test
+    fun batterySnapshot_chargingStatuses() {
+        val charging = BatterySnapshot.from(BatteryManager.BATTERY_STATUS_CHARGING, 40, 100)
+        val full = BatterySnapshot.from(BatteryManager.BATTERY_STATUS_FULL, 100, 100)
+
+        assertEquals(40, charging.levelPercent)
+        assertEquals(true, charging.charging)
+        assertEquals(100, full.levelPercent)
+        assertEquals(true, full.charging)
+    }
+
+    @Test
+    fun batterySnapshot_dischargingStatuses() {
+        val discharging = BatterySnapshot.from(BatteryManager.BATTERY_STATUS_DISCHARGING, 80, 100)
+        val notCharging = BatterySnapshot.from(BatteryManager.BATTERY_STATUS_NOT_CHARGING, 80, 100)
+
+        assertEquals(false, discharging.charging)
+        assertEquals(false, notCharging.charging)
+    }
+
+    @Test
+    fun batterySnapshot_unknownOrMissingFieldsStayNull() {
+        val unknown = BatterySnapshot.from(BatteryManager.BATTERY_STATUS_UNKNOWN, null, null)
+        val missing = BatterySnapshot.from(null, null, null)
+        val badScale = BatterySnapshot.from(BatteryManager.BATTERY_STATUS_CHARGING, 50, 0)
+
+        assertNull(unknown.charging)
+        assertNull(unknown.levelPercent)
+        assertNull(missing.levelPercent)
+        assertNull(missing.charging)
+        assertNull(badScale.levelPercent)
+    }
+
+    @Test
+    fun batterySnapshot_percentClampedToValidRange() {
+        val over = BatterySnapshot.from(BatteryManager.BATTERY_STATUS_DISCHARGING, 120, 100)
+
+        assertEquals(100, over.levelPercent)
     }
 }
