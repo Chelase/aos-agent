@@ -1,7 +1,31 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.compose.compiler)
 }
+
+// 发布签名材料只在本机与 CI secrets 里，仓库不存私钥也不存口令。
+// 也支持环境变量（CI 用），键名与 keystore.properties 一致：storeFile/storePassword/keyAlias/keyPassword
+val keystoreProps = Properties().apply {
+    val file = rootProject.file("keystore.properties")
+    if (file.isFile) file.inputStream().use { load(it) }
+}
+
+fun signingSecret(name: String): String? =
+    (
+        keystoreProps.getProperty(name)
+            ?: System.getenv("AOS_SIGNING_" + name.uppercase())
+        )?.takeIf { it.isNotBlank() }
+
+val releaseKeystoreFile = signingSecret("storeFile")?.let { rootProject.file(it) }
+val releaseSigningReady = releaseKeystoreFile?.isFile == true &&
+    signingSecret("storePassword") != null &&
+    signingSecret("keyAlias") != null
+
+// 版本号由发布流程注入（-PVERSION_CODE / -PVERSION_NAME），本地不传就是 1 / 1.0
+val releaseVersionCode = providers.gradleProperty("VERSION_CODE").orNull?.toIntOrNull() ?: 1
+val releaseVersionName = providers.gradleProperty("VERSION_NAME").orNull ?: "1.0"
 
 android {
     namespace = "com.aos.agent"
@@ -15,8 +39,8 @@ android {
         applicationId = "com.aos.agent"
         minSdk = 31
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = releaseVersionCode
+        versionName = releaseVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -36,10 +60,24 @@ android {
         }
     }
 
+    signingConfigs {
+        if (releaseSigningReady) {
+            create("release") {
+                storeFile = releaseKeystoreFile
+                storePassword = signingSecret("storePassword")
+                keyAlias = signingSecret("keyAlias")
+                keyPassword = signingSecret("keyPassword") ?: signingSecret("storePassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
             optimization {
                 enable = false
+            }
+            if (releaseSigningReady) {
+                signingConfig = signingConfigs.getByName("release")
             }
         }
     }
@@ -59,6 +97,19 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+}
+
+// 缺签名就拒绝出包：未签名 APK 装不上车机。配置期就拦，不占任务图也不破坏配置缓存。
+val releaseBuildRequested = project.gradle.startParameter.taskNames.any {
+    val leaf = it.substringAfterLast(':').lowercase()
+    (leaf.startsWith("assemble") || leaf.startsWith("bundle")) && leaf.endsWith("release")
+}
+if (releaseBuildRequested && !releaseSigningReady) {
+    throw GradleException(
+        "缺少发布签名材料：需要 keystore.properties 或 AOS_SIGNING_* 环境变量" +
+            "（storeFile/storePassword/keyAlias[/keyPassword]）。" +
+            "生产包必须签名，不产出装不上的未签名 APK。",
+    )
 }
 
 dependencies {

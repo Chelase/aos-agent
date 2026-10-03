@@ -15,3 +15,7 @@
 .cxx
 local.properties
 .sisyphus/drafts/
+
+# 发布签名材料：私钥与口令一律不入库（CI 用 secrets 还原）
+keystore/
+keystore.properties
