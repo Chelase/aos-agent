@@ -19,7 +19,7 @@
 | UI | `ui/voice/VoiceVocabulary.kt` | 从资源装配指令词表 |
 | Core | `core/voice/VoiceCommand.kt` / `VoiceCommandParser.kt` | 指令模型 + 纯函数解析（无 Android 依赖，可单测） |
 | Core | `core/voice/SpeechChannels.kt` | `SpeechTranscriber` / `SpeechSynthesizer` / `VoiceFocusHandle` 接口 + `VoiceError` |
-| Core | `core/voice/WakeWord.kt` | `WakeWordEngine` 接口 + `WakeWordMatcher` 纯判定 + `WakeWordGate`（让路闸门与唤醒事件） |
+| Core | `core/voice/WakeWord.kt` | `WakeWordEngine` 接口 + `WakeWordPhrases`（名字→说法→受限语法）+ `WakeWordMatcher` 判定 + `WakeWordGate`（让路闸门与唤醒事件） |
 | System | `system/voice/AndroidSpeechTranscriber.kt` | 系统 `SpeechRecognizer` 封装（流式部分结果） |
 | System | `system/voice/AndroidSpeechSynthesizer.kt` | 系统 `TextToSpeech` 封装；**不碰焦点**（焦点归会话） |
 | System | `system/voice/AndroidVoiceFocus.kt` | 会话级 `AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK`，被抢时回调 |
@@ -66,8 +66,10 @@
 [焦点回来] onAudioFocusGained() → 重新可用则 startListening()，否则 goIdle(原因)
 
 [唤醒] AgentForegroundService
+   说法 = WakeWordPhrases.build(agentName, wakeVariants)   // 你好X / Hi X / 裸X，可多选
    combine(voiceSettings.wakeWordEnabled, wakeModel.state, WakeWordGate.paused)
-      三条件齐 → VoskWakeWordEngine.start()（受限语法 ["你好副驾","[unk]"]）
+      三条件齐 → VoskWakeWordEngine.start(受限语法 = 说法 + [unk])
+      说法变了 → 先 stop 再 start（语法在 Recognizer 构造时定死，改名字必须重建）
       任一不成立 / 界面正在用麦 → stop() 并 release()（模型跟着释放）
    命中（冷却 2s 内不重复）→ WakeWordGate.emitWake() + startActivity(EXTRA_VOICE_WAKE)
       → MainActivity.onNewIntent/onCreate 或进程内事件 → 跳对话页 → voice.startFromWake()
@@ -96,7 +98,8 @@
 | 换识别/播报实现 | 新增 `SpeechTranscriber`/`SpeechSynthesizer` 实现 | 状态机只认接口，替换实现不动 `VoiceController`；离线 ASR/自建 TTS 走这条路 |
 | 改静默/超时/打断节奏 | `ui/voice/VoiceController` 的 `SILENCE_AFTER_SPEECH_MS` / `NO_SPEECH_TIMEOUT_MS` | 计时一律走注入的 `scope`，单测用虚拟时间推进验证，不许改成 `Handler.postDelayed` |
 | 改焦点策略 | `system/voice/AndroidVoiceFocus.kt` | 只有会话这一处申请焦点；播报侧再加申请就是把回路自己挂起 |
-| 改唤醒词 | `res/values*/strings.xml` 的 `wake_keyword` | 中英界面都用同一句中文口令；改词要重下模型？不用——语法是运行时注入的 |
+| 改唤醒词 | 设置页「Agent 名字」+ 唤醒说法勾选 | 名字与说法存 `VoiceSettings`，语法运行时注入，改词不用重下模型；不加代码分支 |
+| 加一种唤醒说法 | `core/voice/WakeVariant` + `WakeWordPhrases.build` | 新枚举值 + 一条生成规则 + 双语标签；判定侧不用改（按说法列表包含匹配） |
 | 换唤醒模型 | `WakeModelInstaller` 的 URL/目录名常量 | 就绪判据是 `am/final.mdl` + `conf/model.conf`，换模型要一起改 |
 | 行驶中再裁布局 | `MainActivity` 的遮罩条件 + `HomeScreen.driveRestricted` | 尺寸只走 `AOSSizing.driveTarget`，不在界面写 72dp 字面量 |
 | 加语音新文案 | `res/values/strings.xml` + `values-en/strings.xml` | 成对新增；`voice_cmd_*` 词表例外（有意只留一份中英混收） |
@@ -105,20 +108,23 @@
 
 1. **音频不出车机**：录音只进系统识别管道，应用不落盘、不缓存、不上传；交给模型的只有识别文本。
    唤醒判定全在本地，命中只交一个事件，唤醒词那半句音频随缓冲丢弃。任何改动不得把原始音频写进文件或网络请求。
-2. **常驻麦克风必须显式开启**：`wakeWordEnabled` 默认 false；开启后通知必须写明在听什么。
+2. **要念出口的词不是界面文案**：唤醒前缀"你好"/"Hi"与生成的说法一律用常量原样显示，
+   **不随界面语言翻译**（英文界面上用户照样喊"你好Chelsea"）；只有"名字为空""裸名易误唤醒"这类说明文字走双语资源。
+   名字是用户输入，进语法前要剥掉引号与反斜杠，否则整条受限语法会打烂、识别器构造失败。
+3. **常驻麦克风必须显式开启**：`wakeWordEnabled` 默认 false；开启后通知必须写明在听什么。
    界面在用麦时 KWS 必须让路（`WakeWordGate.paused`），否则对话页会报"麦克风被占用"。
-3. **焦点只有一份，归会话**：`USAGE_ASSISTANT` + `AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK`，
+4. **焦点只有一份，归会话**：`USAGE_ASSISTANT` + `AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK`，
    申请与放弃复用同一个 request 对象（每次新建会让 abandon 失效）；挂起时**不能**交还焦点；
    回 IDLE/失败/超时必须交还。播报侧再申请焦点就是把回路自己踢挂。
-4. **能力缺失必须渲染禁用态并说明原因**：无语音服务 / 未授权 / 模型没下载，三种都不可点但可见，
+5. **能力缺失必须渲染禁用态并说明原因**：无语音服务 / 未授权 / 模型没下载，三种都不可点但可见，
    原因文案紧邻其下；只差授权时点击应直接发起授权请求（`needsPermission`）。
    可用性在 `VoiceController` 构造时就定死——遮罩可能盖在任何页面上，没人替它刷新。
-5. **状态机只在主线程驱动**：`SpeechRecognizer` 与 `TextToSpeech` 都绑定创建线程；
+6. **状态机只在主线程驱动**：`SpeechRecognizer` 与 `TextToSpeech` 都绑定创建线程；
    识别器每次聆听用新实例（复用实例在部分设备不再回调）。
-6. **行驶遮罩必须吃掉手势**：Compose 会把事件继续传给被盖住的页面，实测点底层"返回"能把遮罩跳没；
+7. **行驶遮罩必须吃掉手势**：Compose 会把事件继续传给被盖住的页面，实测点底层"返回"能把遮罩跳没；
    遮罩根节点 `pointerInput` 消费全部手势，被盖子树 `invisibleToUser()`（但**继续组合**，否则对话条目与终端会话会丢）。
-7. **本地指令宁可漏判不误判**；语音不改变引擎契约，新事件一律加在 UI/系统层，不进 `core/engine`。
-8. **内存基线**：常驻 <200MB。实测模拟器：唤醒关 **146MB**、唤醒开（模型已加载）**215MB** —
+8. **本地指令宁可漏判不误判**；语音不改变引擎契约，新事件一律加在 UI/系统层，不进 `core/engine`。
+9. **内存基线**：常驻 <200MB。实测模拟器：唤醒关 **146MB**、唤醒开（模型已加载）**215MB** —
    开唤醒这条 opt-in 路径超基线约 15MB，靠"关即 `Model.close()` 释放"把默认状态留在基线内。
 
 ## 维护方式
@@ -138,4 +144,4 @@
 - **不可验证项（模拟器）**：说→出字、播报可听、唤醒命中率 3/5 与误唤醒率、人声打断（需硬件回声消除）。
   这些只能真机或有麦环境补，交付时按"仅本地实现/仅单测覆盖"标注，不得写成已验收。
 
-> 更新时间：2026-10-03（Phase B：连续对话回路 + 会话级焦点 + 离线唤醒 + 行驶遮罩）
+> 更新时间：2026-10-03（Phase B + 唤醒词改为按 Agent 名字生成）

@@ -25,7 +25,9 @@
 
 1. **ASR 用系统 `SpeechRecognizer`**（Google 语音服务，zh-CN，支持流式部分结果）。不可用时（部分 AAOS 车机无语音服务）按能力缺失规则渲染禁用态并说明原因，不伪造。
 2. **TTS 用系统 `TextToSpeech`**，回答播报可开关；播报时请求 `USAGE_ASSISTANT` 音频焦点，播完自动释放并（连续对话模式下）回到聆听。
-3. **唤醒词用 Vosk 离线 KWS**（Apache-2.0，中文小模型，模型随首启下载不打进 APK，守住常驻内存 <200MB 基线）。不用 Porcupine（商用授权）与 `VoiceInteractionService` 热词（需系统签名，留待厂商合作路径 Phase C）。
+3. **唤醒词用 Vosk 离线 KWS**（Apache-2.0，中文小模型，模型随首启下载不打进 APK）。
+   交付后按用户要求改为**唤醒词 = Agent 名字**（`你好X` / `Hi X` / 裸名可多选，默认带前缀），
+   语法运行时注入所以改词不用重下模型；英文名受限于普通话声学模型，命中率待真机调。不用 Porcupine（商用授权）与 `VoiceInteractionService` 热词（需系统签名，留待厂商合作路径 Phase C）。
 4. **语音指令本地解析**：`core/voice/VoiceCommandParser.kt` 纯函数（文本 → 指令或 None），可单测；指令不打 LLM，省时省 token。指令词表走双语资源。
 5. **音频隐私**：录音仅进识别管道，不落盘不缓存；唤醒 KWS 在本地推理；隐私说明进设置页文案。
 6. **音频焦点是硬约束**：导航播报/媒体播放时语音识别主动让位（focus loss → 暂停聆听），避免跟车机系统抢麦。

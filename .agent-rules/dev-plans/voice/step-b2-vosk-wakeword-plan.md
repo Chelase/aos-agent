@@ -6,6 +6,20 @@
 > 父计划：[../voice-interaction-plan.md](../voice-interaction-plan.md) Phase B.2
 > 配套机制文档：`../../mechanisms/voice-interaction.md`、`../../mechanisms/boot-and-foreground-service.md`
 
+## 变更（2026-10-03，交付后按用户要求调整）
+
+唤醒词不再是写死的"你好副驾"，而是**由 Agent 名字实时生成**：设置页加「Agent 名字」字段与
+「唤醒说法」多选（`你好X` / `Hi X` / 只喊名字 `X`，默认只开带前缀那条），
+`WakeWordPhrases.build(name, variants)` → `grammarOf(phrases)` 注入 Vosk。改名字**不用重下模型**，
+但说法变了要 stop+start 重建 `Recognizer`（语法在构造时定死）。
+
+三条落地约束：要念出口的词不随界面语言翻译（前缀用常量，不走 string 资源）；名字里的引号/反斜杠
+必须剥掉，否则受限语法 JSON 会打烂；裸名会把日常提到名字都叫成唤醒，勾上时界面直接给风险提示。
+
+**已知天花板**：中文小模型是普通话声学模型，英文名（如 Chelsea）命中率不可预测，
+只做了"包含匹配 + 忽略大小写/空格/标点"的兜底，**命中率必须真机调**；
+真要英文唤醒可靠，得中英双模型并行（约再 +70MB，开唤醒态实测已 215MB 超基线）。
+
 ## 已核实的外部事实（2026-10-03 本机探测）
 
 | 项 | 结论 |
@@ -63,6 +77,8 @@
 
 - [x] 依赖可解析、`assembleDebug` BUILD SUCCESSFUL；APK 内 `libvosk.so`(8.9/9.7MB) + `libjnidispatch.so` 按 arm64-v8a / x86_64 就位
 - [x] 模型下载→解压→校验→改名在模拟器实测通过（42MB，进度到 100% 后卡片显示"唤醒模型已就绪"）
+- [x] 改名 Chelsea 后：三种说法标签、唤醒开关标签、常驻通知全部跟随；勾掉"Hi Chelsea"再勾上，
+      服务日志出现成对 stopped/started（语法重建生效），通知文案同步变成两条说法
 - [x] 失败路径可见可重试（无网络时显示"下载失败，请检查网络后重试"，技术原因进 logcat）
 - [x] 开关关闭时零麦克风占用；开启后通知写明在听什么
       （实测 `dumpsys notification`：`正在听唤醒词「你好副驾」（本地判定，音频不出车机）`）
