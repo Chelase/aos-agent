@@ -39,6 +39,7 @@ import com.aos.agent.core.llm.LlmConfig
 import com.aos.agent.core.tools.mcp.McpServerConfig
 import com.aos.agent.core.voice.VoiceCommand
 import com.aos.agent.core.voice.WakeWordGate
+import com.aos.agent.core.voice.WakeWordPhrases
 import com.aos.agent.data.store.ThemeStore
 import com.aos.agent.data.store.VoiceSettingsStore
 import androidx.lifecycle.ViewModelProvider
@@ -184,6 +185,7 @@ private fun AOSAgentApp(
         var destination by remember { mutableStateOf(Destination.Home) }
         val restriction by driveRestriction.collectAsStateWithLifecycle()
         val voiceState by voiceController.state.collectAsStateWithLifecycle()
+        val voiceSettings by voiceSettingsStore.settings.collectAsStateWithLifecycle()
         val wakePending by wakeRequested.collectAsStateWithLifecycle()
         // 预览开关把"未知"也当成明确状态，否则遮罩都出来了状态行还写着未知
         val driveRestricted = driveRestrictionPreview || restriction == DriveRestriction.RESTRICTED
@@ -242,6 +244,10 @@ private fun AOSAgentApp(
 
                     Destination.Engineer -> EngineerModeScreen(
                         systemInfo = systemInfo,
+                        wakePhrases = WakeWordPhrases.build(
+                            voiceSettings.agentName,
+                            voiceSettings.wakeVariants,
+                        ),
                         onBackClick = { destination = Destination.Home },
                     )
 

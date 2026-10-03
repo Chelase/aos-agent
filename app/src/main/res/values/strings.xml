@@ -116,6 +116,18 @@
     <string name="wake_err_download_failed">唤醒模型下载失败，请检查网络后重试</string>
     <string name="notification_wake_listening">正在听唤醒词「%1$s」（本地判定，音频不出车机）</string>
 
+    <!-- 唤醒调试（工程师模式）：真车调命中率用的观测，只在内存里。 -->
+    <string name="section_wake_debug">唤醒调试</string>
+    <string name="wake_debug_phrases">当前说法</string>
+    <string name="wake_debug_phrases_none">未启用（先在设置里开语音唤醒）</string>
+    <string name="wake_debug_hits">命中</string>
+    <string name="wake_debug_misses">未命中</string>
+    <string name="wake_debug_reset">清零</string>
+    <string name="wake_debug_empty">暂无结果：对着麦克风喊唤醒词</string>
+    <string name="wake_debug_result_hit">%1$s · 命中</string>
+    <string name="wake_debug_result_miss">%1$s · 未命中</string>
+    <string name="wake_debug_result_empty">（空）</string>
+
     <!-- 行驶受限态（CarUxRestrictions）：语音是唯一安全输入，文字入口一律收起。 -->
     <string name="drive_mask_title">行驶中 · 只用语音</string>
     <string name="drive_mask_hint">文字输入与终端已收起。按下面的大麦克风说话。</string>

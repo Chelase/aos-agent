@@ -114,6 +114,18 @@
     <string name="wake_err_download_failed">Wake model download failed — check the network and retry</string>
     <string name="notification_wake_listening">Listening for the wake word “%1$s” (on-device, audio never leaves the car)</string>
 
+    <!-- Wake debugging (engineer mode): observations for on-vehicle tuning, memory only. -->
+    <string name="section_wake_debug">Wake Debug</string>
+    <string name="wake_debug_phrases">Active phrases</string>
+    <string name="wake_debug_phrases_none">Disabled (turn on voice wake in Settings)</string>
+    <string name="wake_debug_hits">Hits</string>
+    <string name="wake_debug_misses">Misses</string>
+    <string name="wake_debug_reset">Reset</string>
+    <string name="wake_debug_empty">No results yet — say the wake word</string>
+    <string name="wake_debug_result_hit">%1$s · hit</string>
+    <string name="wake_debug_result_miss">%1$s · miss</string>
+    <string name="wake_debug_result_empty">(empty)</string>
+
     <!-- Drive-restricted state (CarUxRestrictions): voice is the only safe input. -->
     <string name="drive_mask_title">Driving · voice only</string>
     <string name="drive_mask_hint">Text input and the terminal are hidden. Tap the big mic below to talk.</string>

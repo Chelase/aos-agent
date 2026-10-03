@@ -11,6 +11,7 @@ import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
 import androidx.core.content.ContextCompat
+import com.aos.agent.core.voice.WakeDebug
 import com.aos.agent.core.voice.WakeError
 import com.aos.agent.core.voice.WakeWordEngine
 import com.aos.agent.core.voice.WakeWordMatcher
@@ -99,7 +100,10 @@ class VoskWakeWordEngine(
                 if (!recognizer.acceptWaveForm(buffer, read)) continue
                 val text = WakeWordMatcher.textOf(recognizer.result)
                 recognizer.reset()
-                if (!WakeWordMatcher.isWake(text, phrases)) continue
+                val matched = WakeWordMatcher.isWake(text, phrases)
+                // 连 [unk] 一起记：受限语法下"没听清"只会是 [unk]，它才是调命中率要看的那一半
+                WakeDebug.record(text, matched, SystemClock.elapsedRealtime())
+                if (!matched) continue
                 val now = SystemClock.elapsedRealtime()
                 if (now - lastWakeAt < WAKE_COOLDOWN_MS) continue
                 lastWakeAt = now

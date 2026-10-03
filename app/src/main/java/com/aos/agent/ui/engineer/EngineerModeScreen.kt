@@ -14,10 +14,15 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.aos.agent.R
+import com.aos.agent.core.voice.WakeDebug
+import com.aos.agent.core.voice.WakeWordPhrases
 import com.aos.agent.system.SystemInfo
 import com.aos.agent.ui.components.AOSCard
 import com.aos.agent.ui.components.AOSDataRow
@@ -38,8 +43,14 @@ import com.aos.agent.ui.theme.aosLegendStyle
 @Composable
 fun EngineerModeScreen(
     systemInfo: SystemInfo,
+    wakePhrases: List<String> = emptyList(),
     onBackClick: () -> Unit,
 ) {
+    // 观测只在页面活着时收集，离开即清空——不把现场留在常驻内存里
+    DisposableEffect(Unit) {
+        WakeDebug.open()
+        onDispose { WakeDebug.close() }
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -56,6 +67,8 @@ fun EngineerModeScreen(
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState()),
         )
+        Spacer(modifier = Modifier.height(AOSSpacing.lg))
+        WakeDebugCard(phrases = wakePhrases)
     }
 }
 
@@ -173,6 +186,65 @@ private fun InfoCards(
             AOSDataRow(
                 label = stringResource(R.string.label_device),
                 value = systemInfo.device,
+            )
+        }
+    }
+}
+
+/**
+ * 唤醒调试卡：真车上"喊五次醒几次、平时会不会乱醒"的唯一眼睛。
+ *
+ * 显示的是 Vosk 原始输出（受限语法下只可能是选定的说法或 `[unk]`，日常对话内容流不进来），
+ * 只在内存里、不落盘。
+ */
+@Composable
+private fun WakeDebugCard(phrases: List<String>) {
+    val debug by WakeDebug.state.collectAsState()
+    Column(modifier = Modifier.fillMaxWidth()) {
+        AOSCard(modifier = Modifier.fillMaxWidth()) {
+            AOSSectionHeader(title = stringResource(R.string.section_wake_debug))
+            Spacer(modifier = Modifier.height(AOSSpacing.sm))
+            AOSDataRow(
+                label = stringResource(R.string.wake_debug_phrases),
+                value = if (phrases.isEmpty()) {
+                    stringResource(R.string.wake_debug_phrases_none)
+                } else {
+                    WakeWordPhrases.displayOf(phrases)
+                },
+            )
+            AOSRowDivider()
+            AOSDataRow(
+                label = stringResource(R.string.wake_debug_hits),
+                value = debug.hits.toString(),
+            )
+            AOSRowDivider()
+            AOSDataRow(
+                label = stringResource(R.string.wake_debug_misses),
+                value = debug.misses.toString(),
+            )
+            Spacer(modifier = Modifier.height(AOSSpacing.sm))
+            if (debug.observations.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.wake_debug_empty),
+                    style = aosLegendStyle,
+                    color = AOSTheme.textTertiary,
+                )
+            } else {
+                debug.observations.asReversed().forEach { item ->
+                    AOSDataRow(
+                        label = "+%.1fs".format(item.sinceOpenMillis / 1000f),
+                        value = stringResource(
+                            if (item.matched) R.string.wake_debug_result_hit else R.string.wake_debug_result_miss,
+                            item.text.ifBlank { stringResource(R.string.wake_debug_result_empty) },
+                        ),
+                    )
+                    AOSRowDivider()
+                }
+            }
+            Spacer(modifier = Modifier.height(AOSSpacing.sm))
+            AOSSecondaryButton(
+                text = stringResource(R.string.wake_debug_reset),
+                onClick = { WakeDebug.resetCounters() },
             )
         }
     }
