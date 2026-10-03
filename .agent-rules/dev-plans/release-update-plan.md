@@ -6,7 +6,7 @@
 > 配套机制文档：`../mechanisms/release-and-update.md`（实施后生成）
 > 触发背景：语音 Phase B 交付后需要真机调命中率，而 release 构建当前**未配签名**（`assembleRelease` 出未签名 APK，装不上）。
 
-## 当前状态
+## 当前状态（立项时快照，已于 2026-10-03 全部交付）
 
 - `app/build.gradle.kts` 的 `release` 只有 `optimization { enable = false }`，**没有 signingConfig** → 生产包根本装不了。
 - `versionCode = 1`、`versionName = "1.0"` 写死，没有版本注入通道。
@@ -85,9 +85,11 @@
 - [x] 装不了的两种情况分别给原因与下一步（权限 / 无安装器），回页面 ON_RESUME 重探
 - [x] 仓库无密钥与口令：`keystore/` 与 `keystore.properties` 均在 `.gitignore`，`git check-ignore` 验证过
 - [x] 中英成对文案；`:app:testDebugUnitTest` 206 例全绿；`assembleDebug` 通过
-- [ ] CI 首次跑通（需要推到 GitHub 上看 Actions 结果）
-- [ ] 完整"下载→校验→系统安装器→升级成功"这一趟：**要有第一个真实 Release 才跑得通**，
-      在那之前该路径口径为"仅单测与配置验证"（FileProvider 与安装权限已在模拟器确认注册）
+- [x] CI 首次跑通 — 2026-10-03：main 推送 CI 绿（Actions run 37113526774），Release 工作流同样成功（run 37115668361）
+- [x] 完整"下载→校验→系统安装器→升级成功"这一趟 — 2026-10-03 模拟器实测走通：
+      本地同密钥 v1.0.0(10000) 起步 → 应用内检查发现真实 Release v1.0.1（匿名拉 update.json，仓库已公开）→
+      授权门控先拦后放（appops 授权后 ON_RESUME 重探解除）→ 下载进度到 100% → SHA-256 校验过 →
+      拉起系统安装器且弹"更新此应用"（同签名确认）→ 确认后 versionCode=10001，新包正常启动无崩溃
 
 ## 进度
 
@@ -95,6 +97,7 @@
 - [x] S2 检查更新 — 2026-10-03
 - [x] S3 下载与安装 — 2026-10-03
 - [x] 验证与文档回写 — 2026-10-03（`mechanisms/release-and-update.md` 已生成并双索引入册）
+- [x] GitHub 侧验收：仓库转公开、CI 首次跑通、首个真实 Release v1.0.1、完整升级链路模拟器实测 — 2026-10-03
 
 ## 不在本期做的事
 

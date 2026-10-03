@@ -103,6 +103,11 @@ GitHub Actions 出签名 release 与一份 `update.json` 清单，车机端主�
   网络层用 OkHttp 拦截器灌假响应）。模拟器可验到"检查更新真发请求 + 四种回音文案 +
   FileProvider 与安装权限已注册"（`dumpsys package com.aos.agent`）。
 - **必须真机或首发版本才能验**：完整"下载→校验→系统安装器→升级成功"这一趟，
-  要有第一个真实 Release 才跑得通；在那之前这条路径的口径是"仅单测与配置验证"。
+  要有第一个真实 Release 才跑得通；**2026-10-03 已实测走通**（v1.0.0→v1.0.1，同签名升级，匿名拉公开清单）。
+- **车机镜像的"允许未知来源"页是 stub**：AAOS 模拟器上 `ACTION_MANAGE_UNKNOWN_APP_SOURCES` 解析到
+  `com.android.car.frameworkpackagestubs/.Stubs$ManageExternalSourcesActivityStub`（空页），
+  应用内"去系统设置允许"点了等于没开，而 `runCatching` 会吞掉跳转、无任何提示；
+  测试授权用 `adb shell appops set com.aos.agent REQUEST_INSTALL_PACKAGES allow`（等价于拨开关），
+  真机要走 OEM 提供的入口。授权回来靠 ON_RESUME 重探解除按钮禁用，已实测。
 
 > 更新时间：2026-10-03
