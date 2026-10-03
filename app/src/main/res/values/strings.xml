@@ -128,6 +128,18 @@
     <string name="wake_debug_result_miss">%1$s · 未命中</string>
     <string name="wake_debug_result_empty">（空）</string>
 
+    <!-- 版本与更新：只到"检测+提示+给地址"，装不装由系统与用户决定。 -->
+    <string name="settings_section_update">版本与更新</string>
+    <string name="update_current_version">当前版本</string>
+    <string name="update_check">检查更新</string>
+    <string name="update_checking">检查中…</string>
+    <string name="update_up_to_date">已是最新版本</string>
+    <string name="update_available">发现新版本 %1$s</string>
+    <string name="update_download_hint">下载地址：%1$s</string>
+    <string name="update_err_network">检查失败：车机连不上发布站点，稍后再试</string>
+    <string name="update_err_manifest">检查失败：更新清单读不懂，可能版本还没发完</string>
+    <string name="update_err_untrusted">检查失败：更新来源不在官方白名单内，已拒绝</string>
+
     <!-- 行驶受限态（CarUxRestrictions）：语音是唯一安全输入，文字入口一律收起。 -->
     <string name="drive_mask_title">行驶中 · 只用语音</string>
     <string name="drive_mask_hint">文字输入与终端已收起。按下面的大麦克风说话。</string>

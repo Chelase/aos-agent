@@ -37,6 +37,8 @@ import androidx.core.content.ContextCompat
 import com.aos.agent.core.engine.AgentEvent
 import com.aos.agent.core.llm.LlmConfig
 import com.aos.agent.core.tools.mcp.McpServerConfig
+import com.aos.agent.core.update.HttpUpdateChecker
+import com.aos.agent.core.update.UpdateOutcome
 import com.aos.agent.core.voice.VoiceCommand
 import com.aos.agent.core.voice.WakeWordGate
 import com.aos.agent.core.voice.WakeWordPhrases
@@ -51,6 +53,7 @@ import com.aos.agent.system.AndroidSystemInfoReader
 import com.aos.agent.system.CarUxRestrictionsReader
 import com.aos.agent.system.DriveRestriction
 import com.aos.agent.system.SystemInfoProvider
+import com.aos.agent.system.update.AppVersionReader
 import com.aos.agent.system.voice.AndroidSpeechSynthesizer
 import com.aos.agent.system.voice.AndroidSpeechTranscriber
 import com.aos.agent.system.voice.AndroidVoiceFocus
@@ -402,6 +405,12 @@ private fun SettingsHost(
     val context = LocalContext.current
     val wakeInstaller = remember { WakeModelInstaller(context, scope) }
     val wakeModelState by wakeInstaller.state.collectAsStateWithLifecycle()
+    val appVersion = remember { AppVersionReader.read(context) }
+    val updateChecker = remember {
+        HttpUpdateChecker(localVersionCode = { appVersion.versionCode })
+    }
+    var updateChecking by remember { mutableStateOf(false) }
+    var updateOutcome by remember { mutableStateOf<UpdateOutcome?>(null) }
 
     LaunchedEffect(Unit) {
         current = runtime.llmConfig()
@@ -438,6 +447,17 @@ private fun SettingsHost(
             }
         },
         onDownloadWakeModel = { wakeInstaller.download() },
+        appVersionLabel = appVersion.versionName + " (" + appVersion.versionCode + ")",
+        updateChecking = updateChecking,
+        updateOutcome = updateOutcome,
+        onCheckUpdate = {
+            updateChecking = true
+            updateOutcome = null
+            scope.launch {
+                updateOutcome = updateChecker.check()
+                updateChecking = false
+            }
+        },
         onBackClick = onBackClick,
         onSaveModel = { baseUrl, model, apiKey ->
             scope.launch {

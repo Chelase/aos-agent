@@ -30,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.annotation.StringRes
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -37,6 +38,8 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.aos.agent.R
 import com.aos.agent.core.tools.mcp.McpServerConfig
+import com.aos.agent.core.update.UpdateFailure
+import com.aos.agent.core.update.UpdateOutcome
 import com.aos.agent.core.voice.WakeVariant
 import com.aos.agent.core.voice.WakeWordPhrases
 import com.aos.agent.data.store.VoiceSettings
@@ -79,6 +82,10 @@ fun SettingsScreen(
     onSaveAgentName: (String) -> Unit = {},
     onToggleWakeVariant: (WakeVariant, Boolean) -> Unit = { _, _ -> },
     onDownloadWakeModel: () -> Unit = {},
+    appVersionLabel: String = "",
+    updateChecking: Boolean = false,
+    updateOutcome: UpdateOutcome? = null,
+    onCheckUpdate: () -> Unit = {},
 ) {
     var baseUrl by remember { mutableStateOf(currentLlm?.first.orEmpty()) }
     var model by remember { mutableStateOf(currentLlm?.second.orEmpty()) }
@@ -387,8 +394,69 @@ fun SettingsScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+
+            AOSSectionHeader(title = stringResource(R.string.settings_section_update))
+            AOSCard(modifier = Modifier.fillMaxWidth()) {
+                AOSDataRow(
+                    label = stringResource(R.string.update_current_version),
+                    value = appVersionLabel,
+                )
+                AOSRowDivider()
+                Spacer(modifier = Modifier.height(AOSSpacing.sm))
+                AOSPrimaryButton(
+                    text = stringResource(
+                        if (updateChecking) R.string.update_checking else R.string.update_check,
+                    ),
+                    onClick = onCheckUpdate,
+                    enabled = !updateChecking,
+                )
+                when (val outcome = updateOutcome) {
+                    null -> Unit
+
+                    is UpdateOutcome.UpToDate -> UpdateResultLine(
+                        text = stringResource(R.string.update_up_to_date),
+                        color = AOSTheme.statusSuccess,
+                    )
+
+                    is UpdateOutcome.Available -> {
+                        UpdateResultLine(
+                            text = stringResource(R.string.update_available, outcome.manifest.versionName),
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        UpdateResultLine(
+                            text = stringResource(R.string.update_download_hint, outcome.manifest.apkUrl),
+                            color = AOSTheme.textTertiary,
+                        )
+                    }
+
+                    is UpdateOutcome.Failed -> UpdateResultLine(
+                        text = stringResource(updateFailureRes(outcome.failure)),
+                        color = AOSTheme.statusError,
+                    )
+                }
+            }
         }
     }
+}
+
+@StringRes
+private fun updateFailureRes(failure: UpdateFailure): Int = when (failure) {
+    UpdateFailure.NETWORK -> R.string.update_err_network
+    UpdateFailure.BAD_MANIFEST -> R.string.update_err_manifest
+    UpdateFailure.UNTRUSTED_SOURCE -> R.string.update_err_untrusted
+}
+
+/** 更新结果行：结论、下载地址、失败原因都走这里，保证每次检查都有看得见的回音。 */
+@Composable
+private fun UpdateResultLine(text: String, color: androidx.compose.ui.graphics.Color) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelSmall,
+        color = color,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = AOSSpacing.xs),
+    )
 }
 
 /** 唤醒说法勾选行：整行可点，标签就是这句话本身（要念出口的，不随界面语言翻译）。 */

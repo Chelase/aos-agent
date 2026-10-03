@@ -126,6 +126,18 @@
     <string name="wake_debug_result_miss">%1$s · miss</string>
     <string name="wake_debug_result_empty">(empty)</string>
 
+    <!-- Version & update: detection and pointer only; installing stays with the system and the user. -->
+    <string name="settings_section_update">Version &amp; Update</string>
+    <string name="update_current_version">Current version</string>
+    <string name="update_check">Check for updates</string>
+    <string name="update_checking">Checking…</string>
+    <string name="update_up_to_date">Up to date</string>
+    <string name="update_available">New version %1$s available</string>
+    <string name="update_download_hint">Download: %1$s</string>
+    <string name="update_err_network">Check failed: the head unit can’t reach the release site — try again later</string>
+    <string name="update_err_manifest">Check failed: update manifest is unreadable — the release may be incomplete</string>
+    <string name="update_err_untrusted">Check failed: update source is not on the official allowlist — refused</string>
+
     <!-- Drive-restricted state (CarUxRestrictions): voice is the only safe input. -->
     <string name="drive_mask_title">Driving · voice only</string>
     <string name="drive_mask_hint">Text input and the terminal are hidden. Tap the big mic below to talk.</string>
