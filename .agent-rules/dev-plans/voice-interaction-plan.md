@@ -107,7 +107,7 @@
 - [~] 音频焦点被导航/媒体抢占时识别暂停、恢复后继续
       **仅代码接通**（播报侧成对申请/放弃焦点），未用真实媒体流验证。
 - [x] 新增文案中英成对；`assembleDebug` 通过
-- [ ] 行驶模拟（RESTRICTED）下麦克风按钮 ≥72dp、无键盘依赖（本期只接了读取，未改布局）
+- [x] 行驶模拟（RESTRICTED）下麦克风按钮 ≥72dp、无键盘依赖 —— Phase B.3 交付（2026-10-03，实测 bounds 72px@160dpi）
 
 ## 进度
 
@@ -115,7 +115,7 @@
 - [x] 方案决策记录（ASR/TTS/KWS/指令解析/音频焦点）
 - [x] Phase A 实施 — 2026-10-02（用户确认排期后开工）
 - [x] Phase B 子计划拆解 — 2026-10-03（`dev-plans/voice/` 三份）
-- [ ] Phase B（离线唤醒词 Vosk + 驾驶全屏遮罩）
+- [x] Phase B 实施 — 2026-10-03（B1 连续对话回路 / B3 行驶遮罩 / B2 离线唤醒，见 `voice/` 三份归档）
 - [ ] Phase C
 
 ## 归档
@@ -142,6 +142,29 @@
 
 **回写机制文档：** 新增 `../mechanisms/voice-interaction.md`，并同步 `mechanisms/README.md` 与
 `.agent-rules/README.md` §6 双索引。
+
+---
+
+**Phase B 完成日期：** 2026-10-03
+
+**交付：** 连续对话回路（1s 防自听静默、8s 无语音收工、人声打断默认关、焦点 LOSS/GAIN 挂起恢复）；
+音频焦点从播报侧上移为**会话级** `VoiceFocusHandle`；行驶受限全屏语音遮罩（≥72dp，实测 bounds）；
+Vosk 离线唤醒「你好副驾」（42MB 模型首启下载 + 前台服务常驻 KWS + 唤醒分发跳对话页）；
+驾驶态从布尔改三态并接进首页与遮罩。子计划归档见 `voice/step-b1-continuous-loop-plan.md`、
+`voice/step-b2-vosk-wakeword-plan.md`、`voice/step-b3-driving-mask-plan.md`。
+
+**实测账（AAOS API 35 x86_64 模拟器，160dpi）：**
+- 单测 173 例全绿（状态机 28、指令解析 10、唤醒判定 13）；`assembleDebug` 通过。
+- 模型下载链路跑通（模拟器 guest 无路由，靠 `adb reverse` 借宿主代理出网）：进度 100% → "唤醒模型已就绪"。
+- 开唤醒后通知写明在听什么；关唤醒 PSS 146MB / 开唤醒 215MB（基线 <200MB，**开启态超约 15MB**，
+  取舍为默认关 + 关即释放）。
+- 遮罩走查用启动参数 `--ez com.aos.agent.extra.PREVIEW_DRIVE_RESTRICTED true` 驱动同一套布局。
+
+**仍未验证（必须真机或有麦环境）：** 说→出字、播报可听、唤醒命中率 3/5 与误唤醒率、人声打断、
+真实 `CarUxRestrictions` 翻 RESTRICTED（user 版镜像屏蔽 `cmd car_service`，VHAL 写不进去）。
+
+**回写机制文档：** `../mechanisms/voice-interaction.md` 重写为 Phase A+B 全链路（含焦点只有一份、
+遮罩必须吃手势、常驻麦要显式开、内存实测四条硬约束）。
 
 ## 不在本期做的事
 

@@ -61,28 +61,50 @@
 
 ## 验收清单
 
-- [ ] 依赖可解析、`assembleDebug` BUILD SUCCESSFUL，APK 内 `libvosk.so`/JNA 按 ABI 就位
-- [ ] 模型下载/解压/加载在模拟器实测通过（含失败重试）
-- [ ] 唤醒开关关闭时零麦克风占用；开启后前台服务通知文案说明在听什么
-- [ ] 常驻内存实测数值记录（基线 <200MB）
-- [ ] `WakeWordResult` 单测 ≥6 例全绿；`:app:testDebugUnitTest` 全绿
-- [ ] 中英成对文案
+- [x] 依赖可解析、`assembleDebug` BUILD SUCCESSFUL；APK 内 `libvosk.so`(8.9/9.7MB) + `libjnidispatch.so` 按 arm64-v8a / x86_64 就位
+- [x] 模型下载→解压→校验→改名在模拟器实测通过（42MB，进度到 100% 后卡片显示"唤醒模型已就绪"）
+- [x] 失败路径可见可重试（无网络时显示"下载失败，请检查网络后重试"，技术原因进 logcat）
+- [x] 开关关闭时零麦克风占用；开启后通知写明在听什么
+      （实测 `dumpsys notification`：`正在听唤醒词「你好副驾」（本地判定，音频不出车机）`）
+- [x] 常驻内存实测：**唤醒关 146MB / 唤醒开 215MB**（`dumpsys meminfo` TOTAL PSS）
+- [x] 界面用麦时 KWS 让路、回 IDLE 后自动续听（logcat started/stopped 成对）
+- [x] 唤醒分发：`am start --ez com.aos.agent.extra.VOICE_WAKE true -f 0x34000000` → 跳对话页并进聆听
+      （无麦环境随即回落到"识别失败，请重试"，不卡住）
+- [x] `WakeWordMatcherTest` 13 例全绿；`:app:testDebugUnitTest` 共 173 例全绿
+- [x] 中英成对文案
 
 ## 进度
 
-- [ ] B2.1 依赖接入与模型安装器
-- [ ] B2.2 KWS 引擎与内存实测
-- [ ] B2.3 唤醒分发与引导入口
+- [x] B2.1 依赖接入与模型安装器 — 2026-10-03
+- [x] B2.2 KWS 引擎与内存实测 — 2026-10-03
+- [x] B2.3 唤醒分发与引导入口 — 2026-10-03
 
-## 不可验证项（开工前就讲清）
+## 实测要点与踩坑
+
+- **`LogLevel` 没有 `NO_LOGS`**（0.3.47 只有 WARNINGS/INFO/DEBUG），静音档只能用 `WARNINGS`。
+- **官方模型 zip 带一层同名顶层目录**：解压到 staging 后按 `staging/am/final.mdl` 判就绪永远失败，
+  表现为"下载成功却装不上"。就绪判定要在 `staging` 与 `staging/<模型目录名>` 两处找。
+- JNA 不用自己声明：`vosk-android` 的 pom 已把 `net.java.dev.jna:jna:5.13.0@aar` 作为 compile 依赖带进来。
+- 模拟器 guest **没有任何网络路由**（`ip route` 空、`Active default network: none`），
+  下载走 `adb reverse tcp:7897 tcp:7897` + `settings put global http_proxy 127.0.0.1:7897`
+  借宿主机代理出去（`lo` 是活的，所以不需要 guest 路由）。
+- 双用户老坑复现：`run-as` 落在 user 0 的数据目录，shell 也写不进 `/storage/emulated/10/…`，
+  所以"预置模型到外部目录"这条路在模拟器上验不了 —— 已把这条未验证的兜底从代码里删掉，
+  只留下实测通过的下载路径（无数据套餐的车机要预置，得另立一个能验证的方案）。
+- 内存账：模型加载 +69MB，超 <200MB 基线约 15MB。取舍是"默认关 + 关即 `Model.close()` 释放"，
+  默认状态留在基线内，开启唤醒属用户显式换能力。这条已写进机制文档的关键约束。
+
+
+## 不可验证项（交付口径）
 
 | 项 | 为什么 | 交付口径 |
 |---|---|---|
-| 唤醒命中率 3/5、误唤醒 <1 次/10 分钟 | 模拟器无麦克风音频输入（Phase A 已确认 `Voice is not capturing`），无法喂真实语音 | 标"仅本地实现"，真机验收另开 |
-| 模型加载后的真实内存曲线 | 可测 RSS 单点，但不是整车长时间运行数据 | 报实测数字，不外推 |
-| 首启 42MB 下载的车机网络环境 | 模拟器网络与真车 TSP 出口不同 | 报模拟器结果 |
+| 唤醒命中率 3/5、误唤醒 <1 次/10 分钟 | 模拟器无麦克风音频输入（Phase A 已确认 `Voice is not capturing`，本轮又见 `audio_hw_generic_caremu: pcm_read failed`），无法喂真实语音 | **仅本地实现**，KWS 循环确实在跑（起停有日志、模型确实加载），命中判定只能真机验 |
+| 长时间运行的内存曲线 | 只取了开/关两个单点 PSS | 报实测数字，不外推 |
+| 首启 42MB 下载的车机网络环境 | 模拟器靠 adb reverse 借宿主代理才出得去网 | 报模拟器结果，真车 TSP 出口另验 |
 
 ## 回滚点
 
 唤醒是**加法式**能力：`wakeWordEnabled` 默认 false，KWS 不起则模型/引擎/服务三块对现有链路零影响。
-若 B2 阻塞主流程，可只保留 `core/voice/WakeWordEngine` 接口 + 引导页，撤掉依赖与服务接线。
+若 B2 阻塞主流程，可只保留 `core/voice/WakeWord.kt` 接口 + 设置页引导，撤掉依赖与服务接线。
+
