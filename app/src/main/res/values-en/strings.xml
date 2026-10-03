@@ -24,6 +24,8 @@
     <string name="status_platform_generic">Generic Android</string>
     <string name="status_drive_mode">Drive Mode</string>
     <string name="status_drive_mode_parked">Parked</string>
+    <string name="status_drive_mode_driving">Moving</string>
+    <string name="status_drive_mode_unknown">Unknown (not reported)</string>
 
     <!-- Language -->
     <string name="language_label">Language</string>
@@ -91,6 +93,12 @@
     <string name="settings_voice_barge_in">Interrupt playback by speaking</string>
     <string name="settings_voice_barge_in_hint">Needs hardware echo cancellation, otherwise the assistant hears its own playback and keeps interrupting itself; leave it off if unsure.</string>
     <string name="settings_voice_privacy">Audio stays in the on-device recognition pipeline — never stored or uploaded; only the recognized text reaches the model.</string>
+
+    <!-- Drive-restricted state (CarUxRestrictions): voice is the only safe input. -->
+    <string name="drive_mask_title">Driving · voice only</string>
+    <string name="drive_mask_hint">Text input and the terminal are hidden. Tap the big mic below to talk.</string>
+    <string name="drive_mask_back_home">Back to home</string>
+    <string name="drive_entry_unavailable">Unavailable while driving</string>
     <string name="section_system">System</string>
     <string name="section_device">Device</string>
     <string name="section_platform">Platform</string>

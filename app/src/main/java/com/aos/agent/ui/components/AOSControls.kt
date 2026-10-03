@@ -29,6 +29,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -104,6 +105,7 @@ fun AOSSecondaryButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    height: Dp = AOSSizing.touchTarget,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
@@ -116,7 +118,7 @@ fun AOSSecondaryButton(
     Box(
         modifier = modifier
             .scale(scale)
-            .height(AOSSizing.touchTarget)
+            .height(height)
             .clip(RoundedCornerShape(AOSSizing.cardCorner))
             .border(
                 width = AOSSizing.borderWidth,

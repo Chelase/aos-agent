@@ -7,10 +7,15 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.invisibleToUser
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.lazy.items
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aos.agent.runtime.AgentRuntime
@@ -40,6 +45,7 @@ import com.aos.agent.i18n.AppLocaleController
 import com.aos.agent.i18n.localeStoreFor
 import com.aos.agent.system.AndroidSystemInfoReader
 import com.aos.agent.system.CarUxRestrictionsReader
+import com.aos.agent.system.DriveRestriction
 import com.aos.agent.system.SystemInfoProvider
 import com.aos.agent.system.voice.AndroidSpeechSynthesizer
 import com.aos.agent.system.voice.AndroidSpeechTranscriber
@@ -50,14 +56,27 @@ import com.aos.agent.ui.home.HomeScreen
 import com.aos.agent.ui.systempanel.SystemPanelScreen
 import com.aos.agent.ui.terminal.TerminalScreen
 import com.aos.agent.ui.theme.AOSAgentTheme
+import com.aos.agent.ui.voice.DriveVoiceMask
 import com.aos.agent.ui.voice.VoiceController
 import com.aos.agent.ui.voice.voiceVocabularyFrom
+import kotlinx.coroutines.flow.StateFlow
 
 class MainActivity : ComponentActivity() {
 
     private lateinit var voiceController: VoiceController
     private lateinit var voiceSettingsStore: VoiceSettingsStore
     private val uxRestrictions by lazy { CarUxRestrictionsReader(this) }
+
+    /**
+     * 行驶受限预览开关（仅测试用）：`adb shell am start -n com.aos.agent/.MainActivity --ez <extra> true`。
+     *
+     * 存在的理由：真值只能由 VHAL 写速度/分心优化位翻起来，而 user 版镜像把
+     * `cmd car_service` 全量屏蔽（"requires non-user build"）且 adbd 不能 root，
+     * 于是这套遮罩在交付前没有任何可复现的走查手段。它只影响界面裁剪，不给任何权限或数据。
+     */
+    private val driveRestrictionPreview by lazy {
+        intent.getBooleanExtra(EXTRA_PREVIEW_DRIVE_RESTRICTED, false)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // 主题在 setContentView 前定死：先选对窗口背景样式，避免启动闪屏错色（design.md §9.3）。
@@ -94,6 +113,8 @@ class MainActivity : ComponentActivity() {
                 terminalViewModel = terminalViewModel,
                 voiceController = voiceController,
                 voiceSettingsStore = voiceSettingsStore,
+                driveRestriction = uxRestrictions.restriction,
+                driveRestrictionPreview = driveRestrictionPreview,
                 languageSwitchable = localeController.canSwitch,
                 onLanguageToggle = { localeController.toggle() },
                 darkTheme = darkTheme,
@@ -112,6 +133,10 @@ class MainActivity : ComponentActivity() {
         uxRestrictions.close()
         super.onDestroy()
     }
+
+    companion object {
+        const val EXTRA_PREVIEW_DRIVE_RESTRICTED = "com.aos.agent.extra.PREVIEW_DRIVE_RESTRICTED"
+    }
 }
 
 private enum class Destination { Home, Engineer, Chat, Settings, Terminal, SystemPanel }
@@ -122,6 +147,8 @@ private fun AOSAgentApp(
     terminalViewModel: TerminalViewModel,
     voiceController: VoiceController,
     voiceSettingsStore: VoiceSettingsStore,
+    driveRestriction: StateFlow<DriveRestriction>,
+    driveRestrictionPreview: Boolean,
     languageSwitchable: Boolean,
     onLanguageToggle: () -> Unit,
     darkTheme: Boolean,
@@ -129,54 +156,86 @@ private fun AOSAgentApp(
 ) {
     AOSAgentTheme(darkTheme = darkTheme) {
         var destination by remember { mutableStateOf(Destination.Home) }
+        val restriction by driveRestriction.collectAsStateWithLifecycle()
+        // 预览开关把"未知"也当成明确状态，否则遮罩都出来了状态行还写着未知
+        val driveRestricted = driveRestrictionPreview || restriction == DriveRestriction.RESTRICTED
+        val driveStateKnown = driveRestrictionPreview || restriction != DriveRestriction.UNKNOWN
         val systemInfo = remember { systemInfoProvider.collect() }
         val context = LocalContext.current
         val runtime = remember { AgentRuntime(context) }
 
-        when (destination) {
-            Destination.Home -> HomeScreen(
-                systemInfo = systemInfo,
-                // 语言标签走资源而非枚举，切换后由 Activity 重建自动刷新
-                currentLanguageLabel = stringResource(R.string.language_current),
-                targetLanguageLabel = stringResource(R.string.language_switch_to),
-                languageSwitchable = languageSwitchable,
-                onEngineerModeClick = { destination = Destination.Engineer },
-                onChatClick = { destination = Destination.Chat },
-                onTerminalClick = { destination = Destination.Terminal },
-                onSystemPanelClick = { destination = Destination.SystemPanel },
-                onSettingsClick = { destination = Destination.Settings },
-                onLanguageToggle = onLanguageToggle,
-            )
+        Box(modifier = Modifier.fillMaxSize()) {
+            val driveMaskUp = driveRestricted && destination != Destination.Home
+            // 被遮罩盖住的页面继续组合（对话条目、终端会话不能因为上路就丢），
+            // 但从无障碍树里摘掉——否则 TalkBack 还能滑进藏起来的输入框
+            Box(
+                modifier = if (driveMaskUp) {
+                    Modifier.semantics { invisibleToUser() }
+                } else {
+                    Modifier
+                },
+            ) {
+                when (destination) {
+                    Destination.Home -> HomeScreen(
+                        systemInfo = systemInfo,
+                        // 语言标签走资源而非枚举，切换后由 Activity 重建自动刷新
+                        currentLanguageLabel = stringResource(R.string.language_current),
+                        targetLanguageLabel = stringResource(R.string.language_switch_to),
+                        languageSwitchable = languageSwitchable,
+                        driveRestricted = driveRestricted,
+                        driveStateKnown = driveStateKnown,
+                        onEngineerModeClick = { destination = Destination.Engineer },
+                        onChatClick = { destination = Destination.Chat },
+                        onTerminalClick = { destination = Destination.Terminal },
+                        onSystemPanelClick = { destination = Destination.SystemPanel },
+                        onSettingsClick = { destination = Destination.Settings },
+                        onLanguageToggle = onLanguageToggle,
+                    )
 
-            Destination.Engineer -> EngineerModeScreen(
-                systemInfo = systemInfo,
-                onBackClick = { destination = Destination.Home },
-            )
+                    Destination.Engineer -> EngineerModeScreen(
+                        systemInfo = systemInfo,
+                        onBackClick = { destination = Destination.Home },
+                    )
 
-            Destination.Terminal -> TerminalScreen(
-                viewModel = terminalViewModel,
-                onBackClick = { destination = Destination.Home },
-            )
+                    Destination.Terminal -> TerminalScreen(
+                        viewModel = terminalViewModel,
+                        onBackClick = { destination = Destination.Home },
+                    )
 
-            Destination.SystemPanel -> SystemPanelScreen(
-                provider = systemInfoProvider,
-                onBackClick = { destination = Destination.Home },
-            )
+                    Destination.SystemPanel -> SystemPanelScreen(
+                        provider = systemInfoProvider,
+                        onBackClick = { destination = Destination.Home },
+                    )
 
-            Destination.Chat -> ChatConsole(
-                runtime = runtime,
-                voice = voiceController,
-                onBackClick = { destination = Destination.Home },
-                onOpenSettings = { destination = Destination.Settings },
-            )
+                    Destination.Chat -> ChatConsole(
+                        runtime = runtime,
+                        voice = voiceController,
+                        onBackClick = { destination = Destination.Home },
+                        onOpenSettings = { destination = Destination.Settings },
+                    )
 
-            Destination.Settings -> SettingsHost(
-                runtime = runtime,
-                voiceSettingsStore = voiceSettingsStore,
-                darkTheme = darkTheme,
-                onToggleTheme = onToggleTheme,
-                onBackClick = { destination = Destination.Home },
-            )
+                    Destination.Settings -> SettingsHost(
+                        runtime = runtime,
+                        voiceSettingsStore = voiceSettingsStore,
+                        darkTheme = darkTheme,
+                        onToggleTheme = onToggleTheme,
+                        onBackClick = { destination = Destination.Home },
+                    )
+                }
+            }
+
+            // 行驶受限：离开首页就只剩语音。首页不糊——首页本来没有文字输入，
+            // 把用户最后一块能看的地方也盖掉只会让人以为应用坏了。
+            if (driveMaskUp) {
+                val voiceState by voiceController.state.collectAsStateWithLifecycle()
+                // 盖住的页面不会再刷新能力（授权对话框可能刚回来），遮罩自己确认一次
+                LaunchedEffect(Unit) { voiceController.refreshAvailability() }
+                DriveVoiceMask(
+                    state = voiceState,
+                    onMicClick = { voiceController.toggle() },
+                    onBackHome = { destination = Destination.Home },
+                )
+            }
         }
     }
 }

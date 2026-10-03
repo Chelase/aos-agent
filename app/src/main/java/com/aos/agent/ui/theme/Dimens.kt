@@ -25,6 +25,9 @@ object AOSSizing {
     /** 交互控件最小高度，驾驶场景下限（design.md §1.2）。 */
     val touchTarget = 56.dp
 
+    /** 行驶受限态的触控下限：车机抖动 + 视线离开路面，目标必须比常态再大一档。 */
+    val driveTarget = 72.dp
+
     /** 状态标签（design.md §5.2）。 */
     val badgeHeight = 28.dp
     val badgeCorner = 14.dp

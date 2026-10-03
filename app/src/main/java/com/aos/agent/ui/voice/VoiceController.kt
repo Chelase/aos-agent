@@ -51,6 +51,12 @@ class VoiceController(
     private var holdsFocus = false
     private var awaitingFocus = false
 
+    init {
+        // 构造时就定死能力与原因：行驶遮罩可能盖在任意页面上，没有哪个页面替它刷新过，
+        // 于是会出现"按钮灰着、又没说为什么"的死控件
+        refreshAvailability()
+    }
+
     /** 页面 onResume、权限结果回来后调用：能力与权限都可能刚发生变化。 */
     fun refreshAvailability() {
         val serviceMissing = !transcriber.available

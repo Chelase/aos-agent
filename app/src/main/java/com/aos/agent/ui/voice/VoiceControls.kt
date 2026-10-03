@@ -28,8 +28,9 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import com.aos.agent.R
 import com.aos.agent.ui.components.AOSStatusDot
 import com.aos.agent.ui.components.AOSStatusTone
@@ -40,7 +41,8 @@ import com.aos.agent.ui.theme.AOSTheme
 /**
  * 语音控件：麦克风按钮（灯语化）与状态行。
  *
- * 按钮最小高度取 `AOSSizing.touchTarget`（56dp，驾驶场景下限）；
+ * 按钮最小高度由调用方给档位：常规界面取 `AOSSizing.touchTarget`（56dp），
+ * 行驶遮罩取 `AOSSizing.driveTarget`（72dp）；尺寸一律走 token，不在界面里写死。
  * 禁用态不隐藏也不装可用，原因文案紧邻其下（design.md §5.8）。
  */
 
@@ -50,6 +52,8 @@ fun VoiceMicButton(
     enabled: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    targetSize: Dp = AOSSizing.touchTarget,
+    labelStyle: TextStyle = MaterialTheme.typography.labelSmall,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
@@ -58,7 +62,7 @@ fun VoiceMicButton(
     Column(
         modifier = modifier
             .scale(if (pressed && enabled) 0.97f else 1f)
-            .heightIn(min = AOSSizing.touchTarget)
+            .heightIn(min = targetSize)
             .clip(RoundedCornerShape(AOSSizing.cardCorner))
             .background(
                 if (enabled) {
@@ -87,10 +91,10 @@ fun VoiceMicButton(
             horizontalArrangement = Arrangement.spacedBy(AOSSpacing.sm),
         ) {
             AOSStatusDot(tone = toneOf(phase))
-            MicGlyph(color = glyphColor, modifier = Modifier.size(20.dp))
+            MicGlyph(color = glyphColor, modifier = Modifier.size(targetSize * 0.36f))
             Text(
                 text = stringResource(labelOf(phase)),
-                style = MaterialTheme.typography.labelSmall,
+                style = labelStyle,
                 color = if (enabled) MaterialTheme.colorScheme.onSurface else AOSTheme.textTertiary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

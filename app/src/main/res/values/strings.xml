@@ -26,6 +26,8 @@
     <string name="status_platform_generic">通用 Android</string>
     <string name="status_drive_mode">驾驶模式</string>
     <string name="status_drive_mode_parked">停车</string>
+    <string name="status_drive_mode_driving">行驶中</string>
+    <string name="status_drive_mode_unknown">未知（车机未提供）</string>
 
     <!-- 语言切换 -->
     <string name="language_label">语言</string>
@@ -93,6 +95,12 @@
     <string name="settings_voice_barge_in">说话打断播报</string>
     <string name="settings_voice_barge_in_hint">需要设备能消除喇叭回声，否则我会把自己的播报听成人声、自己打断自己；不确定就别开。</string>
     <string name="settings_voice_privacy">录音只进识别管道，不保存也不上传；只有识别出的文本交给模型。</string>
+
+    <!-- 行驶受限态（CarUxRestrictions）：语音是唯一安全输入，文字入口一律收起。 -->
+    <string name="drive_mask_title">行驶中 · 只用语音</string>
+    <string name="drive_mask_hint">文字输入与终端已收起。按下面的大麦克风说话。</string>
+    <string name="drive_mask_back_home">返回首页</string>
+    <string name="drive_entry_unavailable">行驶中不可用</string>
 
     <!-- 语音指令词表：有意同时收中英文，与界面语言无关，故只在默认资源里定义一份。 -->
     <string-array name="voice_cmd_new_session" translatable="false">

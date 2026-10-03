@@ -48,6 +48,8 @@ fun HomeScreen(
     currentLanguageLabel: String,
     targetLanguageLabel: String,
     languageSwitchable: Boolean,
+    driveRestricted: Boolean = false,
+    driveStateKnown: Boolean = true,
     onEngineerModeClick: () -> Unit,
     onChatClick: () -> Unit,
     onTerminalClick: () -> Unit,
@@ -80,6 +82,7 @@ fun HomeScreen(
                     .fillMaxHeight(),
             )
             QuickActionsColumn(
+                driveRestricted = driveRestricted,
                 onEngineerModeClick = onEngineerModeClick,
                 onChatClick = onChatClick,
                 onTerminalClick = onTerminalClick,
@@ -94,6 +97,8 @@ fun HomeScreen(
                 currentLanguageLabel = currentLanguageLabel,
                 targetLanguageLabel = targetLanguageLabel,
                 languageSwitchable = languageSwitchable,
+                driveRestricted = driveRestricted,
+                driveStateKnown = driveStateKnown,
                 onLanguageToggle = onLanguageToggle,
                 modifier = Modifier
                     .weight(0.28f)
@@ -148,6 +153,7 @@ private fun BrandColumn(
 
 @Composable
 private fun QuickActionsColumn(
+    driveRestricted: Boolean,
     onEngineerModeClick: () -> Unit,
     onChatClick: () -> Unit,
     onTerminalClick: () -> Unit,
@@ -163,13 +169,16 @@ private fun QuickActionsColumn(
         Spacer(modifier = Modifier.height(AOSSpacing.md))
 
         val ready = stringResource(R.string.badge_ready)
+        // 行驶受限：终端与工程师模式禁用并把原因写在行上，而不是静默消失——
+        // 用户需要知道"不是坏了，是行驶中不让用"
+        val restrictedReason = stringResource(R.string.drive_entry_unavailable)
 
         // 点标导航行（design.md §5.10）：行即界面。
         // 终端（Batch 2 Step 1）/ 系统面板（Batch 1 Step 2）/ 对话 / 工程师模式 / 设置均已交付。
         DestinationRow(
             title = stringResource(R.string.action_terminal),
-            badgeText = ready,
-            enabled = true,
+            badgeText = if (driveRestricted) restrictedReason else ready,
+            enabled = !driveRestricted,
             onClick = onTerminalClick,
         )
         RowDivider()
@@ -189,8 +198,8 @@ private fun QuickActionsColumn(
         RowDivider()
         DestinationRow(
             title = stringResource(R.string.action_engineer_mode),
-            badgeText = ready,
-            enabled = true,
+            badgeText = if (driveRestricted) restrictedReason else ready,
+            enabled = !driveRestricted,
             onClick = onEngineerModeClick,
         )
         RowDivider()
@@ -233,6 +242,8 @@ private fun GlanceColumn(
     currentLanguageLabel: String,
     targetLanguageLabel: String,
     languageSwitchable: Boolean,
+    driveRestricted: Boolean,
+    driveStateKnown: Boolean,
     onLanguageToggle: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -270,7 +281,12 @@ private fun GlanceColumn(
             )
             AOSDataRow(
                 label = stringResource(R.string.status_drive_mode),
-                value = stringResource(R.string.status_drive_mode_parked),
+                // 三态如实报：读不到驾驶态时写"停车"就是骗人
+                value = when {
+                    !driveStateKnown -> stringResource(R.string.status_drive_mode_unknown)
+                    driveRestricted -> stringResource(R.string.status_drive_mode_driving)
+                    else -> stringResource(R.string.status_drive_mode_parked)
+                },
             )
         }
 
