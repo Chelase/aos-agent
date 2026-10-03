@@ -78,6 +78,12 @@
 
 ### Phase B — 连续对话 + 离线唤醒
 
+> 已拆解为子计划，实施按子计划推进（父计划不直接开工）：
+> [voice/step-b1-continuous-loop-plan.md](./voice/step-b1-continuous-loop-plan.md)、
+> [voice/step-b2-vosk-wakeword-plan.md](./voice/step-b2-vosk-wakeword-plan.md)、
+> [voice/step-b3-driving-mask-plan.md](./voice/step-b3-driving-mask-plan.md)。
+> 实施顺序 B1 → B3 → B2（先可测的，把原生依赖与 42MB 模型下载放最后）。
+
 1. **连续对话回路**：Speaking 结束 → 自动 Listening（带 1s 防自听静默）；说话打断 TTS（barge-in：检测到人声即 `TextToSpeech.stop()`）；超时 8s 无语音回 Idle。
    验收：模拟器连续三轮问答不碰屏；播放媒体（音频焦点被夺）时回路自动挂起、焦点回来自动恢复。
 2. **Vosk 离线唤醒**：首启引导页下载中文小模型（约 50MB，Wi-Fi 提示）；KWS 服务常驻前台服务（复用 `AgentForegroundService` 进程）唤醒词"你好副驾"；唤醒 → 打开聊天页并进入聆听。
@@ -108,6 +114,7 @@
 - [x] 现状盘点（语音零实现、CarUxRestrictions 未接入）
 - [x] 方案决策记录（ASR/TTS/KWS/指令解析/音频焦点）
 - [x] Phase A 实施 — 2026-10-02（用户确认排期后开工）
+- [x] Phase B 子计划拆解 — 2026-10-03（`dev-plans/voice/` 三份）
 - [ ] Phase B（离线唤醒词 Vosk + 驾驶全屏遮罩）
 - [ ] Phase C
 
