@@ -69,6 +69,8 @@
     <string name="voice_action_listening">聆听中…（点按结束）</string>
     <string name="voice_action_thinking">思考中…</string>
     <string name="voice_action_speaking">播报中…（点按打断）</string>
+    <string name="voice_action_waiting">等一下，马上继续听…</string>
+    <string name="voice_notice_focus_suspended">被其他音频占用，结束后自动继续</string>
     <string name="voice_err_no_service">本机没有语音识别服务，暂不能用语音</string>
     <string name="voice_err_permission">未授予麦克风权限，语音不可用</string>
     <string name="voice_err_audio_busy">麦克风被占用，稍后再试</string>
@@ -88,6 +90,8 @@
     <string name="settings_section_voice">语音</string>
     <string name="settings_voice_tts">语音播报回答</string>
     <string name="settings_voice_continuous">连续对话</string>
+    <string name="settings_voice_barge_in">说话打断播报</string>
+    <string name="settings_voice_barge_in_hint">需要设备能消除喇叭回声，否则我会把自己的播报听成人声、自己打断自己；不确定就别开。</string>
     <string name="settings_voice_privacy">录音只进识别管道，不保存也不上传；只有识别出的文本交给模型。</string>
 
     <!-- 语音指令词表：有意同时收中英文，与界面语言无关，故只在默认资源里定义一份。 -->

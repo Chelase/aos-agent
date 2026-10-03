@@ -69,6 +69,7 @@ fun SettingsScreen(
     onToggleTheme: () -> Unit = {},
     onToggleTts: (Boolean) -> Unit = {},
     onToggleContinuous: (Boolean) -> Unit = {},
+    onToggleBargeIn: (Boolean) -> Unit = {},
 ) {
     var baseUrl by remember { mutableStateOf(currentLlm?.first.orEmpty()) }
     var model by remember { mutableStateOf(currentLlm?.second.orEmpty()) }
@@ -244,6 +245,18 @@ fun SettingsScreen(
                     label = stringResource(R.string.settings_voice_continuous),
                     checked = voiceSettings.continuous,
                     onCheckedChange = onToggleContinuous,
+                )
+                AOSRowDivider()
+                VoiceSwitchRow(
+                    label = stringResource(R.string.settings_voice_barge_in),
+                    checked = voiceSettings.bargeInEnabled,
+                    onCheckedChange = onToggleBargeIn,
+                )
+                // 打断能力的硬件前提写在开关正下方，不留到用户自己踩坑
+                Text(
+                    text = stringResource(R.string.settings_voice_barge_in_hint),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = AOSTheme.textTertiary,
                 )
                 Spacer(modifier = Modifier.height(AOSSpacing.sm))
                 Text(

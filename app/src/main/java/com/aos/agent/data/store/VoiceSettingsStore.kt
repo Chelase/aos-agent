@@ -23,6 +23,8 @@ private val Context.voiceStore: DataStore<Preferences> by preferencesDataStore(n
 data class VoiceSettings(
     val ttsEnabled: Boolean = true,
     val continuous: Boolean = false,
+    /** 人声打断播报：需要设备有回声消除，默认关（否则助手会把自己听成人声）。 */
+    val bargeInEnabled: Boolean = false,
 )
 
 /**
@@ -45,9 +47,14 @@ class VoiceSettingsStore(context: Context) {
             VoiceSettings(
                 ttsEnabled = prefs[KEY_TTS] ?: DEFAULT_TTS,
                 continuous = prefs[KEY_CONTINUOUS] ?: DEFAULT_CONTINUOUS,
+                bargeInEnabled = prefs[KEY_BARGE_IN] ?: DEFAULT_BARGE_IN,
             )
         }
-        .stateIn(scope, SharingStarted.Eagerly, VoiceSettings(DEFAULT_TTS, DEFAULT_CONTINUOUS))
+        .stateIn(
+            scope,
+            SharingStarted.Eagerly,
+            VoiceSettings(DEFAULT_TTS, DEFAULT_CONTINUOUS, DEFAULT_BARGE_IN),
+        )
 
     suspend fun setTtsEnabled(enabled: Boolean) {
         appContext.voiceStore.edit { it[KEY_TTS] = enabled }
@@ -57,10 +64,16 @@ class VoiceSettingsStore(context: Context) {
         appContext.voiceStore.edit { it[KEY_CONTINUOUS] = enabled }
     }
 
+    suspend fun setBargeInEnabled(enabled: Boolean) {
+        appContext.voiceStore.edit { it[KEY_BARGE_IN] = enabled }
+    }
+
     private companion object {
         val KEY_TTS = booleanPreferencesKey("tts_enabled")
         val KEY_CONTINUOUS = booleanPreferencesKey("continuous")
+        val KEY_BARGE_IN = booleanPreferencesKey("barge_in_enabled")
         const val DEFAULT_TTS = true
         const val DEFAULT_CONTINUOUS = false
+        const val DEFAULT_BARGE_IN = false
     }
 }

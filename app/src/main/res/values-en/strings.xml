@@ -67,6 +67,8 @@
     <string name="voice_action_listening">Listening… (tap to stop)</string>
     <string name="voice_action_thinking">Thinking…</string>
     <string name="voice_action_speaking">Speaking… (tap to interrupt)</string>
+    <string name="voice_action_waiting">One moment, listening again…</string>
+    <string name="voice_notice_focus_suspended">Paused for other audio; resumes when it ends</string>
     <string name="voice_err_no_service">No speech recognition service on this device</string>
     <string name="voice_err_permission">Microphone permission not granted</string>
     <string name="voice_err_audio_busy">Microphone is busy, try again</string>
@@ -86,6 +88,8 @@
     <string name="settings_section_voice">Voice</string>
     <string name="settings_voice_tts">Speak answers</string>
     <string name="settings_voice_continuous">Continuous conversation</string>
+    <string name="settings_voice_barge_in">Interrupt playback by speaking</string>
+    <string name="settings_voice_barge_in_hint">Needs hardware echo cancellation, otherwise the assistant hears its own playback and keeps interrupting itself; leave it off if unsure.</string>
     <string name="settings_voice_privacy">Audio stays in the on-device recognition pipeline — never stored or uploaded; only the recognized text reaches the model.</string>
     <string name="section_system">System</string>
     <string name="section_device">Device</string>

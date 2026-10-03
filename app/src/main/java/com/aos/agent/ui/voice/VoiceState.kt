@@ -2,8 +2,12 @@ package com.aos.agent.ui.voice
 
 import androidx.annotation.StringRes
 
-/** 语音状态机的四个可见阶段；每个阶段都要在界面上有灯与文案。 */
-enum class VoicePhase { IDLE, LISTENING, THINKING, SPEAKING }
+/**
+ * 语音可见阶段；每个阶段都要在界面上有灯与文案。
+ *
+ * `WAITING` 是连续对话里播报结束后的静默间隙（防自听），不是一轮新的聆听，也不是空闲。
+ */
+enum class VoicePhase { IDLE, WAITING, LISTENING, THINKING, SPEAKING }
 
 /**
  * 语音界面状态：Compose 的唯一真相源。
@@ -25,6 +29,10 @@ data class VoiceUiState(
     val continuous: Boolean = false,
     /** 最近一次已提交的识别文本，供界面显示"我听到了什么"。 */
     val lastHeard: String = "",
+    /** 焦点被别的音频抢走、回路挂起中：灯回 IDLE 但必须说明不是用户自己停的。 */
+    val suspendedByFocus: Boolean = false,
 ) {
-    val busy: Boolean get() = phase == VoicePhase.LISTENING || phase == VoicePhase.THINKING
+    val busy: Boolean
+        get() = phase == VoicePhase.LISTENING || phase == VoicePhase.THINKING ||
+            phase == VoicePhase.WAITING
 }

@@ -32,5 +32,20 @@ interface SpeechSynthesizer {
     fun release()
 }
 
+/**
+ * 一次语音会话的音频焦点。焦点由会话持有而不是由播报持有：
+ * 同一 App 内两个焦点请求会互相踢掉对方（播报时把聆听挤成 LOSS），
+ * 而且只有**自己名下**的请求被抢走时才收得到回调——挂起/恢复必须有这一路常驻请求才谈得上。
+ *
+ * 播报侧因此不再申请焦点（媒体压低由本会话的 MAY_DUCK 覆盖）。
+ */
+interface VoiceFocusHandle {
+
+    /** 申请会话焦点，[onLost]/[onGained] 由系统在同一路焦点变化时回调。返回是否真的拿到。 */
+    fun claim(onLost: () -> Unit, onGained: () -> Unit): Boolean
+
+    fun release()
+}
+
 /** 失败原因枚举，UI 侧映射到本地化文案。 */
 enum class VoiceError { NO_SERVICE, PERMISSION, AUDIO_IN_USE, NO_MATCH, TIMEOUT, GENERIC }

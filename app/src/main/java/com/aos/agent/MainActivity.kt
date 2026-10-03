@@ -43,6 +43,7 @@ import com.aos.agent.system.CarUxRestrictionsReader
 import com.aos.agent.system.SystemInfoProvider
 import com.aos.agent.system.voice.AndroidSpeechSynthesizer
 import com.aos.agent.system.voice.AndroidSpeechTranscriber
+import com.aos.agent.system.voice.AndroidVoiceFocus
 import com.aos.agent.terminal.TerminalViewModel
 import com.aos.agent.ui.engineer.EngineerModeScreen
 import com.aos.agent.ui.home.HomeScreen
@@ -76,8 +77,10 @@ class MainActivity : ComponentActivity() {
         voiceController = VoiceController(
             transcriber = AndroidSpeechTranscriber(this),
             synthesizer = AndroidSpeechSynthesizer(this),
+            focus = AndroidVoiceFocus(this),
             vocabulary = voiceVocabularyFrom(this),
             settings = voiceSettingsStore.settings,
+            scope = lifecycleScope,
             hasPermission = {
                 ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
                     PackageManager.PERMISSION_GRANTED
@@ -298,6 +301,7 @@ private fun SettingsHost(
         onToggleTheme = onToggleTheme,
         onToggleTts = { enabled -> scope.launch { voiceSettingsStore.setTtsEnabled(enabled) } },
         onToggleContinuous = { enabled -> scope.launch { voiceSettingsStore.setContinuous(enabled) } },
+        onToggleBargeIn = { enabled -> scope.launch { voiceSettingsStore.setBargeInEnabled(enabled) } },
         onBackClick = onBackClick,
         onSaveModel = { baseUrl, model, apiKey ->
             scope.launch {

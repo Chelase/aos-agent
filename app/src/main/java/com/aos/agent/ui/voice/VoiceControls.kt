@@ -134,6 +134,7 @@ fun VoiceStatusLine(state: VoiceUiState, modifier: Modifier = Modifier) {
 
 private fun toneOf(phase: VoicePhase): AOSStatusTone = when (phase) {
     VoicePhase.IDLE -> AOSStatusTone.NEUTRAL
+    VoicePhase.WAITING -> AOSStatusTone.NEUTRAL
     VoicePhase.LISTENING -> AOSStatusTone.SUCCESS
     VoicePhase.THINKING -> AOSStatusTone.INFO
     VoicePhase.SPEAKING -> AOSStatusTone.WARNING
@@ -141,6 +142,7 @@ private fun toneOf(phase: VoicePhase): AOSStatusTone = when (phase) {
 
 private fun labelOf(phase: VoicePhase): Int = when (phase) {
     VoicePhase.IDLE -> R.string.voice_action_listen
+    VoicePhase.WAITING -> R.string.voice_action_waiting
     VoicePhase.LISTENING -> R.string.voice_action_listening
     VoicePhase.THINKING -> R.string.voice_action_thinking
     VoicePhase.SPEAKING -> R.string.voice_action_speaking
