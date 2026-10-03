@@ -60,7 +60,8 @@
 
 - [batch1/](./batch1/README.md) — Batch 1 各 Step 拆解出的子计划（父计划为复杂功能，禁止直接实现）
 - [mvp/](./mvp/README.md) — MVP 专项各 Step 拆解出的子计划（父计划为 [mvp-core-plan.md](./mvp-core-plan.md)）
-- [voice/](./voice/README.md) — 语音 Phase B 子计划：连续对话回路 / Vosk 离线唤醒 / 驾驶遮罩
+- [voice/](./voice/README.md) — 语音 Phase B 子计划：连续对话回路 / Vosk 离线唤醒 / 驾驶遮罩 / 唤醒调试面板
+- [release-update-plan.md](./release-update-plan.md) — 发布与更新：签名 + CI + 检查更新 + 下载安装（真机交付前置）
 
 ## 6. 已归档
 
