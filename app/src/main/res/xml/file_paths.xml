@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 只暴露升级包所在的缓存子目录；其余目录一律不给外部读 -->
+<paths>
+    <cache-path name="updates" path="update/" />
+</paths>

@@ -139,6 +139,15 @@
     <string name="update_err_network">检查失败：车机连不上发布站点，稍后再试</string>
     <string name="update_err_manifest">检查失败：更新清单读不懂，可能版本还没发完</string>
     <string name="update_err_untrusted">检查失败：更新来源不在官方白名单内，已拒绝</string>
+    <string name="update_install">下载并安装</string>
+    <string name="update_downloading">下载中 %1$d%%</string>
+    <string name="update_gate_permission">还没允许本应用安装未知来源应用，装不了</string>
+    <string name="update_gate_open_settings">去系统设置允许</string>
+    <string name="update_gate_no_installer">这台车机没有可用的安装程序，请走应用商店或厂商升级</string>
+    <string name="update_result_installed">已拉起系统安装器，请在弹窗里确认</string>
+    <string name="update_result_checksum_failed">校验不通过，下载文件已删除，拒绝安装</string>
+    <string name="update_result_untrusted">下载地址不在官方白名单内，已拒绝</string>
+    <string name="update_result_network">下载失败：网络不通或站点无响应</string>
 
     <!-- 行驶受限态（CarUxRestrictions）：语音是唯一安全输入，文字入口一律收起。 -->
     <string name="drive_mask_title">行驶中 · 只用语音</string>

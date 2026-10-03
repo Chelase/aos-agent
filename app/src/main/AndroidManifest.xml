@@ -14,6 +14,9 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- 语音对话：录音只进系统识别管道，应用不落盘（隐私边界见设置页文案与 mechanisms/voice-interaction.md） -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- 应用内升级：只能拉起系统安装器，静默安装要系统签名，我们没有。
+         车机不允许侧载时界面会禁用并写明原因，见 mechanisms/release-and-update.md -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- Android 11+ 包可见性：不声明就探测不到语音识别服务，会被误判成"本机无语音" -->
     <queries>
@@ -25,6 +28,11 @@
         </intent>
         <intent>
             <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+        <!-- 升级要探测"这台机器上有没有能装 APK 的程序"，不声明就永远探不到 -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:mimeType="application/vnd.android.package-archive" />
         </intent>
     </queries>
 
@@ -68,6 +76,17 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="AOSAgent core runtime" />
         </service>
+
+        <!-- 升级包在缓存目录，安装器是另一个 uid，只能用 content URI 授权给它读 -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
         <receiver
             android:name=".receiver.BootReceiver"

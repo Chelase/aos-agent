@@ -137,6 +137,15 @@
     <string name="update_err_network">Check failed: the head unit can’t reach the release site — try again later</string>
     <string name="update_err_manifest">Check failed: update manifest is unreadable — the release may be incomplete</string>
     <string name="update_err_untrusted">Check failed: update source is not on the official allowlist — refused</string>
+    <string name="update_install">Download and install</string>
+    <string name="update_downloading">Downloading %1$d%%</string>
+    <string name="update_gate_permission">This app isn’t allowed to install unknown apps yet</string>
+    <string name="update_gate_open_settings">Allow in system settings</string>
+    <string name="update_gate_no_installer">No package installer on this head unit — use the app store or a factory update</string>
+    <string name="update_result_installed">Installer launched — confirm in the system dialog</string>
+    <string name="update_result_checksum_failed">Checksum mismatch — download deleted, install refused</string>
+    <string name="update_result_untrusted">Download URL isn’t on the official allowlist — refused</string>
+    <string name="update_result_network">Download failed: no network or the site didn’t answer</string>
 
     <!-- Drive-restricted state (CarUxRestrictions): voice is the only safe input. -->
     <string name="drive_mask_title">Driving · voice only</string>

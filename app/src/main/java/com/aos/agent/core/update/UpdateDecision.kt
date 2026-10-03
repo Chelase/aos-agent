@@ -39,6 +39,7 @@ sealed interface UpdateOutcome {
  */
 object UpdateDecision {
 
+    /** 精确主机名，不做后缀匹配：`evil.github.com` 也算官方子域这种结论不能默认成立。 */
     private val ALLOWED_HOSTS = setOf(
         "github.com",
         "raw.githubusercontent.com",
@@ -48,9 +49,7 @@ object UpdateDecision {
 
     fun isTrustedUrl(raw: String): Boolean = runCatching {
         val uri = java.net.URI(raw.trim())
-        val scheme = uri.scheme?.lowercase()
-        val host = uri.host?.lowercase()
-        scheme == "https" && host != null && ALLOWED_HOSTS.any { host == it || host.endsWith(".$it") }
+        uri.scheme?.lowercase() == "https" && uri.host?.lowercase() in ALLOWED_HOSTS
     }.getOrDefault(false)
 
     /** 校验和必须是 64 位十六进制，否则等于没校验。 */

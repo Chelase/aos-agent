@@ -18,6 +18,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.invisibleToUser
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.lazy.items
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aos.agent.runtime.AgentRuntime
 import com.aos.agent.runtime.RuntimeStatus
@@ -25,6 +29,7 @@ import com.aos.agent.ui.chat.ChatEntry
 import com.aos.agent.ui.chat.ChatScreen
 import com.aos.agent.ui.chat.ChatTranscript
 import com.aos.agent.ui.settings.SettingsScreen
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.Composable
@@ -38,6 +43,8 @@ import com.aos.agent.core.engine.AgentEvent
 import com.aos.agent.core.llm.LlmConfig
 import com.aos.agent.core.tools.mcp.McpServerConfig
 import com.aos.agent.core.update.HttpUpdateChecker
+import com.aos.agent.core.update.InstallGate
+import com.aos.agent.core.update.InstallGates
 import com.aos.agent.core.update.UpdateOutcome
 import com.aos.agent.core.voice.VoiceCommand
 import com.aos.agent.core.voice.WakeWordGate
@@ -53,6 +60,7 @@ import com.aos.agent.system.AndroidSystemInfoReader
 import com.aos.agent.system.CarUxRestrictionsReader
 import com.aos.agent.system.DriveRestriction
 import com.aos.agent.system.SystemInfoProvider
+import com.aos.agent.system.update.ApkInstaller
 import com.aos.agent.system.update.AppVersionReader
 import com.aos.agent.system.voice.AndroidSpeechSynthesizer
 import com.aos.agent.system.voice.AndroidSpeechTranscriber
@@ -411,6 +419,23 @@ private fun SettingsHost(
     }
     var updateChecking by remember { mutableStateOf(false) }
     var updateOutcome by remember { mutableStateOf<UpdateOutcome?>(null) }
+    val installer = remember { ApkInstaller(context) }
+    var installGate by remember {
+        mutableStateOf(InstallGates.decide(installer.canRequestInstalls(), installer.installerPresent()))
+    }
+    var downloadPercent by remember { mutableStateOf<Int?>(null) }
+    var installMessageRes by remember { mutableStateOf<Int?>(null) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        // 从"允许安装"设置页回来时重探一次，否则按钮会一直停在禁用态
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                installGate = InstallGates.decide(installer.canRequestInstalls(), installer.installerPresent())
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     LaunchedEffect(Unit) {
         current = runtime.llmConfig()
@@ -450,14 +475,39 @@ private fun SettingsHost(
         appVersionLabel = appVersion.versionName + " (" + appVersion.versionCode + ")",
         updateChecking = updateChecking,
         updateOutcome = updateOutcome,
+        installGate = installGate,
+        downloadPercent = downloadPercent,
+        installMessageRes = installMessageRes,
         onCheckUpdate = {
             updateChecking = true
             updateOutcome = null
+            installMessageRes = null
             scope.launch {
                 updateOutcome = updateChecker.check()
                 updateChecking = false
             }
         },
+        onDownloadAndInstall = {
+            val manifest = (updateOutcome as? UpdateOutcome.Available)?.manifest ?: return@SettingsScreen
+            scope.launch {
+                installMessageRes = null
+                val outcome = installer.download(manifest.apkUrl, manifest.sha256) { percent ->
+                    launch(Dispatchers.Main) { downloadPercent = percent }
+                }
+                downloadPercent = null
+                installMessageRes = when (outcome.result) {
+                    ApkInstaller.DownloadResult.DOWNLOADED -> {
+                        val launched = outcome.file?.let { installer.launchInstall(it) } == true
+                        if (launched) R.string.update_result_installed else R.string.update_gate_no_installer
+                    }
+
+                    ApkInstaller.DownloadResult.CHECKSUM_MISMATCH -> R.string.update_result_checksum_failed
+                    ApkInstaller.DownloadResult.UNTRUSTED_URL -> R.string.update_result_untrusted
+                    else -> R.string.update_result_network
+                }
+            }
+        },
+        onOpenInstallPermissionSettings = { installer.openInstallPermissionSettings() },
         onBackClick = onBackClick,
         onSaveModel = { baseUrl, model, apiKey ->
             scope.launch {

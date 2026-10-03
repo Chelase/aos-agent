@@ -38,6 +38,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.aos.agent.R
 import com.aos.agent.core.tools.mcp.McpServerConfig
+import com.aos.agent.core.update.InstallGate
 import com.aos.agent.core.update.UpdateFailure
 import com.aos.agent.core.update.UpdateOutcome
 import com.aos.agent.core.voice.WakeVariant
@@ -85,7 +86,12 @@ fun SettingsScreen(
     appVersionLabel: String = "",
     updateChecking: Boolean = false,
     updateOutcome: UpdateOutcome? = null,
+    installGate: InstallGate = InstallGate.PERMISSION_NEEDED,
+    downloadPercent: Int? = null,
+    @StringRes installMessageRes: Int? = null,
     onCheckUpdate: () -> Unit = {},
+    onDownloadAndInstall: () -> Unit = {},
+    onOpenInstallPermissionSettings: () -> Unit = {},
 ) {
     var baseUrl by remember { mutableStateOf(currentLlm?.first.orEmpty()) }
     var model by remember { mutableStateOf(currentLlm?.second.orEmpty()) }
@@ -427,10 +433,46 @@ fun SettingsScreen(
                             text = stringResource(R.string.update_download_hint, outcome.manifest.apkUrl),
                             color = AOSTheme.textTertiary,
                         )
+                        Spacer(modifier = Modifier.height(AOSSpacing.sm))
+                        val percent = downloadPercent
+                        when {
+                            percent != null -> UpdateResultLine(
+                                text = stringResource(R.string.update_downloading, percent),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+
+                            installGate == InstallGate.READY -> AOSPrimaryButton(
+                                text = stringResource(R.string.update_install),
+                                onClick = onDownloadAndInstall,
+                            )
+
+                            // 装不了的时候给的是"为什么 + 下一步"，不是一个灰按钮
+                            installGate == InstallGate.PERMISSION_NEEDED -> {
+                                UpdateResultLine(
+                                    text = stringResource(R.string.update_gate_permission),
+                                    color = AOSTheme.statusWarning,
+                                )
+                                AOSSecondaryButton(
+                                    text = stringResource(R.string.update_gate_open_settings),
+                                    onClick = onOpenInstallPermissionSettings,
+                                )
+                            }
+
+                            else -> UpdateResultLine(
+                                text = stringResource(R.string.update_gate_no_installer),
+                                color = AOSTheme.statusWarning,
+                            )
+                        }
                     }
 
                     is UpdateOutcome.Failed -> UpdateResultLine(
                         text = stringResource(updateFailureRes(outcome.failure)),
+                        color = AOSTheme.statusError,
+                    )
+                }
+                installMessageRes?.let {
+                    UpdateResultLine(
+                        text = stringResource(it),
                         color = AOSTheme.statusError,
                     )
                 }
