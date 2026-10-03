@@ -97,8 +97,15 @@
     <string name="settings_voice_privacy">录音只进识别管道，不保存也不上传；只有识别出的文本交给模型。</string>
 
     <!-- 离线唤醒词（Vosk KWS）：唤醒词本身不翻译，中英界面都认同一句中文口令 -->
-    <string name="wake_keyword">你好副驾</string>
     <string name="settings_voice_wake">语音唤醒「%1$s」</string>
+    <string name="settings_agent_name">Agent 名字</string>
+    <string name="settings_agent_name_save">保存名字</string>
+    <string name="settings_agent_name_hint">唤醒词由这个名字生成。中文名字识别最稳；英文名受限于普通话声学模型，命中率需真机调。</string>
+    <string name="settings_wake_variants">唤醒说法（可多选）</string>
+    <string name="settings_wake_variant_hello">你好%1$s</string>
+    <string name="settings_wake_variant_hi">Hi %1$s</string>
+    <string name="settings_wake_variant_bare">只喊名字：%1$s</string>
+    <string name="settings_wake_variant_bare_risk">只喊名字最容易误唤醒：平时聊天提到名字就会叫醒它。</string>
     <string name="settings_voice_wake_hint">开启后常驻麦克风只判“是不是叫我”，判定在车机本地完成，音频不出车机、不落盘。需要先下载约 42MB 中文小模型。</string>
     <string name="wake_needs_model">还没下载唤醒模型，暂时开不了</string>
     <string name="wake_model_download">下载唤醒模型（约 42MB，建议在 Wi‑Fi 下）</string>

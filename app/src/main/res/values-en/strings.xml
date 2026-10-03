@@ -95,8 +95,15 @@
     <string name="settings_voice_privacy">Audio stays in the on-device recognition pipeline — never stored or uploaded; only the recognized text reaches the model.</string>
 
     <!-- Offline wake word (Vosk KWS): the keyword itself stays Chinese on both locales -->
-    <string name="wake_keyword">你好副驾</string>
     <string name="settings_voice_wake">Wake word “%1$s”</string>
+    <string name="settings_agent_name">Agent name</string>
+    <string name="settings_agent_name_save">Save name</string>
+    <string name="settings_agent_name_hint">The wake word is built from this name. Chinese names recognize most reliably; English names are limited by the Mandarin acoustic model and need on-device tuning.</string>
+    <string name="settings_wake_variants">Wake phrases (multi-select)</string>
+    <string name="settings_wake_variant_hello">你好%1$s</string>
+    <string name="settings_wake_variant_hi">Hi %1$s</string>
+    <string name="settings_wake_variant_bare">Name only: %1$s</string>
+    <string name="settings_wake_variant_bare_risk">Name-only wakes most easily: any mention in normal talk can trigger it.</string>
     <string name="settings_voice_wake_hint">When on, the mic stays open only to decide “is it calling me”, entirely on this device — audio never leaves the car and is never stored. Needs a ~42MB Chinese model download first.</string>
     <string name="wake_needs_model">Wake model not downloaded yet, so this can\'t be enabled</string>
     <string name="wake_model_download">Download wake model (~42MB, Wi-Fi recommended)</string>

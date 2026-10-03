@@ -424,6 +424,13 @@ private fun SettingsHost(
                 AgentWakeWatcher.requestRefresh(context)
             }
         },
+        onSaveAgentName = { name -> scope.launch { voiceSettingsStore.setAgentName(name) } },
+        onToggleWakeVariant = { variant, checked ->
+            scope.launch {
+                val current = voiceSettingsStore.settings.value.wakeVariants
+                voiceSettingsStore.setWakeVariants(if (checked) current + variant else current - variant)
+            }
+        },
         onDownloadWakeModel = { wakeInstaller.download() },
         onBackClick = onBackClick,
         onSaveModel = { baseUrl, model, apiKey ->

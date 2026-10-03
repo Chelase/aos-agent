@@ -29,18 +29,21 @@ interface WakeWordEngine {
 enum class WakeError { MODEL_MISSING, NO_MIC_PERMISSION, AUDIO_IN_USE, NATIVE_UNAVAILABLE, GENERIC }
 
 /**
- * 唤醒判定纯函数。
+ * 唤醒判定与说法生成的纯函数。
  *
- * 受限语法下 Vosk 只会给唤醒词或 `[unk]`；判定不收正则、不切句，只去空白后看是否包含唤醒词，
- * 这样中英混说与识别器多给的空格都不会把"叫了我"判成没叫。
+ * 受限语法下 Vosk 只会给出语法内的词条或 `[unk]`；判定不收正则、不切句，只去空白与标点
+ * 后看是否包含某个说法，这样中英混说与识别器多给的空格都不会把"叫了我"判成没叫。
  */
 object WakeWordMatcher {
 
     private const val UNKNOWN_TOKEN = "[unk]"
 
-    fun isWake(text: String, keyword: String): Boolean {
-        val needle = normalize(keyword)
-        return needle.isNotEmpty() && normalize(text).contains(needle)
+    fun isWake(text: String, phrases: List<String>): Boolean {
+        val heard = normalize(text)
+        return phrases.any { phrase ->
+            val needle = normalize(phrase)
+            needle.isNotEmpty() && heard.isNotEmpty() && heard.contains(needle)
+        }
     }
 
     /** `[unk]` 与空串都算没听到；带前后噪声的整句按包含判定。 */
@@ -58,8 +61,58 @@ object WakeWordMatcher {
             ?.get("text")?.jsonPrimitive?.content.orEmpty()
     }.getOrDefault("")
 
-    private fun normalize(text: String): String =
-        text.filterNot { it.isWhitespace() }.lowercase()
+    /** 空白与标点不参与比对：识别器给"你好 Chelsea"还是"你好，chelsea"都该算命中。 */
+    private fun normalize(text: String): String = buildString {
+        text.forEach { ch ->
+            if (!ch.isWhitespace() && ch !in PUNCTUATION_MARKS) append(ch.lowercaseChar())
+        }
+    }
+
+    private val PUNCTUATION_MARKS = charArrayOf(
+        ',', '.', '!', '?', ';', ':', '\'', '"', '、', '，', '。', '！', '？', '；', '：',
+    )
+}
+
+/** 唤醒说法的三种模板。名字由用户给，模板固定可选，多个可同时开。 */
+enum class WakeVariant { HELLO, HI, BARE }
+
+/**
+ * 由 Agent 名字生成唤醒说法与 Vosk 受限语法。
+ *
+ * 前缀"你好"/"Hi" 是**要念出口的词**，不随界面语言翻译（英文界面上用户照样喊"你好X"），
+ * 所以这里用常量而不是 string 资源；界面显示时原样回显这些字符串。
+ */
+object WakeWordPhrases {
+
+    private const val HELLO_PREFIX = "你好"
+    private const val HI_PREFIX = "Hi"
+    private const val UNKNOWN_TOKEN = "[unk]"
+
+    /** 按 HELLO → HI → BARE 固定顺序生成，去空去重；名字为空则没有任何说法。 */
+    fun build(name: String, variants: Set<WakeVariant>): List<String> {
+        val who = name.trim()
+        if (who.isEmpty()) return emptyList()
+        val ordered = buildList {
+            if (WakeVariant.HELLO in variants) add("$HELLO_PREFIX$who")
+            if (WakeVariant.HI in variants) add("$HI_PREFIX $who")
+            if (WakeVariant.BARE in variants) add(who)
+        }
+        return ordered.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+    }
+
+    /**
+     * 受限语法 JSON。
+     *
+     * 名字是用户输入的，可能带引号或反斜杠，不转义就会把整条语法打烂（ recognizer 构造失败）；
+     * 这里剥掉这两个字符而不是做 JSON 转义——唤醒词里出现引号本身没有意义。
+     */
+    fun grammarOf(phrases: List<String>): String {
+        val items = phrases.map { "\"" + it.replace("\\", "").replace("\"", "") + "\"" } + "\"$UNKNOWN_TOKEN\""
+        return "[" + items.joinToString(", ") + "]"
+    }
+
+    /** 界面上把说法串成一串展示（通知文案、开关标签共用）。 */
+    fun displayOf(phrases: List<String>): String = phrases.joinToString(" / ")
 }
 
 /**

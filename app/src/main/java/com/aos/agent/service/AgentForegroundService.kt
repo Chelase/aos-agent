@@ -16,6 +16,7 @@ import com.aos.agent.MainActivity
 import com.aos.agent.R
 import com.aos.agent.core.voice.WakeWordEngine
 import com.aos.agent.core.voice.WakeWordGate
+import com.aos.agent.core.voice.WakeWordPhrases
 import com.aos.agent.data.store.VoiceSettingsStore
 import com.aos.agent.system.voice.VoskWakeWordEngine
 import com.aos.agent.system.voice.WakeModelInstaller
@@ -58,6 +59,7 @@ class AgentForegroundService : Service() {
     private val modelInstaller by lazy { WakeModelInstaller(this, scope) }
     private var wakeWatchJob: Job? = null
     private var wakeEngine: WakeWordEngine? = null
+    private var wakePhrases: List<String> = emptyList()
 
     override fun onCreate() {
         super.onCreate()
@@ -106,7 +108,7 @@ class AgentForegroundService : Service() {
 
     // ---- 离线唤醒（KWS）----
 
-    /** 幂等：只装一次监听协程，之后开关/模型/闸门任一变化都会自动重算该不该听。 */
+    /** 幂等：只装一次监听协程，之后开关/模型/名字/说法/闸门任一变化都会自动重算该不该听。 */
     private fun watchWakeWord() {
         if (wakeWatchJob != null) return
         wakeWatchJob = scope.launch {
@@ -115,23 +117,35 @@ class AgentForegroundService : Service() {
                 modelInstaller.state,
                 WakeWordGate.paused,
             ) { settings, model, paused ->
-                settings.wakeWordEnabled && model is WakeModelState.Ready && !paused
-            }.collect { shouldListen ->
-                if (shouldListen) startWakeWord() else stopWakeWord()
+                WakePlan(
+                    listening = settings.wakeWordEnabled && model is WakeModelState.Ready && !paused,
+                    phrases = WakeWordPhrases.build(settings.agentName, settings.wakeVariants),
+                )
+            }.collect { plan ->
+                when {
+                    !plan.listening || plan.phrases.isEmpty() -> stopWakeWord()
+                    wakePhrases != plan.phrases -> {
+                        // 说法变了要重建识别器：受限语法是构造时定死的
+                        stopWakeWord()
+                        startWakeWord(plan.phrases)
+                    }
+                }
             }
         }
     }
 
-    private fun startWakeWord() {
-        if (wakeEngine != null) return
+    private data class WakePlan(val listening: Boolean, val phrases: List<String>)
+
+    private fun startWakeWord(phrases: List<String>) {
         val modelPath = modelInstaller.readyModelPath() ?: return
         val engine = VoskWakeWordEngine(
             context = this,
             modelPath = modelPath,
-            keyword = getString(R.string.wake_keyword),
+            phrases = phrases,
             scope = scope,
         )
         wakeEngine = engine
+        wakePhrases = phrases
         engine.start(
             onWake = { onWakeWordHeard() },
             onError = { error ->
@@ -146,6 +160,7 @@ class AgentForegroundService : Service() {
     private fun stopWakeWord() {
         val engine = wakeEngine ?: return
         wakeEngine = null
+        wakePhrases = emptyList()
         engine.release()
         refreshNotification()
         Log.i(TAG, "Wake word listening stopped")
@@ -198,7 +213,7 @@ class AgentForegroundService : Service() {
         )
         // 常驻麦克风必须在通知里说清楚在听什么，不能只写"运行中"
         val contentText = if (wakeEngine != null) {
-            getString(R.string.notification_wake_listening, getString(R.string.wake_keyword))
+            getString(R.string.notification_wake_listening, WakeWordPhrases.displayOf(wakePhrases))
         } else {
             getString(R.string.service_running)
         }

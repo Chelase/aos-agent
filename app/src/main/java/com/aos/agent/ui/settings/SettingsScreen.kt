@@ -16,6 +16,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
@@ -36,6 +37,8 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.aos.agent.R
 import com.aos.agent.core.tools.mcp.McpServerConfig
+import com.aos.agent.core.voice.WakeVariant
+import com.aos.agent.core.voice.WakeWordPhrases
 import com.aos.agent.data.store.VoiceSettings
 import com.aos.agent.system.voice.WakeModelState
 import com.aos.agent.ui.components.AOSCard
@@ -73,6 +76,8 @@ fun SettingsScreen(
     onToggleContinuous: (Boolean) -> Unit = {},
     onToggleBargeIn: (Boolean) -> Unit = {},
     onToggleWake: (Boolean) -> Unit = {},
+    onSaveAgentName: (String) -> Unit = {},
+    onToggleWakeVariant: (WakeVariant, Boolean) -> Unit = { _, _ -> },
     onDownloadWakeModel: () -> Unit = {},
 ) {
     var baseUrl by remember { mutableStateOf(currentLlm?.first.orEmpty()) }
@@ -81,6 +86,7 @@ fun SettingsScreen(
     var mcpName by remember { mutableStateOf("fixture") }
     var mcpUrl by remember { mutableStateOf("http://localhost:9101/mcp") }
     var hint by remember { mutableStateOf<String?>(null) }
+    var agentNameDraft by remember(voiceSettings.agentName) { mutableStateOf(voiceSettings.agentName) }
     var showKey by remember { mutableStateOf(false) }
     val savedLabel = stringResource(R.string.settings_saved)
 
@@ -263,9 +269,68 @@ fun SettingsScreen(
                     color = AOSTheme.textTertiary,
                 )
                 AOSRowDivider()
+                // Agent 名字 → 唤醒词。名字与说法两行都直接摊开，不折叠进二级页
+                Field(
+                    label = stringResource(R.string.settings_agent_name),
+                    value = agentNameDraft,
+                    onValueChange = { agentNameDraft = it },
+                    keyboardType = KeyboardType.Text,
+                )
+                AOSPrimaryButton(
+                    text = stringResource(R.string.settings_agent_name_save),
+                    onClick = {
+                        onSaveAgentName(agentNameDraft)
+                        hint = savedLabel
+                    },
+                    enabled = agentNameDraft.isNotBlank() && agentNameDraft.trim() != voiceSettings.agentName,
+                )
+                Spacer(modifier = Modifier.height(AOSSpacing.xs))
+                Text(
+                    text = stringResource(R.string.settings_agent_name_hint),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = AOSTheme.textTertiary,
+                )
+                AOSRowDivider()
+                Text(
+                    text = stringResource(R.string.settings_wake_variants),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = AOSTheme.textTertiary,
+                )
+                WakeVariant.entries.forEach { variant ->
+                    WakeVariantRow(
+                        label = when (variant) {
+                            WakeVariant.HELLO -> stringResource(
+                                R.string.settings_wake_variant_hello,
+                                voiceSettings.agentName,
+                            )
+
+                            WakeVariant.HI -> stringResource(
+                                R.string.settings_wake_variant_hi,
+                                voiceSettings.agentName,
+                            )
+
+                            WakeVariant.BARE -> stringResource(
+                                R.string.settings_wake_variant_bare,
+                                voiceSettings.agentName,
+                            )
+                        },
+                        checked = variant in voiceSettings.wakeVariants,
+                        onCheckedChange = { onToggleWakeVariant(variant, it) },
+                    )
+                }
+                // 裸名会把日常提到名字都当成叫它，勾选时把代价写在眼前
+                if (WakeVariant.BARE in voiceSettings.wakeVariants) {
+                    Text(
+                        text = stringResource(R.string.settings_wake_variant_bare_risk),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = AOSTheme.statusWarning,
+                    )
+                }
+                AOSRowDivider()
                 val wakeReady = wakeModelState is WakeModelState.Ready
+                val wakePhrases = WakeWordPhrases.build(voiceSettings.agentName, voiceSettings.wakeVariants)
                 VoiceSwitchRow(
-                    label = stringResource(R.string.settings_voice_wake, stringResource(R.string.wake_keyword)),
+                    label = stringResource(R.string.settings_voice_wake, WakeWordPhrases.displayOf(wakePhrases)),
                     checked = voiceSettings.wakeWordEnabled && wakeReady,
                     enabled = wakeReady,
                     onCheckedChange = onToggleWake,
@@ -323,6 +388,31 @@ fun SettingsScreen(
                 )
             }
         }
+    }
+}
+
+/** 唤醒说法勾选行：整行可点，标签就是这句话本身（要念出口的，不随界面语言翻译）。 */
+@Composable
+private fun WakeVariantRow(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = AOSSizing.touchTarget)
+            .clickable { onCheckedChange(!checked) }
+            .padding(vertical = AOSSpacing.xs),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(AOSSpacing.sm),
+    ) {
+        Checkbox(checked = checked, onCheckedChange = onCheckedChange)
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
     }
 }
 
