@@ -96,6 +96,19 @@
     <string name="settings_voice_barge_in_hint">需要设备能消除喇叭回声，否则我会把自己的播报听成人声、自己打断自己；不确定就别开。</string>
     <string name="settings_voice_privacy">录音只进识别管道，不保存也不上传；只有识别出的文本交给模型。</string>
 
+    <!-- 离线唤醒词（Vosk KWS）：唤醒词本身不翻译，中英界面都认同一句中文口令 -->
+    <string name="wake_keyword">你好副驾</string>
+    <string name="settings_voice_wake">语音唤醒「%1$s」</string>
+    <string name="settings_voice_wake_hint">开启后常驻麦克风只判“是不是叫我”，判定在车机本地完成，音频不出车机、不落盘。需要先下载约 42MB 中文小模型。</string>
+    <string name="wake_needs_model">还没下载唤醒模型，暂时开不了</string>
+    <string name="wake_model_download">下载唤醒模型（约 42MB，建议在 Wi‑Fi 下）</string>
+    <string name="wake_model_retry">重新下载</string>
+    <string name="wake_model_downloading">唤醒模型下载中：%1$d%%</string>
+    <string name="wake_model_downloading_unknown">唤醒模型下载中…</string>
+    <string name="wake_model_ready">唤醒模型已就绪</string>
+    <string name="wake_err_download_failed">唤醒模型下载失败，请检查网络后重试</string>
+    <string name="notification_wake_listening">正在听唤醒词「%1$s」（本地判定，音频不出车机）</string>
+
     <!-- 行驶受限态（CarUxRestrictions）：语音是唯一安全输入，文字入口一律收起。 -->
     <string name="drive_mask_title">行驶中 · 只用语音</string>
     <string name="drive_mask_hint">文字输入与终端已收起。按下面的大麦克风说话。</string>

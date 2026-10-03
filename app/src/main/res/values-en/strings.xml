@@ -94,6 +94,19 @@
     <string name="settings_voice_barge_in_hint">Needs hardware echo cancellation, otherwise the assistant hears its own playback and keeps interrupting itself; leave it off if unsure.</string>
     <string name="settings_voice_privacy">Audio stays in the on-device recognition pipeline — never stored or uploaded; only the recognized text reaches the model.</string>
 
+    <!-- Offline wake word (Vosk KWS): the keyword itself stays Chinese on both locales -->
+    <string name="wake_keyword">你好副驾</string>
+    <string name="settings_voice_wake">Wake word “%1$s”</string>
+    <string name="settings_voice_wake_hint">When on, the mic stays open only to decide “is it calling me”, entirely on this device — audio never leaves the car and is never stored. Needs a ~42MB Chinese model download first.</string>
+    <string name="wake_needs_model">Wake model not downloaded yet, so this can\'t be enabled</string>
+    <string name="wake_model_download">Download wake model (~42MB, Wi-Fi recommended)</string>
+    <string name="wake_model_retry">Download again</string>
+    <string name="wake_model_downloading">Downloading wake model: %1$d%%</string>
+    <string name="wake_model_downloading_unknown">Downloading wake model…</string>
+    <string name="wake_model_ready">Wake model ready</string>
+    <string name="wake_err_download_failed">Wake model download failed — check the network and retry</string>
+    <string name="notification_wake_listening">Listening for the wake word “%1$s” (on-device, audio never leaves the car)</string>
+
     <!-- Drive-restricted state (CarUxRestrictions): voice is the only safe input. -->
     <string name="drive_mask_title">Driving · voice only</string>
     <string name="drive_mask_hint">Text input and the terminal are hidden. Tap the big mic below to talk.</string>

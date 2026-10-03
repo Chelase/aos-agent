@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import com.aos.agent.R
 import com.aos.agent.core.tools.mcp.McpServerConfig
 import com.aos.agent.data.store.VoiceSettings
+import com.aos.agent.system.voice.WakeModelState
 import com.aos.agent.ui.components.AOSCard
 import com.aos.agent.ui.components.AOSDataRow
 import com.aos.agent.ui.components.AOSLanguageSwitch
@@ -66,10 +67,13 @@ fun SettingsScreen(
     onDeleteMcp: (name: String) -> Unit,
     darkTheme: Boolean = false,
     voiceSettings: VoiceSettings = VoiceSettings(),
+    wakeModelState: WakeModelState = WakeModelState.Missing,
     onToggleTheme: () -> Unit = {},
     onToggleTts: (Boolean) -> Unit = {},
     onToggleContinuous: (Boolean) -> Unit = {},
     onToggleBargeIn: (Boolean) -> Unit = {},
+    onToggleWake: (Boolean) -> Unit = {},
+    onDownloadWakeModel: () -> Unit = {},
 ) {
     var baseUrl by remember { mutableStateOf(currentLlm?.first.orEmpty()) }
     var model by remember { mutableStateOf(currentLlm?.second.orEmpty()) }
@@ -258,6 +262,59 @@ fun SettingsScreen(
                     style = MaterialTheme.typography.labelSmall,
                     color = AOSTheme.textTertiary,
                 )
+                AOSRowDivider()
+                val wakeReady = wakeModelState is WakeModelState.Ready
+                VoiceSwitchRow(
+                    label = stringResource(R.string.settings_voice_wake, stringResource(R.string.wake_keyword)),
+                    checked = voiceSettings.wakeWordEnabled && wakeReady,
+                    enabled = wakeReady,
+                    onCheckedChange = onToggleWake,
+                )
+                // 开关不可用时先说缺什么，再给补上的入口，而不是只留一个灰开关
+                if (!wakeReady) {
+                    Text(
+                        text = stringResource(
+                            if (wakeModelState is WakeModelState.Failed) {
+                                (wakeModelState as WakeModelState.Failed).reasonRes
+                            } else {
+                                R.string.wake_needs_model
+                            },
+                        ),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = AOSTheme.textTertiary,
+                    )
+                }
+                when (val model = wakeModelState) {
+                    is WakeModelState.Downloading -> Text(
+                        text = if (model.percent >= 0) {
+                            stringResource(R.string.wake_model_downloading, model.percent)
+                        } else {
+                            stringResource(R.string.wake_model_downloading_unknown)
+                        },
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+
+                    WakeModelState.Missing, is WakeModelState.Failed -> AOSSecondaryButton(
+                        text = stringResource(
+                            if (model is WakeModelState.Failed) R.string.wake_model_retry
+                            else R.string.wake_model_download,
+                        ),
+                        onClick = onDownloadWakeModel,
+                    )
+
+                    WakeModelState.Ready -> Text(
+                        text = stringResource(R.string.wake_model_ready),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = AOSTheme.statusSuccess,
+                    )
+                }
+                Spacer(modifier = Modifier.height(AOSSpacing.sm))
+                Text(
+                    text = stringResource(R.string.settings_voice_wake_hint),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 Spacer(modifier = Modifier.height(AOSSpacing.sm))
                 Text(
                     text = stringResource(R.string.settings_voice_privacy),
@@ -269,18 +326,19 @@ fun SettingsScreen(
     }
 }
 
-/** 语音开关行：整行可点，开关状态即结果，不额外做确认弹窗。 */
+/** 语音开关行：整行可点，开关状态即结果，不额外做确认弹窗。禁用时由调用方在下方给原因。 */
 @Composable
 private fun VoiceSwitchRow(
     label: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
+    enabled: Boolean = true,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = AOSSizing.touchTarget)
-            .clickable { onCheckedChange(!checked) }
+            .clickable(enabled = enabled) { onCheckedChange(!checked) }
             .padding(vertical = AOSSpacing.xs),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -288,9 +346,9 @@ private fun VoiceSwitchRow(
         Text(
             text = label,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface,
+            color = if (enabled) MaterialTheme.colorScheme.onSurface else AOSTheme.textTertiary,
         )
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
     }
 }
 

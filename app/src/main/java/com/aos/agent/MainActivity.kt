@@ -1,6 +1,7 @@
 package com.aos.agent
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -37,12 +38,14 @@ import com.aos.agent.core.engine.AgentEvent
 import com.aos.agent.core.llm.LlmConfig
 import com.aos.agent.core.tools.mcp.McpServerConfig
 import com.aos.agent.core.voice.VoiceCommand
+import com.aos.agent.core.voice.WakeWordGate
 import com.aos.agent.data.store.ThemeStore
 import com.aos.agent.data.store.VoiceSettingsStore
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import com.aos.agent.i18n.AppLocaleController
 import com.aos.agent.i18n.localeStoreFor
+import com.aos.agent.service.AgentWakeWatcher
 import com.aos.agent.system.AndroidSystemInfoReader
 import com.aos.agent.system.CarUxRestrictionsReader
 import com.aos.agent.system.DriveRestriction
@@ -50,6 +53,8 @@ import com.aos.agent.system.SystemInfoProvider
 import com.aos.agent.system.voice.AndroidSpeechSynthesizer
 import com.aos.agent.system.voice.AndroidSpeechTranscriber
 import com.aos.agent.system.voice.AndroidVoiceFocus
+import com.aos.agent.system.voice.WakeModelInstaller
+import com.aos.agent.system.voice.WakeModelState
 import com.aos.agent.terminal.TerminalViewModel
 import com.aos.agent.ui.engineer.EngineerModeScreen
 import com.aos.agent.ui.home.HomeScreen
@@ -58,7 +63,9 @@ import com.aos.agent.ui.terminal.TerminalScreen
 import com.aos.agent.ui.theme.AOSAgentTheme
 import com.aos.agent.ui.voice.DriveVoiceMask
 import com.aos.agent.ui.voice.VoiceController
+import com.aos.agent.ui.voice.VoicePhase
 import com.aos.agent.ui.voice.voiceVocabularyFrom
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 class MainActivity : ComponentActivity() {
@@ -77,6 +84,9 @@ class MainActivity : ComponentActivity() {
     private val driveRestrictionPreview by lazy {
         intent.getBooleanExtra(EXTRA_PREVIEW_DRIVE_RESTRICTED, false)
     }
+
+    /** 唤醒请求：Intent 拉起（Activity 不在栈上）与进程内事件（Activity 活着）两条路都汇到这里。 */
+    private val wakeRequested = MutableStateFlow(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // 主题在 setContentView 前定死：先选对窗口背景样式，避免启动闪屏错色（design.md §9.3）。
@@ -106,6 +116,7 @@ class MainActivity : ComponentActivity() {
             },
         )
         uxRestrictions.start()
+        takeWakeFromIntent(intent)
 
         setContent {
             AOSAgentApp(
@@ -115,6 +126,8 @@ class MainActivity : ComponentActivity() {
                 voiceSettingsStore = voiceSettingsStore,
                 driveRestriction = uxRestrictions.restriction,
                 driveRestrictionPreview = driveRestrictionPreview,
+                wakeRequested = wakeRequested,
+                onWakeHandled = { wakeRequested.value = false },
                 languageSwitchable = localeController.canSwitch,
                 onLanguageToggle = { localeController.toggle() },
                 darkTheme = darkTheme,
@@ -128,6 +141,16 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        takeWakeFromIntent(intent)
+    }
+
+    private fun takeWakeFromIntent(intent: Intent?) {
+        if (intent?.getBooleanExtra(EXTRA_VOICE_WAKE, false) == true) wakeRequested.value = true
+    }
+
     override fun onDestroy() {
         voiceController.release()
         uxRestrictions.close()
@@ -136,6 +159,7 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         const val EXTRA_PREVIEW_DRIVE_RESTRICTED = "com.aos.agent.extra.PREVIEW_DRIVE_RESTRICTED"
+        const val EXTRA_VOICE_WAKE = "com.aos.agent.extra.VOICE_WAKE"
     }
 }
 
@@ -149,6 +173,8 @@ private fun AOSAgentApp(
     voiceSettingsStore: VoiceSettingsStore,
     driveRestriction: StateFlow<DriveRestriction>,
     driveRestrictionPreview: Boolean,
+    wakeRequested: StateFlow<Boolean>,
+    onWakeHandled: () -> Unit,
     languageSwitchable: Boolean,
     onLanguageToggle: () -> Unit,
     darkTheme: Boolean,
@@ -157,12 +183,34 @@ private fun AOSAgentApp(
     AOSAgentTheme(darkTheme = darkTheme) {
         var destination by remember { mutableStateOf(Destination.Home) }
         val restriction by driveRestriction.collectAsStateWithLifecycle()
+        val voiceState by voiceController.state.collectAsStateWithLifecycle()
+        val wakePending by wakeRequested.collectAsStateWithLifecycle()
         // 预览开关把"未知"也当成明确状态，否则遮罩都出来了状态行还写着未知
         val driveRestricted = driveRestrictionPreview || restriction == DriveRestriction.RESTRICTED
         val driveStateKnown = driveRestrictionPreview || restriction != DriveRestriction.UNKNOWN
         val systemInfo = remember { systemInfoProvider.collect() }
         val context = LocalContext.current
         val runtime = remember { AgentRuntime(context) }
+
+        fun openChatByVoice() {
+            destination = Destination.Chat
+            voiceController.startFromWake()
+        }
+
+        // 界面正在用麦克风时让常驻唤醒让路：同进程两路 AudioRecord 抢一只麦，
+        // 抢不过的那路只会报"麦克风被占用"
+        LaunchedEffect(voiceState.phase) {
+            WakeWordGate.paused.value = voiceState.phase != VoicePhase.IDLE
+        }
+        LaunchedEffect(Unit) {
+            WakeWordGate.wakes.collect { openChatByVoice() }
+        }
+        LaunchedEffect(wakePending) {
+            if (wakePending) {
+                onWakeHandled()
+                openChatByVoice()
+            }
+        }
 
         Box(modifier = Modifier.fillMaxSize()) {
             val driveMaskUp = driveRestricted && destination != Destination.Home
@@ -227,7 +275,6 @@ private fun AOSAgentApp(
             // 行驶受限：离开首页就只剩语音。首页不糊——首页本来没有文字输入，
             // 把用户最后一块能看的地方也盖掉只会让人以为应用坏了。
             if (driveMaskUp) {
-                val voiceState by voiceController.state.collectAsStateWithLifecycle()
                 // 盖住的页面不会再刷新能力（授权对话框可能刚回来），遮罩自己确认一次
                 LaunchedEffect(Unit) { voiceController.refreshAvailability() }
                 DriveVoiceMask(
@@ -346,10 +393,18 @@ private fun SettingsHost(
     var servers by remember { mutableStateOf<List<com.aos.agent.core.tools.mcp.McpServerConfig>>(emptyList()) }
     val voiceSettings by voiceSettingsStore.settings.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val wakeInstaller = remember { WakeModelInstaller(context, scope) }
+    val wakeModelState by wakeInstaller.state.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         current = runtime.llmConfig()
         servers = runtime.mcpServers()
+    }
+
+    // 模型下完后常驻侧那份实例并不知道，再拉一次服务让它重算，否则开关会一直"开不了"
+    LaunchedEffect(wakeModelState) {
+        if (wakeModelState is WakeModelState.Ready) AgentWakeWatcher.requestRefresh(context)
     }
 
     SettingsScreen(
@@ -357,10 +412,19 @@ private fun SettingsHost(
         mcpServers = servers,
         darkTheme = darkTheme,
         voiceSettings = voiceSettings,
+        wakeModelState = wakeModelState,
         onToggleTheme = onToggleTheme,
         onToggleTts = { enabled -> scope.launch { voiceSettingsStore.setTtsEnabled(enabled) } },
         onToggleContinuous = { enabled -> scope.launch { voiceSettingsStore.setContinuous(enabled) } },
         onToggleBargeIn = { enabled -> scope.launch { voiceSettingsStore.setBargeInEnabled(enabled) } },
+        onToggleWake = { enabled ->
+            scope.launch {
+                voiceSettingsStore.setWakeWordEnabled(enabled)
+                // 开关变化要让常驻侧立刻重算"该不该听"，否则要等到下次进前台才生效
+                AgentWakeWatcher.requestRefresh(context)
+            }
+        },
+        onDownloadWakeModel = { wakeInstaller.download() },
         onBackClick = onBackClick,
         onSaveModel = { baseUrl, model, apiKey ->
             scope.launch {

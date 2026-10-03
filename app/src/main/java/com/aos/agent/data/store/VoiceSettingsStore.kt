@@ -25,6 +25,8 @@ data class VoiceSettings(
     val continuous: Boolean = false,
     /** 人声打断播报：需要设备有回声消除，默认关（否则助手会把自己听成人声）。 */
     val bargeInEnabled: Boolean = false,
+    /** 离线唤醒词：默认关——常驻麦克风是隐私红线，必须用户显式开启。 */
+    val wakeWordEnabled: Boolean = false,
 )
 
 /**
@@ -48,12 +50,13 @@ class VoiceSettingsStore(context: Context) {
                 ttsEnabled = prefs[KEY_TTS] ?: DEFAULT_TTS,
                 continuous = prefs[KEY_CONTINUOUS] ?: DEFAULT_CONTINUOUS,
                 bargeInEnabled = prefs[KEY_BARGE_IN] ?: DEFAULT_BARGE_IN,
+                wakeWordEnabled = prefs[KEY_WAKE] ?: DEFAULT_WAKE,
             )
         }
         .stateIn(
             scope,
             SharingStarted.Eagerly,
-            VoiceSettings(DEFAULT_TTS, DEFAULT_CONTINUOUS, DEFAULT_BARGE_IN),
+            VoiceSettings(DEFAULT_TTS, DEFAULT_CONTINUOUS, DEFAULT_BARGE_IN, DEFAULT_WAKE),
         )
 
     suspend fun setTtsEnabled(enabled: Boolean) {
@@ -68,12 +71,18 @@ class VoiceSettingsStore(context: Context) {
         appContext.voiceStore.edit { it[KEY_BARGE_IN] = enabled }
     }
 
+    suspend fun setWakeWordEnabled(enabled: Boolean) {
+        appContext.voiceStore.edit { it[KEY_WAKE] = enabled }
+    }
+
     private companion object {
         val KEY_TTS = booleanPreferencesKey("tts_enabled")
         val KEY_CONTINUOUS = booleanPreferencesKey("continuous")
         val KEY_BARGE_IN = booleanPreferencesKey("barge_in_enabled")
+        val KEY_WAKE = booleanPreferencesKey("wake_word_enabled")
         const val DEFAULT_TTS = true
         const val DEFAULT_CONTINUOUS = false
         const val DEFAULT_BARGE_IN = false
+        const val DEFAULT_WAKE = false
     }
 }

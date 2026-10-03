@@ -95,6 +95,17 @@ class VoiceController(
         }
     }
 
+    /** 唤醒词命中后由宿主调用：不碰屏直接进聆听；已在回路里就不重开一轮。 */
+    fun startFromWake() {
+        refreshAvailability()
+        if (!state.value.usable) {
+            _state.value = _state.value.copy(noticeRes = state.value.blockedReasonRes)
+            return
+        }
+        if (state.value.phase != VoicePhase.IDLE) return
+        startSession()
+    }
+
     /** 引擎开始产出一轮回答。 */
     fun onTurnStarted() {
         _state.value = _state.value.copy(phase = VoicePhase.THINKING, partial = "")
