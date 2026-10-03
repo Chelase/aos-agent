@@ -75,21 +75,26 @@
 **验收**：`canRequestPackageInstalls()` 为 false 时按钮禁用且写明原因、能跳授权页；
 篡改校验值时拒绝安装；模拟器上安装器存在则走通一次真实升级（同签名 debug→release 不行，用同 key 的两个版本验）。
 
-## 验收清单
+## 验收清单（实测账）
 
-- [ ] release 产物可安装（签名验证通过），CI 一键出版
-- [ ] 应用内能查出"有无新版"，失败有原因
-- [ ] 下载校验不过绝不拉起安装
-- [ ] 车机不允许侧载 / 没有安装器时，界面给出原因与替代路径，不给死按钮
-- [ ] 仓库无密钥与口令；`.gitignore` 覆盖到位
-- [ ] 中英成对文案；`testDebugUnitTest` + `assembleDebug` 全绿
+- [x] release 产物可安装：本机 `assembleRelease` 出 42.9MB APK，`apksigner verify` 通过（V2，CN=AOSAgent Release）
+- [x] 缺签名必须失败：移走 `keystore.properties` 后 `assembleRelease` 3 秒内抛错并说明要什么；`:app:help` 不受影响
+- [x] 应用内能查出"有无新版"：模拟器点"检查更新"真打到 GitHub，当前无 Release → 如实报"清单读不懂，可能版本还没发完"
+      （404 与断网是两种处置，文案分开）
+- [x] 下载校验不过绝不拉起安装：`Checksum` 逐位比对 + 不过即删文件，单测钉住（含已知向量 `sha256("abc")`）
+- [x] 装不了的两种情况分别给原因与下一步（权限 / 无安装器），回页面 ON_RESUME 重探
+- [x] 仓库无密钥与口令：`keystore/` 与 `keystore.properties` 均在 `.gitignore`，`git check-ignore` 验证过
+- [x] 中英成对文案；`:app:testDebugUnitTest` 206 例全绿；`assembleDebug` 通过
+- [ ] CI 首次跑通（需要推到 GitHub 上看 Actions 结果）
+- [ ] 完整"下载→校验→系统安装器→升级成功"这一趟：**要有第一个真实 Release 才跑得通**，
+      在那之前该路径口径为"仅单测与配置验证"（FileProvider 与安装权限已在模拟器确认注册）
 
 ## 进度
 
-- [ ] S1 签名与 CI
-- [ ] S2 检查更新
-- [ ] S3 下载与安装
-- [ ] 验证与文档回写
+- [x] S1 签名与 CI — 2026-10-03
+- [x] S2 检查更新 — 2026-10-03
+- [x] S3 下载与安装 — 2026-10-03
+- [x] 验证与文档回写 — 2026-10-03（`mechanisms/release-and-update.md` 已生成并双索引入册）
 
 ## 不在本期做的事
 

@@ -94,7 +94,9 @@
 - [ui-design-system.md](./ui-design-system.md) — UI 设计 token、共享组件库与中英双语机制
 - [boot-and-foreground-service.md](./boot-and-foreground-service.md) — 开机自启广播链路与前台服务保活
 - [aoc-integration.md](./aoc-integration.md) — AOC 生态接入契约（Entry 模式 HTTP 协议、身份、skill 请求回传）
-- [voice-interaction.md](./voice-interaction.md) — 语音交互机制（识别/播报/本地指令/连续对话/音频焦点）
+- [voice-interaction.md](./voice-interaction.md) — 语音交互机制（识别/播报/本地指令/连续对话/音频焦点/行驶遮罩）
+- [wake-word-kws.md](./wake-word-kws.md) — 离线唤醒词机制（Vosk KWS：名字→说法→受限语法、常驻服务、观测面板）
+- [release-and-update.md](./release-and-update.md) — 发布与更新机制（签名/CI/检查更新/校验后拉起安装器）
 
 
 
