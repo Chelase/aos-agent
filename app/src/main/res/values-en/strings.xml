@@ -60,6 +60,7 @@
     <string name="battery_charging">Charging</string>
     <string name="battery_discharging">Discharging</string>
     <string name="battery_unknown">Unknown</string>
+    <string name="battery_level_permission_denied">Unavailable: vehicle battery permission not granted</string>
     <string name="panel_updated_at">Updated at %1$s</string>
     <string name="panel_action_refresh">Refresh</string>
     <string name="value_unavailable">Unavailable</string>

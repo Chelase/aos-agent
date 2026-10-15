@@ -42,6 +42,14 @@ data class BatterySnapshot(
     val levelPercent: Int?,
     val charging: Boolean?,
 ) {
+    /**
+     * 真车的动力电池 SOC 只在 VHAL 里（五菱星光 `dumpsys battery` 恒 0，见
+     * `system/vehicle/VehicleBattery.kt`），所以 VHAL 读到就覆盖系统广播值；
+     * VHAL 读不到才保留广播值，两条都没有仍是 null → 界面"不可用"。
+     */
+    fun withVehicleLevel(vehicleLevelPercent: Int?): BatterySnapshot =
+        if (vehicleLevelPercent == null) this else copy(levelPercent = vehicleLevelPercent)
+
     companion object {
         /**
          * 纯函数：从 ACTION_BATTERY_CHANGED 的关键字段解析，便于无 Android 环境单测。

@@ -1,5 +1,7 @@
 {
   "_note": "车辆属性 allowlist。唯一事实源：加减字段或换 OEM 只改本文件，不改 Kotlin。protection 来自 2026-09-27 在 Automotive 模拟器(API 35) dumpsys package permission 的实测；属性名与可读性来自 VehiclePropertyProbeTest 在同一模拟器上的实测——注意 AOSP 里没有 SPEED / ODOMETER / PERCENT_REMAINING_CHARGE 这些名字，也没有'剩余续航'这一系统属性（多为 vendor 扩展，必须显式给 id）。",
+  "_battery_level_unit_note": "EV_BATTERY_LEVEL 的口径：wh=剩余能量（AOSP 定义，模拟器实测 150000.0），必须除以容量才是 SOC；percent=厂商直接塞百分比。真车如果显示明显不对，改这一个键，不要改 Kotlin。",
+  "battery_level_unit": "wh",
   "properties": [
     {
       "name": "PERF_VEHICLE_SPEED",
@@ -17,7 +19,7 @@
       "protection": "dangerous",
       "access": "read",
       "unit": "Wh",
-      "description": "动力电池当前电量，瓦时。模拟器实测返回 150000.0。百分比要自己除以 INFO_EV_BATTERY_CAPACITY，AOSP 没有现成的百分比属性。"
+      "description": "动力电池当前电量，瓦时。模拟器实测返回 150000.0。百分比口径见本文件顶部的 battery_level_unit，AOSP 没有现成的百分比属性。"
     },
     {
       "name": "EV_CURRENT_BATTERY_CAPACITY",
@@ -26,7 +28,16 @@
       "protection": "dangerous",
       "access": "read",
       "unit": "Wh",
-      "description": "当前可用电池容量，瓦时。"
+      "description": "当前可用电池容量，瓦时。模拟器实测返回 150000.0，是 SOC 换算的首选分母。"
+    },
+    {
+      "name": "INFO_EV_BATTERY_CAPACITY",
+      "category": "VEHICLE_INFO",
+      "permission": "android.car.permission.CAR_INFO",
+      "protection": "normal",
+      "access": "read",
+      "unit": "Wh",
+      "description": "电池标称容量，瓦时。EV_CURRENT_BATTERY_CAPACITY 读不到时的兜底分母；名称与权限取自 android-37 optional/android.car.jar 的常量表，尚未在模拟器 probe 过。注意 AOSP 没有 EV_BATTERY_CAPACITY 这个名字（dumpsys 里那个是 VHAL 侧属性名）。"
     },
     {
       "name": "ENV_OUTSIDE_TEMPERATURE",

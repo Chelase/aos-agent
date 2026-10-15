@@ -1,5 +1,6 @@
 package com.aos.agent.system.vehicle
 
+import android.content.Context
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -8,6 +9,12 @@ import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonPrimitive
 
 enum class VehiclePropertyAccess { Read, Write }
+
+/**
+ * `EV_BATTERY_LEVEL` 的口径。AOSP 把它定义成剩余能量（Wh），但厂商会各自发挥，
+ * 所以这是数据而不是代码里的常量表——换车型只改 `vehicle_properties.json`。
+ */
+enum class BatteryLevelUnit { Wh, Percent }
 
 /**
  * 一条车辆属性声明。字段语义对齐 AOSP VHAL 属性与 CarToolForge 的 allowlist 形态，
@@ -38,6 +45,7 @@ data class VehiclePropertySpec(
 class VehiclePropertyAllowlist private constructor(
     val readable: List<VehiclePropertySpec>,
     val skipped: List<Skipped>,
+    val batteryLevelUnit: BatteryLevelUnit = BatteryLevelUnit.Wh,
 ) {
     data class Skipped(val name: String, val reason: String)
 
@@ -48,13 +56,22 @@ class VehiclePropertyAllowlist private constructor(
     companion object {
         private val JSON = Json { ignoreUnknownKeys = true }
 
+        const val DEFAULT_ASSET_PATH = "vehicle/vehicle_properties.json"
+
+        /** 读 assets 里的 allowlist。文件很小，但要走磁盘，调用方别放主线程热路径。 */
+        fun parseAsset(context: Context, path: String = DEFAULT_ASSET_PATH): VehiclePropertyAllowlist =
+            parse(
+                context.applicationContext.assets.open(path).bufferedReader().use { it.readText() },
+            )
+
         /**
          * @param allowPrivilegedRead 系统级预装后（Batch 3）置 true，特权只读属性才会进可用集。
          */
         fun parse(raw: String, allowPrivilegedRead: Boolean = false): VehiclePropertyAllowlist {
             val root = JSON.parseToJsonElement(raw) as? JsonObject
                 ?: return VehiclePropertyAllowlist(emptyList(), listOf(Skipped("<root>", "allowlist 不是 JSON 对象")))
-            val entries = root["properties"] as? JsonArray ?: return VehiclePropertyAllowlist(emptyList(), emptyList())
+            val entries = root["properties"] as? JsonArray
+                ?: return VehiclePropertyAllowlist(emptyList(), emptyList())
 
             val readable = mutableListOf<VehiclePropertySpec>()
             val skipped = mutableListOf<Skipped>()
@@ -73,7 +90,14 @@ class VehiclePropertyAllowlist private constructor(
                     else -> readable += spec
                 }
             }
-            return VehiclePropertyAllowlist(readable, skipped)
+            return VehiclePropertyAllowlist(
+                readable = readable,
+                skipped = skipped,
+                batteryLevelUnit = when ((root["battery_level_unit"] as? JsonPrimitive)?.contentOrNullSafe()) {
+                    "percent" -> BatteryLevelUnit.Percent
+                    else -> BatteryLevelUnit.Wh
+                },
+            )
         }
 
         private fun JsonObject.toSpec(name: String): VehiclePropertySpec? {

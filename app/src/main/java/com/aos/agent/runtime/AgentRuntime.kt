@@ -76,9 +76,7 @@ class AgentRuntime(context: Context) {
         .readTimeout(60, TimeUnit.SECONDS)
         .build()
 
-    private val vehicleAllowlist: VehiclePropertyAllowlist = VehiclePropertyAllowlist.parse(
-        appContext.assets.open(VEHICLE_ALLOWLIST_ASSET).bufferedReader().use { it.readText() },
-    )
+    private val vehicleAllowlist: VehiclePropertyAllowlist = VehiclePropertyAllowlist.parseAsset(appContext)
 
     private var skillRegistry: SkillRegistry = SkillRegistry.parseAll(AssetSkillLoader(appContext).load())
     private var toolSystem: ToolSystem = ToolSystem()
@@ -185,7 +183,6 @@ class AgentRuntime(context: Context) {
     suspend fun mcpServers(): List<McpServerConfig> = mcpServerStore.servers()
 
     private companion object {
-        const val VEHICLE_ALLOWLIST_ASSET = "vehicle/vehicle_properties.json"
         const val CLIENT_NAME = "aos-agent"
         const val CLIENT_VERSION = "0.1.0"
         const val BASE_SYSTEM_PROMPT =

@@ -17,6 +17,7 @@ AOS-Agent 是一个车载 AI Agent，具备工具调用、插件扩展、多步�
 | Core | `core/tools/Tool.kt` / `ToolJsonRepair.kt` / `ToolLoopGuard.kt` | 工具契约（name/version/category）、参数畸形保守修复、步数与重复调用防护 | 已实现（MVP Step 3） |
 | System | `system/vehicle/VehiclePropertyAllowlist.kt` + `assets/vehicle/vehicle_properties.json` | 车辆属性声明式 allowlist，写与特权条目挡下并留原因 | 已实现（MVP Step 3） |
 | System | `system/vehicle/AndroidVehicleReader.kt` | 真车 Car API 读取（`useLibrary` 编译期 + 运行期探测降级） | 已实现（MVP Step 3，模拟器实测） |
+| System | `system/vehicle/VehicleBattery.kt` | 动力电池 SOC：`EV_BATTERY_LEVEL` 换算成百分比，读不到给结构化原因 | 已实现（2026-10-15，模拟器与单测；真车口径待确认） |
 | System | `system/Capabilities.kt` | 运行环境能力探测（Car API / per-app locale / AppFunctions），工具与 UI 共用一份 | 已实现（MVP Step 3） |
 | Core | `core/skills/SkillRegistry.kt` + `SkillDefinition.kt` + `AssetSkillLoader.kt` | 技能定义解析、触发词命中、越权过滤；`assets/skills/<id>/skill.json` 为唯一配置源 | 已实现（MVP Step 4） |
 | Core | `core/tools/mcp/`（MCP client 工具来源） | `StreamableHttpTransport` → `McpClient` → `McpToolAdapter` → `McpToolSource`，远端工具变成本地 `Tool` | 已实现（MVP Step 6；真实 server 互通待验证） |
@@ -156,6 +157,14 @@ LLM 整合结果 -> 自然语言回复
 4. 插件系统必须有安全沙箱，不能访问 Agent 核心数据。
 5. 驾驶模式下 Agent 优先使用语音交互。
 6. 引擎事件流契约固定为 `Started → Token* → Completed | Failed`：失败以事件形式产出、不向调用方抛异常；Step 3/5/6 只能在流上增加事件类型，不得改动既有语义。`core/llm` 与 `core/engine` 禁止 import `android.*`，否则"无头可驱动"这条验收失效。
+7. **动力电池电量不能直接当百分比用**。AOSP 的 `EV_BATTERY_LEVEL` 单位是 Wh（模拟器实测 150000.0），
+   SOC 必须 `剩余能量 / 容量` 自己算；分母优先 `EV_CURRENT_BATTERY_CAPACITY`（实测可读），
+   `INFO_EV_BATTERY_CAPACITY` 兜底——AOSP 里**没有** `EV_BATTERY_CAPACITY` 这个常量名（那是 VHAL 侧属性名）。
+   部分厂商直接把百分比塞进 `EV_BATTERY_LEVEL`，所以口径是 `vehicle_properties.json` 的
+   `battery_level_unit` 键（`wh` / `percent`），不是代码常量；换车型改数据即可。
+   算不出来一律返回 null 并带 `DegradeStatus`，界面显示"不可用（原因）"——
+   车机 `dumpsys battery` 恒 `level 0`，把 `BatteryManager` 的 0 当真值显示属于界面说谎（五菱星光实测 bug）。
+   `EV_BATTERY_DISPLAY_UNITS` 的取值语义未在官方文档核实（本机无外网），因此不据它自动判口径。
 
 ## 维护方式
 
@@ -166,4 +175,4 @@ LLM 整合结果 -> 自然语言回复
 - **新增插件**：编写 plugin.yaml + 实现代码，放入插件目录。
 - **验证**：与 Agent 对话 -> 工具调用正确 -> 回复合理。
 
-> 更新时间：2026-09-27（MVP Step 2 无头引擎落地，涉及对象补实现状态）
+> 更新时间：2026-09-27（MVP Step 2 无头引擎落地，涉及对象补实现状态）；2026-10-15 补关键约束 7（动力电池 SOC 单位口径）
