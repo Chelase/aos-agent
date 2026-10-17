@@ -23,6 +23,7 @@ import androidx.compose.ui.res.stringResource
 import com.aos.agent.R
 import com.aos.agent.core.voice.WakeDebug
 import com.aos.agent.core.voice.WakeWordPhrases
+import com.aos.agent.system.DriveUxDiagnostics
 import com.aos.agent.system.SystemInfo
 import com.aos.agent.ui.components.AOSCard
 import com.aos.agent.ui.components.AOSDataRow
@@ -44,6 +45,7 @@ import com.aos.agent.ui.theme.aosLegendStyle
 fun EngineerModeScreen(
     systemInfo: SystemInfo,
     wakePhrases: List<String> = emptyList(),
+    driveDiagnostics: DriveUxDiagnostics? = null,
     onBackClick: () -> Unit,
 ) {
     // 观测只在页面活着时收集，离开即清空——不把现场留在常驻内存里
@@ -55,7 +57,8 @@ fun EngineerModeScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .padding(AOSSizing.safeZone),
+            .padding(AOSSizing.safeZone)
+            .verticalScroll(rememberScrollState()),
     ) {
         TopBar(onBackClick = onBackClick)
         Spacer(modifier = Modifier.height(AOSSpacing.lg))
@@ -63,11 +66,13 @@ fun EngineerModeScreen(
         Spacer(modifier = Modifier.height(AOSSpacing.lg))
         InfoCards(
             systemInfo = systemInfo,
-            modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState()),
+            modifier = Modifier.fillMaxWidth(),
         )
         Spacer(modifier = Modifier.height(AOSSpacing.lg))
+        if (driveDiagnostics != null) {
+            DriveDiagnosticsCard(diagnostics = driveDiagnostics)
+            Spacer(modifier = Modifier.height(AOSSpacing.lg))
+        }
         WakeDebugCard(phrases = wakePhrases)
     }
 }
@@ -187,6 +192,54 @@ private fun InfoCards(
                 label = stringResource(R.string.label_device),
                 value = systemInfo.device,
             )
+        }
+    }
+}
+
+/**
+ * 驾驶态诊断卡：
+ *
+ * Bound（已绑定）只说真实状态；Unavailable（哪一段失败）显式告警——
+ * 行驶遮罩永不出现时，这里必须能说出为什么，而不是首页只写"未知"。
+ */
+@Composable
+private fun DriveDiagnosticsCard(diagnostics: DriveUxDiagnostics) {
+    AOSCard(modifier = Modifier.fillMaxWidth()) {
+        AOSSectionHeader(title = stringResource(R.string.section_drive_diag))
+        Spacer(modifier = Modifier.height(AOSSpacing.sm))
+        when (diagnostics) {
+            is DriveUxDiagnostics.Bound -> {
+                AOSDataRow(
+                    label = stringResource(R.string.drive_diag_state),
+                    value = AOSLabels.driveRestrictionLabel(diagnostics.restriction),
+                )
+                AOSRowDivider()
+                AOSDataRow(
+                    label = stringResource(R.string.drive_diag_binding),
+                    value = diagnostics.carService,
+                )
+            }
+
+            is DriveUxDiagnostics.Unavailable -> {
+                AOSDataRow(
+                    label = stringResource(R.string.drive_diag_state),
+                    value = AOSLabels.driveRestrictionLabel(
+                        com.aos.agent.system.DriveRestriction.UNKNOWN,
+                    ),
+                )
+                AOSRowDivider()
+                AOSDataRow(
+                    label = stringResource(R.string.drive_diag_reason),
+                    value = AOSLabels.driveFailureLabel(diagnostics.stage) +
+                        "（${diagnostics.reason}）",
+                )
+                Spacer(modifier = Modifier.height(AOSSpacing.sm))
+                Text(
+                    text = stringResource(R.string.drive_diag_unavailable_hint),
+                    style = aosLegendStyle,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
         }
     }
 }

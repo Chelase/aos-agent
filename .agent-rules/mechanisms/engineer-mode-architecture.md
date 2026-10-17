@@ -161,6 +161,13 @@
 3. 自检报告不包含个人隐私数据（位置、车辆 VIN 等）。
 4. Release 编译必须移除工程师模式入口。
 5. OEM 检测仅用于适配判断，不做绕过厂商限制之用。
+6. **驾驶态读不到必须显式告警**（2026-10-17）：`CarUxRestrictionsReader` 按
+   建 Car / 取 Manager / 注册监听三段记录失败原因到诊断流，工程师页"驾驶态诊断"卡显式说明，
+   不准回到整段 catch 吞成静默 UNKNOWN。
+7. **`CarUxRestrictions` 的包位置经核对固定为 `android.car.drivingstate`**
+   （2026-10-17 核 AOSP car-lib `main` 分支：只有 `drivingstate/`，
+   无 `android.car.uxrestriction` 包）。禁止基于"Android 14+ 换包"的推测写跨包名反射；
+   若未来上游真迁移，走探测式兼容并先在此处留下源码链接证据。
 
 ## 维护方式
 

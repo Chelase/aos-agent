@@ -4,6 +4,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.aos.agent.R
 import com.aos.agent.system.BatterySnapshot
+import com.aos.agent.system.DriveRestriction
+import com.aos.agent.system.DriveUxDiagnostics
 import com.aos.agent.system.NetworkTransport
 
 /**
@@ -29,6 +31,24 @@ object AOSLabels {
             true -> R.string.battery_charging
             false -> R.string.battery_discharging
             null -> R.string.battery_unknown
+        },
+    )
+
+    @Composable
+    fun driveRestrictionLabel(restriction: DriveRestriction): String = stringResource(
+        when (restriction) {
+            DriveRestriction.RESTRICTED -> R.string.drive_diag_restriction_restricted
+            DriveRestriction.UNRESTRICTED -> R.string.drive_diag_restriction_unrestricted
+            DriveRestriction.UNKNOWN -> R.string.drive_diag_restriction_unknown
+        },
+    )
+
+    @Composable
+    fun driveFailureLabel(stage: DriveUxDiagnostics.FailureStage): String = stringResource(
+        when (stage) {
+            DriveUxDiagnostics.FailureStage.CREATE_CAR -> R.string.drive_diag_stage_create_car
+            DriveUxDiagnostics.FailureStage.GET_MANAGER -> R.string.drive_diag_stage_get_manager
+            DriveUxDiagnostics.FailureStage.REGISTER -> R.string.drive_diag_stage_register
         },
     )
 }

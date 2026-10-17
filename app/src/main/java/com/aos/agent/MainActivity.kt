@@ -59,6 +59,7 @@ import com.aos.agent.service.AgentWakeWatcher
 import com.aos.agent.system.AndroidSystemInfoReader
 import com.aos.agent.system.CarUxRestrictionsReader
 import com.aos.agent.system.DriveRestriction
+import com.aos.agent.system.DriveUxDiagnostics
 import com.aos.agent.system.SystemInfoProvider
 import com.aos.agent.system.update.ApkInstaller
 import com.aos.agent.system.update.AppVersionReader
@@ -137,6 +138,7 @@ class MainActivity : ComponentActivity() {
                 voiceController = voiceController,
                 voiceSettingsStore = voiceSettingsStore,
                 driveRestriction = uxRestrictions.restriction,
+                driveDiagnostics = uxRestrictions.diagnostics,
                 driveRestrictionPreview = driveRestrictionPreview,
                 wakeRequested = wakeRequested,
                 onWakeHandled = { wakeRequested.value = false },
@@ -184,9 +186,9 @@ private fun AOSAgentApp(
     voiceController: VoiceController,
     voiceSettingsStore: VoiceSettingsStore,
     driveRestriction: StateFlow<DriveRestriction>,
+    driveDiagnostics: StateFlow<DriveUxDiagnostics>,
     driveRestrictionPreview: Boolean,
-    wakeRequested: StateFlow<Boolean>,
-    onWakeHandled: () -> Unit,
+    wakeRequested: StateFlow<Boolean>,    onWakeHandled: () -> Unit,
     languageSwitchable: Boolean,
     onLanguageToggle: () -> Unit,
     darkTheme: Boolean,
@@ -195,6 +197,7 @@ private fun AOSAgentApp(
     AOSAgentTheme(darkTheme = darkTheme) {
         var destination by remember { mutableStateOf(Destination.Home) }
         val restriction by driveRestriction.collectAsStateWithLifecycle()
+        val driveDiagnostics by driveDiagnostics.collectAsStateWithLifecycle()
         val voiceState by voiceController.state.collectAsStateWithLifecycle()
         val voiceSettings by voiceSettingsStore.settings.collectAsStateWithLifecycle()
         val wakePending by wakeRequested.collectAsStateWithLifecycle()
@@ -259,6 +262,7 @@ private fun AOSAgentApp(
                             voiceSettings.agentName,
                             voiceSettings.wakeVariants,
                         ),
+                        driveDiagnostics = driveDiagnostics,
                         onBackClick = { destination = Destination.Home },
                     )
 

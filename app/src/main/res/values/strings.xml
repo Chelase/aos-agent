@@ -129,6 +129,19 @@
     <string name="wake_debug_result_miss">%1$s · 未命中</string>
     <string name="wake_debug_result_empty">（空）</string>
 
+    <!-- 驾驶态诊断（工程师模式）：把"读不到驾驶态"从静默 UNKNOWN 变成可见告警。 -->
+    <string name="section_drive_diag">驾驶态诊断</string>
+    <string name="drive_diag_state">当前状态</string>
+    <string name="drive_diag_binding">Car 服务</string>
+    <string name="drive_diag_restriction_restricted">行驶受限</string>
+    <string name="drive_diag_restriction_unrestricted">不受限（停车）</string>
+    <string name="drive_diag_restriction_unknown">未知</string>
+    <string name="drive_diag_stage_create_car">建 Car 服务失败（非 Automotive 或服务未就绪）</string>
+    <string name="drive_diag_stage_get_manager">拿不到 UX 限制管理器</string>
+    <string name="drive_diag_stage_register">注册监听被拒（厂商权限）或读值异常</string>
+    <string name="drive_diag_reason">原因</string>
+    <string name="drive_diag_unavailable_hint">驾驶遮罩将不会出现；上车前请确认。</string>
+
     <!-- 版本与更新：只到"检测+提示+给地址"，装不装由系统与用户决定。 -->
     <string name="settings_section_update">版本与更新</string>
     <string name="update_current_version">当前版本</string>

@@ -127,6 +127,19 @@
     <string name="wake_debug_result_miss">%1$s · miss</string>
     <string name="wake_debug_result_empty">(empty)</string>
 
+    <!-- Drive-state diagnostics (engineer mode): turn unreadable drive state into a visible alert. -->
+    <string name="section_drive_diag">Drive Diagnostics</string>
+    <string name="drive_diag_state">Current state</string>
+    <string name="drive_diag_binding">Car service</string>
+    <string name="drive_diag_restriction_restricted">Restricted (driving)</string>
+    <string name="drive_diag_restriction_unrestricted">Unrestricted (parked)</string>
+    <string name="drive_diag_restriction_unknown">Unknown</string>
+    <string name="drive_diag_stage_create_car">Failed to create Car service (not Automotive or not ready)</string>
+    <string name="drive_diag_stage_get_manager">UX restriction manager unavailable</string>
+    <string name="drive_diag_stage_register">Listener registration denied (OEM permission) or read failed</string>
+    <string name="drive_diag_reason">Reason</string>
+    <string name="drive_diag_unavailable_hint">Drive mask will not appear; verify before driving.</string>
+
     <!-- Version & update: detection and pointer only; installing stays with the system and the user. -->
     <string name="settings_section_update">Version &amp; Update</string>
     <string name="update_current_version">Current version</string>
