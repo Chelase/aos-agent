@@ -19,3 +19,21 @@ local.properties
 # 发布签名材料：私钥与口令一律不入库（CI 用 secrets 还原）
 keystore/
 keystore.properties
+*.jks
+*.keystore
+
+# 本地模拟器/实车调试日志
+.emulator.log
+emu-out.log
+*.log
+app/.cxx/
+
+# UI 评审截图，本地留存不入库
+.impeccable/
+
+# 车机实测文档：含量产车安全姿态（test-keys / Permissive / adb root），
+# 按文档自带警告不入公开仓库，仅本地查阅
+.agent-rules/docs/wuling-starlight-2025-*.md
+
+*.apk
+*.aab
