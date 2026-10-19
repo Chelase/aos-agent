@@ -37,3 +37,4 @@ app/.cxx/
 
 *.apk
 *.aab
+.devctx/
