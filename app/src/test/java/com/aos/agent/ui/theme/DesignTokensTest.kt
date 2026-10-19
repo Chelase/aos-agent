@@ -6,7 +6,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * 守护设计 token 与 `.agent-rules/docs/原型/design.md`（v5.0 双主题）一致。
+ * 守护设计 token 与 `.agent-rules/docs/原型/design.md`（v6 原型双主题）一致。
  * 改动色值前必须先改设计规范，否则本测试失败。
  */
 class DesignTokensTest {
@@ -14,72 +14,72 @@ class DesignTokensTest {
     @Test
     fun lightBackgroundTokens_matchDesignSpec() {
         // design.md §2.1：日间蓝白浅色（默认主脸）
-        assertEquals(Color(0xFFF5F8FC), AOSBgPrimaryLight)
+        assertEquals(Color(0xFFF4F6FA), AOSBgPrimaryLight)
         assertEquals(Color(0xFFFFFFFF), AOSBgSecondaryLight)
-        assertEquals(Color(0xFFEDF2F8), AOSBgTertiaryLight)
-        assertEquals(Color(0xFFE2E9F2), AOSBgElevatedLight)
+        assertEquals(Color(0xFFE9EEF6), AOSBgTertiaryLight)
+        assertEquals(Color(0xFFE1E8F2), AOSBgElevatedLight)
     }
 
     @Test
     fun darkBackgroundTokens_matchDesignSpec() {
         // design.md §2.1：夜间深空蓝黑
-        assertEquals(Color(0xFF0E1116), AOSBgPrimaryDark)
-        assertEquals(Color(0xFF161B22), AOSBgSecondaryDark)
-        assertEquals(Color(0xFF1D242D), AOSBgTertiaryDark)
-        assertEquals(Color(0xFF242D38), AOSBgElevatedDark)
+        assertEquals(Color(0xFF0B0F17), AOSBgPrimaryDark)
+        assertEquals(Color(0xFF131A26), AOSBgSecondaryDark)
+        assertEquals(Color(0xFF1A2331), AOSBgTertiaryDark)
+        assertEquals(Color(0xFF222D40), AOSBgElevatedDark)
     }
 
     @Test
     fun lightAccentAndStatusTokens_matchDesignSpec() {
-        assertEquals(Color(0xFF2E6FD8), AOSAccentPrimaryLight)
-        assertEquals(Color(0xFF1E55B0), AOSAccentSecondaryLight)
-        assertEquals(Color(0xFF1E7A34), AOSStatusSuccessLight)
-        assertEquals(Color(0xFFB45309), AOSStatusWarningLight)
-        assertEquals(Color(0xFFC23425), AOSStatusErrorLight)
-        assertEquals(Color(0xFF4A6584), AOSStatusInfoLight)
+        assertEquals(Color(0xFF0B57D0), AOSAccentPrimaryLight)
+        assertEquals(Color(0xFF0B57D0), AOSAccentSecondaryLight)
+        assertEquals(Color(0xFF146C2E), AOSStatusSuccessLight)
+        assertEquals(Color(0xFF7A4A00), AOSStatusWarningLight)
+        assertEquals(Color(0xFFBA1A1A), AOSStatusErrorLight)
+        assertEquals(Color(0xFF43474E), AOSStatusInfoLight)
     }
 
     @Test
     fun darkAccentAndStatusTokens_matchDesignSpec() {
-        assertEquals(Color(0xFF5B9BFF), AOSAccentPrimaryDark)
-        assertEquals(Color(0xFF3E7BD6), AOSAccentSecondaryDark)
-        assertEquals(Color(0xFF7CC47F), AOSStatusSuccessDark)
-        assertEquals(Color(0xFFE8A33D), AOSStatusWarningDark)
-        assertEquals(Color(0xFFEA6E5E), AOSStatusErrorDark)
-        assertEquals(Color(0xFF8A9BB0), AOSStatusInfoDark)
+        assertEquals(Color(0xFFA8C7FA), AOSAccentPrimaryDark)
+        assertEquals(Color(0xFFA8C7FA), AOSAccentSecondaryDark)
+        assertEquals(Color(0xFF7BD88F), AOSStatusSuccessDark)
+        assertEquals(Color(0xFFF0B429), AOSStatusWarningDark)
+        assertEquals(Color(0xFFFFB4AB), AOSStatusErrorDark)
+        assertEquals(Color(0xFFB4BCC9), AOSStatusInfoDark)
     }
 
     @Test
     fun lightTextTokens_matchDesignSpec() {
-        assertEquals(Color(0xFF10151C), AOSTextPrimaryLight)
-        assertEquals(Color(0xFF45505C), AOSTextSecondaryLight)
-        assertEquals(Color(0xFF5E6B7A), AOSTextTertiaryLight)
+        assertEquals(Color(0xFF191C22), AOSTextPrimaryLight)
+        assertEquals(Color(0xFF43474E), AOSTextSecondaryLight)
+        assertEquals(Color(0xFF6B7280), AOSTextTertiaryLight)
     }
 
     @Test
     fun darkTextTokens_matchDesignSpec() {
-        assertEquals(Color(0xFFF2F5F9), AOSTextPrimaryDark)
-        assertEquals(Color(0xFFA8B3C1), AOSTextSecondaryDark)
-        assertEquals(Color(0xFF7C8899), AOSTextTertiaryDark)
+        assertEquals(Color(0xFFE3E7EE), AOSTextPrimaryDark)
+        assertEquals(Color(0xFFB4BCC9), AOSTextSecondaryDark)
+        assertEquals(Color(0xFF8A94A6), AOSTextTertiaryDark)
     }
 
     @Test
     fun onAccentTexts_matchDesignSpec() {
         // design.md §2.5：日间蓝底白字、夜间蓝底深蓝墨字
         assertEquals(Color(0xFFFFFFFF), AOSOnAccentLight)
-        assertEquals(Color(0xFF0A1428), AOSOnAccentDark)
+        assertEquals(Color(0xFF06275F), AOSOnAccentDark)
     }
 
     @Test
     fun touchTarget_meetsDrivingSafetyMinimum() {
         // design.md §1.2：驾驶场景交互区域 ≥ 56dp
-        assertTrue(AOSSizing.touchTarget.value >= 56f)
+        assertTrue(AOSSizing.touchTarget.value >= 72f)
     }
 
     @Test
     fun cardCorner_matchesSpec() {
         // design.md §4.4：卡片圆角 12dp
-        assertEquals(12f, AOSSizing.cardCorner.value, 0.001f)
+        assertEquals(20f, AOSSizing.cardCorner.value, 0.001f)
     }
 
     @Test
@@ -93,21 +93,21 @@ class DesignTokensTest {
 
     @Test
     fun typography_matchesTypeScale() {
-        assertEquals(32f, AOSTypography.displayLarge.fontSize.value, 0.001f)
-        assertEquals(24f, AOSTypography.headlineMedium.fontSize.value, 0.001f)
-        assertEquals(18f, AOSTypography.titleMedium.fontSize.value, 0.001f)
-        assertEquals(15f, AOSTypography.bodyMedium.fontSize.value, 0.001f)
-        assertEquals(13f, AOSTypography.labelSmall.fontSize.value, 0.001f)
-        assertEquals(14f, AOSDataText.standard.fontSize.value, 0.001f)
-        assertEquals(20f, AOSDataText.large.fontSize.value, 0.001f)
+        assertEquals(56f, AOSTypography.displayLarge.fontSize.value, 0.001f)
+        assertEquals(36f, AOSTypography.headlineMedium.fontSize.value, 0.001f)
+        assertEquals(24f, AOSTypography.titleMedium.fontSize.value, 0.001f)
+        assertEquals(22f, AOSTypography.bodyMedium.fontSize.value, 0.001f)
+        assertEquals(18f, AOSTypography.labelSmall.fontSize.value, 0.001f)
+        assertEquals(20f, AOSDataText.standard.fontSize.value, 0.001f)
+        assertEquals(44f, AOSDataText.large.fontSize.value, 0.001f)
     }
 
     @Test
     fun legendStyle_matchesSignatureTypeScale() {
         // design.md §3.2：Legend 13sp/500 + 0.1em 字距，区块图例签名样式
         // letterSpacing 为 em 单位时 TextUnit.value 即 em 倍数
-        assertEquals(13f, aosLegendStyle.fontSize.value, 0.001f)
+        assertEquals(22f, aosLegendStyle.fontSize.value, 0.001f)
         assertTrue(aosLegendStyle.letterSpacing.type == androidx.compose.ui.unit.TextUnitType.Em)
-        assertEquals(0.1f, aosLegendStyle.letterSpacing.value, 0.001f)
+        assertEquals(0f, aosLegendStyle.letterSpacing.value, 0.001f)
     }
 }

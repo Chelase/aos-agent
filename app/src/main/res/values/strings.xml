@@ -262,4 +262,25 @@
     <string name="settings_show_key">显示</string>
     <string name="settings_hide_key">隐藏</string>
     <string name="settings_saved">已保存</string>
+
+    <!-- v6 原型：导航、会话和真实能力摘要 -->
+    <string name="nav_home">首页</string>
+    <string name="nav_panel">面板</string>
+    <string name="nav_engineer">工程</string>
+    <string name="home_version">应用版本</string>
+    <string name="home_voice">语音输入</string>
+    <string name="home_vehicle">车辆与设备</string>
+    <string name="chat_model_ready">模型已就绪</string>
+    <string name="chat_model_missing">模型未配置</string>
+    <string name="chat_empty_title">有什么需要帮忙？</string>
+    <string name="chat_configure_hint">尚未配置模型服务，请在设置中添加模型后继续。</string>
+    <string name="chat_session">本次会话</string>
+    <string name="chat_session_messages">消息</string>
+    <string name="chat_session_tools">工具调用</string>
+    <string name="chat_session_skills">已加载 Skill</string>
+    <string name="chat_session_mcp">MCP 工具</string>
+    <string name="settings_capabilities">能力总览 · 本机</string>
+    <string name="settings_capability_asr">语音识别</string>
+    <string name="settings_capability_tts">语音播报</string>
+    <string name="settings_capability_hint">不可用的语音开关已禁用。停车时可在对话页打字，语音功能需要本机具备对应的识别或播报服务。</string>
 </resources>

@@ -1,7 +1,6 @@
 package com.aos.agent.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -9,7 +8,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
@@ -20,7 +18,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import com.aos.agent.ui.theme.AOSDataText
 import com.aos.agent.ui.theme.AOSSizing
 import com.aos.agent.ui.theme.AOSSpacing
@@ -32,7 +29,7 @@ import com.aos.agent.ui.theme.aosLegendStyle
  * 规范见 `.agent-rules/docs/原型/design.md` §4.4 / §5.3 / §3.2 Legend。
  */
 
-/** 标准卡片：bg-secondary 底 + 发丝级描边 + 12dp 仪表窗圆角。 */
+/** 标准卡片：v6 平面表面与 20dp 圆角，颜色与尺寸均取主题。 */
 @Composable
 fun AOSCard(
     modifier: Modifier = Modifier,
@@ -42,43 +39,21 @@ fun AOSCard(
         modifier = modifier
             .clip(RoundedCornerShape(AOSSizing.cardCorner))
             .background(MaterialTheme.colorScheme.surface)
-            .border(
-                width = AOSSizing.borderWidth,
-                color = MaterialTheme.colorScheme.outlineVariant,
-                shape = RoundedCornerShape(AOSSizing.cardCorner),
-            )
             .padding(AOSSizing.cardPadding),
         content = content,
     )
 }
 
-/**
- * 区块图例（Legend）：左侧品牌刻度短条 + 加字距图例文字。
- * 像仪表盘上的刻度图例，是本设计语言的签名排版（design.md §3.2），
- * 所有分组标题共用，避免各页面各写一套。
- */
+/** 共享区块标题，与 v6 的简洁 Material 层级一致。 */
 @Composable
 fun AOSSectionHeader(
     title: String,
     modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Spacer(
-            modifier = Modifier
-                .size(width = 3.dp, height = 14.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(MaterialTheme.colorScheme.primary),
-        )
-        Spacer(modifier = Modifier.width(AOSSpacing.sm))
-        Text(
-            text = title,
-            style = aosLegendStyle,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
+    Text(
+        text = title, modifier = modifier.fillMaxWidth(),
+        style = aosLegendStyle, color = MaterialTheme.colorScheme.onSurface,
+    )
 }
 
 /**
@@ -100,8 +75,9 @@ fun AOSDataRow(
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = AOSTheme.textTertiary,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(0.42f),
         )
         Spacer(modifier = Modifier.width(AOSSpacing.md))
         Text(
@@ -109,6 +85,7 @@ fun AOSDataRow(
             style = AOSDataText.standard,
             color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.End,
+            modifier = Modifier.weight(0.58f),
         )
     }
 }
@@ -123,7 +100,7 @@ fun AOSRowDivider(modifier: Modifier = Modifier) {
     )
 }
 
-/** 关键指标：大号等宽数值 + 下方说明标签。 */
+/** 关键指标：大号数值 + 下方说明标签。 */
 @Composable
 fun AOSMetric(
     value: String,
@@ -137,7 +114,7 @@ fun AOSMetric(
         Text(
             text = value,
             style = AOSDataText.large,
-            color = MaterialTheme.colorScheme.primary,
+            color = MaterialTheme.colorScheme.onSurface,
         )
         Text(
             text = label,
@@ -145,4 +122,10 @@ fun AOSMetric(
             color = AOSTheme.textTertiary,
         )
     }
+}
+
+/** 指标一律从页面真实状态传入，同一承载面跨首页、系统与工程页复用。 */
+@Composable
+fun AOSMetricCard(value: String, label: String, modifier: Modifier = Modifier) {
+    AOSCard(modifier) { AOSMetric(value, label) }
 }

@@ -1,6 +1,13 @@
 package com.aos.agent.ui.terminal
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import com.aos.agent.ui.theme.AOSDataText
+import com.aos.agent.ui.components.AOSPageHeader
 import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,10 +22,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -29,7 +34,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aos.agent.R
 import com.aos.agent.terminal.TerminalUiState
-import com.aos.agent.terminal.TerminalSession
 import com.aos.agent.terminal.TerminalViewModel
 import com.aos.agent.ui.components.AOSCard
 import com.aos.agent.ui.components.AOSPrimaryButton
@@ -39,7 +43,6 @@ import com.aos.agent.ui.components.AOSStatusTone
 import com.aos.agent.ui.theme.AOSSizing
 import com.aos.agent.ui.theme.AOSSpacing
 import com.aos.agent.ui.theme.AOSTheme
-import com.aos.agent.ui.theme.aosLegendStyle
 
 /**
  * 终端页（design.md 卡片式顶栏 + 满宽终端区 + 输入栏）：
@@ -70,7 +73,10 @@ fun TerminalScreen(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f),
+                .weight(1f)
+                .clip(RoundedCornerShape(AOSSizing.cardCorner))
+                .background(AOSTheme.terminalBackground)
+                .padding(AOSSpacing.lg),
         ) {
             val session = (state as? TerminalUiState.Running)?.session
             TerminalCanvas(
@@ -105,40 +111,13 @@ private fun TopBar(
     running: Boolean,
     onBackClick: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(AOSSizing.topBarHeight),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
+    AOSPageHeader(
+        title = stringResource(R.string.terminal_title),
+        subtitle = stringResource(R.string.terminal_subtitle),
+        onBackClick = onBackClick,
     ) {
-        Column {
-            Text(
-                text = stringResource(R.string.terminal_title),
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-            Text(
-                text = stringResource(R.string.terminal_subtitle),
-                style = aosLegendStyle,
-                color = AOSTheme.textTertiary,
-            )
-        }
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(AOSSpacing.md),
-        ) {
-            AOSStatusBadge(
-                text = stringResource(
-                    if (running) R.string.terminal_status_running else R.string.terminal_status_stopped,
-                ),
-                tone = if (running) AOSStatusTone.SUCCESS else AOSStatusTone.NEUTRAL,
-            )
-            AOSSecondaryButton(
-                text = stringResource(R.string.action_back),
-                onClick = onBackClick,
-            )
-        }
+        AOSStatusBadge(stringResource(if (running) R.string.terminal_status_running else R.string.terminal_status_stopped),
+            if (running) AOSStatusTone.SUCCESS else AOSStatusTone.NEUTRAL)
     }
 }
 
@@ -187,44 +166,33 @@ private fun InputBar(
         }
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(AOSSpacing.sm)) {
-        OutlinedTextField(
-            value = input,
-            onValueChange = { input = it },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = enabled,
-            singleLine = true,
-            placeholder = {
-                Text(
-                    text = stringResource(R.string.terminal_input_hint),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            },
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-            keyboardActions = KeyboardActions(onSend = { submit() }),
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(AOSSpacing.sm)) {
-            AOSSecondaryButton(
-                text = stringResource(R.string.terminal_key_tab),
-                enabled = enabled,
-                onClick = { onControl(0x09) },
+    androidx.compose.foundation.layout.BoxWithConstraints {
+        val compact = maxWidth < AOSSizing.paneMinWidth
+        val field: @Composable (Modifier) -> Unit = { fieldModifier ->
+            OutlinedTextField(
+                value = input, onValueChange = { input = it },
+                modifier = fieldModifier.heightIn(min = AOSSizing.fieldHeight),
+                enabled = enabled, singleLine = true,
+                shape = RoundedCornerShape(AOSSizing.cardCorner),
+                textStyle = AOSDataText.standard,
+                placeholder = { Text(stringResource(R.string.terminal_input_hint), style = MaterialTheme.typography.bodySmall) },
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                keyboardActions = KeyboardActions(onSend = { if (enabled) submit() }),
             )
-            AOSSecondaryButton(
-                text = stringResource(R.string.terminal_key_ctrl_c),
-                enabled = enabled,
-                onClick = { onControl(0x03) },
-            )
-            AOSSecondaryButton(
-                text = stringResource(R.string.terminal_key_esc),
-                enabled = enabled,
-                onClick = { onControl(0x1B) },
-            )
-            Spacer(modifier = Modifier.weight(1f))
-            AOSPrimaryButton(
-                text = stringResource(R.string.terminal_send),
-                enabled = enabled,
-                onClick = submit,
-            )
+        }
+        val keys: @Composable () -> Unit = {
+            AOSSecondaryButton(stringResource(R.string.terminal_key_tab), { onControl(0x09) }, enabled = enabled)
+            AOSSecondaryButton(stringResource(R.string.terminal_key_ctrl_c), { onControl(0x03) }, enabled = enabled)
+            AOSSecondaryButton(stringResource(R.string.terminal_key_esc), { onControl(0x1B) }, enabled = enabled)
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(AOSSpacing.sm)) {
+            if (compact) field(Modifier.fillMaxWidth())
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(AOSSpacing.sm)) {
+                keys()
+                if (!compact) field(Modifier.weight(1f)) else Spacer(Modifier.weight(1f))
+                AOSPrimaryButton(stringResource(R.string.terminal_send), submit, enabled = enabled && input.isNotBlank())
+            }
         }
     }
 }

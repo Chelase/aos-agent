@@ -1,6 +1,9 @@
 package com.aos.agent.ui.systempanel
 
-import android.util.Log
+import androidx.compose.foundation.layout.FlowRow
+import com.aos.agent.ui.state.rememberSystemSnapshot
+import com.aos.agent.ui.components.AOSMetricCard
+import com.aos.agent.ui.components.AOSPageHeader
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -13,43 +16,21 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.aos.agent.R
 import com.aos.agent.core.tools.DegradeStatus
-import com.aos.agent.system.BatterySnapshot
 import com.aos.agent.system.SystemInfo
 import com.aos.agent.system.SystemInfoProvider
-import com.aos.agent.system.vehicle.AndroidVehicleReader
-import com.aos.agent.system.vehicle.VehicleBatteryReader
-import com.aos.agent.system.vehicle.VehiclePropertyAllowlist
 import com.aos.agent.ui.components.AOSCard
 import com.aos.agent.ui.components.AOSDataRow
 import com.aos.agent.ui.components.AOSLabels
-import com.aos.agent.ui.components.AOSMetric
 import com.aos.agent.ui.components.AOSRowDivider
 import com.aos.agent.ui.components.AOSSectionHeader
 import com.aos.agent.ui.components.AOSSecondaryButton
 import com.aos.agent.ui.theme.AOSSizing
 import com.aos.agent.ui.theme.AOSSpacing
-import com.aos.agent.ui.theme.AOSTheme
-import com.aos.agent.ui.theme.aosLegendStyle
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 /**
  * 系统感知面板（Batch 1 Step 2，design.md 卡片式仪表布局）：
@@ -62,40 +43,11 @@ fun SystemPanelScreen(
     provider: SystemInfoProvider,
     onBackClick: () -> Unit,
 ) {
-    val vehicleBattery = rememberVehicleBatteryReader()
-    var info by remember { mutableStateOf(provider.collect()) }
-    // 合并后的电量：VHAL 有值 > 系统广播 > 不可用。读到之前留空，不拿广播旧值先播一个假百分比。
-    var battery by remember { mutableStateOf(BatterySnapshot(null, null)) }
-    var batteryStatus by remember { mutableStateOf<DegradeStatus?>(null) }
-    var updatedAt by remember { mutableStateOf(formatClock()) }
-    val refreshScope = rememberCoroutineScope()
-
-    suspend fun reload() {
-        val collected = provider.collect()
-        val vehicle = vehicleBattery.read()
-        val merged = collected.battery.withVehicleLevel(vehicle.levelPercent)
-        // 只在"刚开始读不到"时记一行：状态恢复正常后 batteryStatus 会被清掉，所以下次失效还会记
-        val firstFailure = merged.levelPercent == null && batteryStatus == null
-        info = collected
-        battery = merged
-        batteryStatus = if (merged.levelPercent == null) vehicle.unavailableStatus else null
-        if (firstFailure) {
-            Log.i(TAG, "车辆电量不可用：${vehicle.detail}")
-        }
-        updatedAt = formatClock()
-    }
-
-    LaunchedEffect(Unit) {
-        // 先采一次再等周期：Car 属性是异步读，等 5 秒才填会让首帧一直是空值
-        reload()
-        while (true) {
-            delay(REFRESH_INTERVAL_MS)
-            reload()
-        }
-    }
-
-    val refresh: () -> Unit = { refreshScope.launch { reload() } }
-    val shown = info.copy(battery = battery)
+    val snapshot = rememberSystemSnapshot(provider)
+    val shown = snapshot.info
+    val batteryStatus = snapshot.batteryStatus
+    val updatedAt = snapshot.updatedAt
+    val refresh = snapshot::refresh
 
     Column(
         modifier = Modifier
@@ -122,32 +74,6 @@ fun SystemPanelScreen(
 }
 
 /**
- * 车辆属性连接随面板建、随面板断。
- *
- * `Car.createCar` 只能非主线程调用，所以属性读取全在 [AndroidVehicleReader] 里切到 IO；
- * allowlist 走 assets，换车型不用改这里。
- */
-@Composable
-private fun rememberVehicleBatteryReader(): VehicleBatteryReader {
-    val context = LocalContext.current
-    val vehicle = remember { AndroidVehicleReader(context) }
-    val reader = remember(vehicle) {
-        VehicleBatteryReader(vehicle, VehiclePropertyAllowlist.parseAsset(context))
-    }
-    DisposableEffect(reader) {
-        onDispose { vehicle.close() }
-    }
-    return reader
-}
-
-/** 手动刷新/自动刷新共用的采集时刻格式。 */
-private fun formatClock(): String =
-    SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
-
-private const val REFRESH_INTERVAL_MS = 5_000L
-private const val TAG = "AOSSystemPanel"
-
-/**
  * 电量读数文案。有值给百分比；读不到时权限问题单独说明（这是普通安装最常见的真实原因），
  * 其余情况只说"不可用"——细节已经进 logcat，不把诊断串塞进界面语言。
  */
@@ -166,70 +92,25 @@ private fun TopBar(
     onBackClick: () -> Unit,
     onRefreshClick: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(AOSSizing.topBarHeight),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column {
-            Text(
-                text = stringResource(R.string.panel_title),
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-            Text(
-                text = stringResource(R.string.panel_subtitle),
-                style = aosLegendStyle,
-                color = AOSTheme.textTertiary,
-            )
-        }
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(AOSSpacing.md),
-        ) {
-            Text(
-                text = stringResource(R.string.panel_updated_at, updatedAt),
-                style = aosLegendStyle,
-                color = AOSTheme.textTertiary,
-            )
-            AOSSecondaryButton(
-                text = stringResource(R.string.panel_action_refresh),
-                onClick = onRefreshClick,
-            )
-            AOSSecondaryButton(
-                text = stringResource(R.string.action_back),
-                onClick = onBackClick,
-            )
-        }
-    }
+    AOSPageHeader(
+        title = stringResource(R.string.panel_title),
+        subtitle = stringResource(R.string.panel_updated_at, updatedAt),
+        onBackClick = onBackClick,
+    ) { AOSSecondaryButton(stringResource(R.string.panel_action_refresh), onRefreshClick) }
 }
 
 @Composable
 private fun MetricStrip(info: SystemInfo, batteryStatus: DegradeStatus?, updatedAt: String) {
-    AOSCard(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            AOSMetric(
-                value = batteryLevelLabel(info.battery.levelPercent, batteryStatus),
-                label = stringResource(R.string.label_battery_level),
-            )
-            AOSMetric(
-                value = AOSLabels.networkLabel(info.networkTransport),
-                label = stringResource(R.string.label_network),
-            )
-            AOSMetric(
-                value = if (info.isAutomotive) {
-                    stringResource(R.string.value_yes)
-                } else {
-                    stringResource(R.string.value_no)
-                },
-                label = stringResource(R.string.label_automotive),
-            )
-        }
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(AOSSpacing.md),
+        verticalArrangement = Arrangement.spacedBy(AOSSpacing.md),
+        maxItemsInEachRow = 3,
+    ) {
+        val metricModifier = Modifier.weight(1f)
+        AOSMetricCard(batteryLevelLabel(info.battery.levelPercent, batteryStatus), stringResource(R.string.label_battery_level), metricModifier)
+        AOSMetricCard(AOSLabels.networkLabel(info.networkTransport), stringResource(R.string.label_network), metricModifier)
+        AOSMetricCard(stringResource(if (info.isAutomotive) R.string.value_yes else R.string.value_no), stringResource(R.string.label_automotive), metricModifier)
     }
 }
 

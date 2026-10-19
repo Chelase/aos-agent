@@ -1,245 +1,156 @@
 package com.aos.agent.ui.chat
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.unit.dp
 import com.aos.agent.R
 import com.aos.agent.runtime.RuntimeStatus
-import com.aos.agent.ui.components.AOSPrimaryButton
-import com.aos.agent.ui.components.AOSSecondaryButton
-import com.aos.agent.ui.theme.AOSDataText
-import com.aos.agent.ui.theme.AOSSizing
-import com.aos.agent.ui.theme.AOSSpacing
-import com.aos.agent.ui.theme.AOSTheme
-import com.aos.agent.ui.voice.VoiceMicButton
-import com.aos.agent.ui.voice.VoiceStatusLine
-import com.aos.agent.ui.voice.VoiceUiState
-import com.aos.agent.ui.theme.aosLegendStyle
+import com.aos.agent.ui.components.*
+import com.aos.agent.ui.theme.*
+import com.aos.agent.ui.voice.*
 
-/**
- * 对话页（design.md §6.3，v4.0 纯化）：单栏满宽——顶栏、对话流、输入行。
- *
- * 对话即对话：用户消息、助手回复与工具轨迹逐行滚动，不常驻运行状态面板；
- * 配置入口在首页设置，不在本页。未配置模型等阻断态以警示行出现在输入区上方，
- * 并指引到首页设置。输入行左侧是麦克风：语音与键盘是同一条通路的两种输入，
- * 识别中的部分结果直接进输入框（所见即所发）。
- */
+/** v6 对话：气泡、结构化工具轨迹及真实会话摘要。 */
 @Composable
 fun ChatScreen(
-    entries: List<ChatEntry>,
-    status: RuntimeStatus,
-    busy: Boolean,
-    voiceState: VoiceUiState,
-    onBackClick: () -> Unit,
-    onSend: (String) -> Unit,
-    onVoiceToggle: () -> Unit,
+    entries: List<ChatEntry>, status: RuntimeStatus, busy: Boolean,
+    voiceState: VoiceUiState, onBackClick: () -> Unit,
+    onSend: (String) -> Unit, onVoiceToggle: () -> Unit,
 ) {
-    var input by remember { mutableStateOf("") }
+    var input by rememberSaveable { mutableStateOf("") }
     val listState = rememberLazyListState()
-
-    // 语音部分结果直接落到输入框，用户可以在发送前改字
     LaunchedEffect(voiceState.partial) {
         if (voiceState.partial.isNotBlank()) input = voiceState.partial
     }
-
     LaunchedEffect(entries.size, busy) {
         if (entries.isNotEmpty()) listState.animateScrollToItem(entries.lastIndex)
     }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(AOSSizing.safeZone),
-    ) {
-        TopBar(onBackClick = onBackClick)
-        Spacer(modifier = Modifier.height(AOSSpacing.lg))
-
-        LazyColumn(
-            modifier = Modifier.weight(1f).fillMaxWidth(),
-            state = listState,
-            verticalArrangement = Arrangement.spacedBy(AOSSpacing.sm),
-        ) {
-            if (entries.isEmpty()) {
-                item {
-                    Text(
-                        text = stringResource(R.string.chat_empty_hint),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = AOSTheme.textTertiary,
+    BoxWithConstraints(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        val showSummary = maxWidth >= AOSSizing.paneMinWidth && androidx.compose.ui.platform.LocalDensity.current.fontScale <= 1.2f
+        Row(Modifier.fillMaxSize()) {
+            Column(Modifier.weight(1f).fillMaxHeight().padding(AOSSizing.safeZone)) {
+                AOSPageHeader(stringResource(R.string.chat_title),
+                    subtitle = stringResource(if (status.canSend) R.string.chat_model_ready else R.string.chat_model_missing),
+                    onBackClick = onBackClick)
+                Spacer(Modifier.height(AOSSpacing.md))
+                LazyColumn(
+                    Modifier.weight(1f).fillMaxWidth(), state = listState,
+                    verticalArrangement = Arrangement.spacedBy(AOSSpacing.md),
+                    contentPadding = PaddingValues(vertical = AOSSpacing.md),
+                ) {
+                    if (entries.isEmpty()) item {
+                        Column(Modifier.fillMaxWidth().padding(vertical = AOSSpacing.xxl),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(AOSSpacing.md)) {
+                            AOSLogo()
+                            Text(stringResource(R.string.chat_empty_title), style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onSurface)
+                            Text(stringResource(R.string.chat_empty_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                    items(entries) { ChatRow(it) }
+                    if (busy) item {
+                        Row(horizontalArrangement = Arrangement.spacedBy(AOSSpacing.md), verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(Modifier.size(AOSSizing.iconSize), strokeWidth = AOSSizing.borderWidth)
+                            Text(stringResource(R.string.chat_sending), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+                if (!voiceState.usable || voiceState.noticeRes != null || voiceState.partial.isNotBlank()) {
+                    Surface(shape = RoundedCornerShape(AOSSizing.badgeCorner), color = MaterialTheme.colorScheme.surfaceContainer) {
+                        VoiceStatusLine(voiceState, Modifier.padding(AOSSpacing.md))
+                    }
+                    Spacer(Modifier.height(AOSSpacing.sm))
+                }
+                if (!status.canSend) Text(stringResource(R.string.chat_configure_hint),
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = AOSSpacing.sm))
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(AOSSpacing.md)) {
+                    VoiceMicButton(voiceState.phase, voiceState.usable || voiceState.needsPermission, onVoiceToggle, iconOnly = true)
+                    OutlinedTextField(
+                        value = input, onValueChange = { input = it },
+                        modifier = Modifier.weight(1f).heightIn(min = AOSSizing.fieldHeight),
+                        placeholder = { Text(stringResource(R.string.chat_input_hint), style = MaterialTheme.typography.bodySmall) },
+                        singleLine = true, shape = RoundedCornerShape(AOSSizing.touchTarget),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                        keyboardActions = KeyboardActions(onSend = {
+                            if (input.isNotBlank() && status.canSend && !busy) { onSend(input.trim()); input = "" }
+                        }),
                     )
+                    AOSPrimaryButton(stringResource(R.string.chat_send), {
+                        if (input.isNotBlank() && status.canSend && !busy) { onSend(input.trim()); input = "" }
+                    }, enabled = input.isNotBlank() && status.canSend && !busy)
                 }
             }
-            items(entries) { entry -> ChatRow(entry) }
-            if (busy) {
-                item {
-                    Text(
-                        text = stringResource(R.string.chat_sending),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = AOSTheme.textTertiary,
-                    )
+            if (showSummary) {
+                VerticalDivider(thickness = AOSSizing.borderWidth, color = MaterialTheme.colorScheme.outlineVariant)
+                Column(Modifier.width(AOSSizing.sidebarWidth).fillMaxHeight()
+                    .background(MaterialTheme.colorScheme.surface).padding(AOSSpacing.lg).verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(AOSSpacing.md)) {
+                    AOSSectionHeader(stringResource(R.string.chat_session))
+                    AOSDataRow(stringResource(R.string.chat_session_messages), entries.count { it is ChatEntry.User || it is ChatEntry.Assistant }.toString())
+                    AOSRowDivider()
+                    AOSDataRow(stringResource(R.string.chat_session_tools), entries.count { it is ChatEntry.ToolCalled }.toString())
+                    AOSRowDivider()
+                    AOSDataRow(stringResource(R.string.chat_session_skills), status.skills.size.toString())
+                    AOSRowDivider()
+                    AOSDataRow(stringResource(R.string.chat_session_mcp), status.mcpTools.size.toString())
+                    Spacer(Modifier.height(AOSSpacing.lg))
+                    AOSSectionHeader(stringResource(R.string.settings_section_model))
+                    Text(status.llmDescribe, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
-        Spacer(modifier = Modifier.height(AOSSpacing.sm))
-        VoiceStatusLine(state = voiceState, modifier = Modifier.padding(bottom = AOSSpacing.xs))
-        InputRow(
-            input = input,
-            canSend = status.canSend && !busy,
-            blockedReason = status.blockedReason,
-            voiceState = voiceState,
-            onInputChange = { input = it },
-            onSend = {
-                val query = input.trim()
-                if (query.isNotEmpty() && status.canSend && !busy) {
-                    input = ""
-                    onSend(query)
-                }
-            },
-            onVoiceToggle = onVoiceToggle,
-        )
-    }
-}
-
-@Composable
-private fun TopBar(onBackClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(AOSSizing.topBarHeight),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column {
-            Text(
-                text = stringResource(R.string.chat_title),
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-            Text(
-                text = stringResource(R.string.chat_subtitle),
-                style = aosLegendStyle,
-                color = AOSTheme.textTertiary,
-            )
-        }
-        AOSSecondaryButton(text = stringResource(R.string.action_back), onClick = onBackClick)
     }
 }
 
 @Composable
 private fun ChatRow(entry: ChatEntry) {
-    when (entry) {
-        is ChatEntry.User -> Text(
-            text = "› ${entry.text}",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
-
-        is ChatEntry.Assistant -> Text(
-            text = entry.text,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        is ChatEntry.Note -> Text(
-            text = entry.text,
-            style = MaterialTheme.typography.labelSmall,
-            color = AOSTheme.statusWarning,
-        )
-
-        is ChatEntry.ToolCalled -> Text(
-            text = "→ ${entry.tool} ${entry.args}",
-            style = AOSDataText.standard,
-            color = AOSTheme.statusInfo,
-        )
-
-        is ChatEntry.ToolFinished -> Text(
-            text = "← ${entry.tool} [${entry.outcome}] ${entry.payload.take(240)}",
-            style = AOSDataText.standard,
-            color = when (entry.outcome) {
-                "ok" -> AOSTheme.statusSuccess
-                "rejected" -> AOSTheme.statusWarning
-                else -> AOSTheme.statusError
-            },
-        )
+    val user = entry is ChatEntry.User
+    val tool = entry is ChatEntry.ToolCalled || entry is ChatEntry.ToolFinished
+    val text = when (entry) {
+        is ChatEntry.User -> entry.text
+        is ChatEntry.Assistant -> entry.text
+        is ChatEntry.Note -> entry.text
+        is ChatEntry.ToolCalled -> "${entry.tool}  ${entry.args}"
+        is ChatEntry.ToolFinished -> "${entry.tool} [${entry.outcome}] ${entry.payload.take(240)}"
     }
-}
-
-@Composable
-private fun InputRow(
-    input: String,
-    canSend: Boolean,
-    blockedReason: String?,
-    voiceState: VoiceUiState,
-    onInputChange: (String) -> Unit,
-    onSend: () -> Unit,
-    onVoiceToggle: () -> Unit,
-) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        blockedReason?.let {
-            Text(
-                text = it,
-                style = MaterialTheme.typography.labelSmall,
-                color = AOSTheme.statusWarning,
-                modifier = Modifier.padding(bottom = AOSSpacing.xs),
-            )
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(AOSSpacing.sm),
-        ) {
-            VoiceMicButton(
-                phase = voiceState.phase,
-                enabled = voiceState.usable,
-                onClick = onVoiceToggle,
-            )
-            OutlinedTextField(
-                value = input,
-                onValueChange = onInputChange,
-                modifier = Modifier.weight(1f),
-                placeholder = {
-                    Text(
-                        text = stringResource(R.string.chat_input_hint),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = AOSTheme.textTertiary,
-                    )
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(AOSSizing.cardCorner),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                keyboardActions = KeyboardActions(onSend = { onSend() }),
-            )
-            AOSPrimaryButton(
-                text = stringResource(R.string.chat_send),
-                onClick = onSend,
-                enabled = canSend,
-            )
-        }
+    val background = when {
+        user -> MaterialTheme.colorScheme.primary
+        tool -> MaterialTheme.colorScheme.surfaceContainer
+        entry is ChatEntry.Note -> AOSTheme.warningSurface
+        else -> MaterialTheme.colorScheme.surface
+    }
+    val foreground = when {
+        user -> MaterialTheme.colorScheme.onPrimary
+        entry is ChatEntry.Note -> AOSTheme.statusWarning
+        else -> MaterialTheme.colorScheme.onSurface
+    }
+    BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = if (user) Alignment.CenterEnd else Alignment.CenterStart) {
+        val bubbleWidth = maxWidth * if (tool) 0.94f else 0.7f
+        Text(text,
+            style = if (tool) AOSDataText.standard else MaterialTheme.typography.bodyMedium,
+            color = foreground,
+            modifier = Modifier.widthIn(max = bubbleWidth)
+                .clip(RoundedCornerShape(
+                    topStart = AOSSizing.cardCorner, topEnd = AOSSizing.cardCorner,
+                    bottomStart = if (user) AOSSizing.cardCorner else AOSSpacing.sm,
+                    bottomEnd = if (user) AOSSpacing.sm else AOSSizing.cardCorner))
+                .background(background).padding(horizontal = AOSSpacing.lg, vertical = AOSSpacing.md),
+        )
     }
 }

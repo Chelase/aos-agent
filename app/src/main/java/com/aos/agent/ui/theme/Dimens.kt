@@ -2,46 +2,38 @@ package com.aos.agent.ui.theme
 
 import androidx.compose.ui.unit.dp
 
-/**
- * 尺寸 token，对应 `.agent-rules/docs/原型/design.md` §4。
- * 基准网格 8dp；触控目标下限受驾驶安全约束，不得低于 56dp。
- */
+/** v6 的共享尺寸；停车与驾驶界面的触控目标均不低于 72dp。 */
 object AOSSpacing {
     val xs = 4.dp
     val sm = 8.dp
     val md = 16.dp
     val lg = 24.dp
     val xl = 32.dp
+    val xxl = 48.dp
 }
 
 object AOSSizing {
-    /** 横屏安全区内边距，避开系统状态栏/导航栏。 */
-    val safeZone = 24.dp
-
-    /** 卡片圆角与内边距（design.md §4.4，v2.0 收紧为 12dp 仪表窗圆角）。 */
-    val cardCorner = 12.dp
-    val cardPadding = 20.dp
-
-    /** 交互控件最小高度，驾驶场景下限（design.md §1.2）。 */
-    val touchTarget = 56.dp
-
-    /** 行驶受限态的触控下限：车机抖动 + 视线离开路面，目标必须比常态再大一档。 */
-    val driveTarget = 72.dp
-
-    /** 状态标签（design.md §5.2）。 */
-    val badgeHeight = 28.dp
-    val badgeCorner = 14.dp
-    val badgePadding = 12.dp
-
-    /** 顶部状态栏（design.md §5.5）。 */
-    val topBarHeight = 56.dp
-
-    /** 数据行行高与行间距（design.md §5.3）。 */
+    val safeZone = 32.dp
+    val pageHorizontal = 48.dp
+    val cardCorner = 20.dp
+    val cardPadding = 28.dp
+    val touchTarget = 72.dp
+    val driveTarget = 88.dp
+    val badgeHeight = 36.dp
+    val badgeCorner = 18.dp
+    val badgePadding = 16.dp
+    val topBarHeight = 88.dp
     val dataRowSpacing = 12.dp
-
-    /** 品牌 Logo 标准尺寸。 */
-    val logoSize = 72.dp
-
-    /** 边框描边宽度。 */
+    val logoSize = 48.dp
     val borderWidth = 1.dp
+    val railWidth = 112.dp
+    val railCompactWidth = 96.dp
+    val railItem = 88.dp
+    val iconSize = 28.dp
+    val railIconWidth = 56.dp
+    val railIconHeight = 36.dp
+    val paneMinWidth = 1100.dp
+    val sidebarWidth = 320.dp
+    val fieldHeight = 72.dp
+    val driveMic = 160.dp
 }

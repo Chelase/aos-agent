@@ -11,7 +11,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
 /**
- * AOSAgent 主题（v5.0 双主题）：日间浅色（默认）+ 夜间深色，[darkTheme] 切换。
+ * AOSAgent 主题（v6 原型双主题）：日间浅色（默认）+ 夜间深色，[darkTheme] 切换。
  * 色值来源见 `.agent-rules/docs/原型/design.md` §2。
  *
  * 主题状态存 ThemeStore（DataStore，唯一真相），切换由设置页触发并重建 Activity，
@@ -22,7 +22,9 @@ private val AOSLightColorScheme = lightColorScheme(
     primary = AOSAccentPrimaryLight,
     onPrimary = AOSOnAccentLight,
     primaryContainer = AOSAccentDimLight,
-    onPrimaryContainer = AOSAccentPrimaryLight,
+    onPrimaryContainer = AOSOnContainerLight,
+    secondaryContainer = AOSAccentDimLight,
+    onSecondaryContainer = AOSOnContainerLight,
     secondary = AOSAccentSecondaryLight,
     onSecondary = AOSOnAccentLight,
     background = AOSBgPrimaryLight,
@@ -38,13 +40,17 @@ private val AOSLightColorScheme = lightColorScheme(
     outlineVariant = AOSBorderSubtleLight,
     error = AOSStatusErrorLight,
     onError = AOSOnAccentLight,
+    errorContainer = AOSErrorSurfaceLight,
+    onErrorContainer = AOSStatusErrorLight,
 )
 
 private val AOSDarkColorScheme = darkColorScheme(
     primary = AOSAccentPrimaryDark,
     onPrimary = AOSOnAccentDark,
     primaryContainer = AOSAccentDimDark,
-    onPrimaryContainer = AOSAccentPrimaryDark,
+    onPrimaryContainer = AOSOnContainerDark,
+    secondaryContainer = AOSAccentDimDark,
+    onSecondaryContainer = AOSOnContainerDark,
     secondary = AOSAccentSecondaryDark,
     onSecondary = AOSOnAccentDark,
     background = AOSBgPrimaryDark,
@@ -60,6 +66,8 @@ private val AOSDarkColorScheme = darkColorScheme(
     outlineVariant = AOSBorderSubtleDark,
     error = AOSStatusErrorDark,
     onError = AOSTextPrimaryDark,
+    errorContainer = AOSErrorSurfaceDark,
+    onErrorContainer = AOSStatusErrorDark,
 )
 
 /** Material3 色板覆盖不到的扩展 token（语义状态、层级文本、品牌边框），两主题各一份。 */
@@ -76,6 +84,9 @@ data class AOSExtendedColors(
     val textTertiary: Color,
     val borderAccent: Color,
     val accentDim: Color,
+    val rail: Color,
+    val terminalBackground: Color,
+    val terminalForeground: Color,
 )
 
 private val AOSLightExtendedColors = AOSExtendedColors(
@@ -90,6 +101,9 @@ private val AOSLightExtendedColors = AOSExtendedColors(
     textTertiary = AOSTextTertiaryLight,
     borderAccent = AOSBorderAccentLight,
     accentDim = AOSAccentDimLight,
+    rail = AOSRailLight,
+    terminalBackground = AOSTerminalBackground,
+    terminalForeground = AOSTerminalForeground,
 )
 
 private val AOSDarkExtendedColors = AOSExtendedColors(
@@ -104,6 +118,9 @@ private val AOSDarkExtendedColors = AOSExtendedColors(
     textTertiary = AOSTextTertiaryDark,
     borderAccent = AOSBorderAccentDark,
     accentDim = AOSAccentDimDark,
+    rail = AOSRailDark,
+    terminalBackground = AOSTerminalBackground,
+    terminalForeground = AOSTerminalForeground,
 )
 
 private val LocalAOSExtendedColors = staticCompositionLocalOf { AOSDarkExtendedColors }

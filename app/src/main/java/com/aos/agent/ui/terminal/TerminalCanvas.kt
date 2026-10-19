@@ -30,6 +30,7 @@ import com.aos.agent.terminal.TextStyle.COLOR_INDEX_BACKGROUND
 import com.aos.agent.terminal.TextStyle.COLOR_INDEX_CURSOR
 import com.aos.agent.terminal.TextStyle.COLOR_INDEX_FOREGROUND
 import com.aos.agent.ui.theme.AOSDataText
+import com.aos.agent.ui.theme.AOSTheme
 import kotlin.math.roundToInt
 
 /**
@@ -53,8 +54,8 @@ fun TerminalCanvas(
     val rowHeightPx = with(density) { AOSDataText.terminal.lineHeight.toPx() }
     val rowHeight = with(density) { rowHeightPx.toDp() }
 
-    val surfaceColor = MaterialTheme.colorScheme.surface
-    val foregroundColor = MaterialTheme.colorScheme.onSurface
+    val surfaceColor = AOSTheme.terminalBackground
+    val foregroundColor = AOSTheme.terminalForeground
     val cursorColor = MaterialTheme.colorScheme.primary
 
     // 仿真层调色板的底/前景/光标对齐主题 token；ANSI 0-255 保持标准调色板

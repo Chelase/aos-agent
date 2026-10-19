@@ -1,5 +1,7 @@
 package com.aos.agent
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -15,11 +17,10 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.invisibleToUser
+import androidx.compose.ui.semantics.hideFromAccessibility
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -28,22 +29,20 @@ import com.aos.agent.runtime.RuntimeStatus
 import com.aos.agent.ui.chat.ChatEntry
 import com.aos.agent.ui.chat.ChatScreen
 import com.aos.agent.ui.chat.ChatTranscript
+import com.aos.agent.ui.settings.SettingsDraft
 import com.aos.agent.ui.settings.SettingsScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
 import com.aos.agent.core.engine.AgentEvent
 import com.aos.agent.core.llm.LlmConfig
 import com.aos.agent.core.tools.mcp.McpServerConfig
 import com.aos.agent.core.update.HttpUpdateChecker
-import com.aos.agent.core.update.InstallGate
 import com.aos.agent.core.update.InstallGates
 import com.aos.agent.core.update.UpdateOutcome
 import com.aos.agent.core.voice.VoiceCommand
@@ -70,6 +69,11 @@ import com.aos.agent.system.voice.WakeModelInstaller
 import com.aos.agent.system.voice.WakeModelState
 import com.aos.agent.terminal.TerminalViewModel
 import com.aos.agent.ui.engineer.EngineerModeScreen
+import com.aos.agent.ui.components.AOSAppShell
+import com.aos.agent.ui.components.AOSDestination as Destination
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import androidx.compose.runtime.saveable.SaveableStateHolder
 import com.aos.agent.ui.home.HomeScreen
 import com.aos.agent.ui.systempanel.SystemPanelScreen
 import com.aos.agent.ui.terminal.TerminalScreen
@@ -177,7 +181,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class Destination { Home, Engineer, Chat, Settings, Terminal, SystemPanel }
+
 
 @Composable
 private fun AOSAgentApp(
@@ -195,7 +199,9 @@ private fun AOSAgentApp(
     onToggleTheme: () -> Unit,
 ) {
     AOSAgentTheme(darkTheme = darkTheme) {
-        var destination by remember { mutableStateOf(Destination.Home) }
+        var destination by rememberSaveable { mutableStateOf(Destination.Home) }
+        val pageStateHolder = rememberSaveableStateHolder()
+        val settingsDraft = remember { SettingsDraft() }
         val restriction by driveRestriction.collectAsStateWithLifecycle()
         val driveDiagnostics by driveDiagnostics.collectAsStateWithLifecycle()
         val voiceState by voiceController.state.collectAsStateWithLifecycle()
@@ -204,6 +210,7 @@ private fun AOSAgentApp(
         // 预览开关把"未知"也当成明确状态，否则遮罩都出来了状态行还写着未知
         val driveRestricted = driveRestrictionPreview || restriction == DriveRestriction.RESTRICTED
         val driveStateKnown = driveRestrictionPreview || restriction != DriveRestriction.UNKNOWN
+        LaunchedEffect(destination) { voiceController.refreshAvailability() }
         val systemInfo = remember { systemInfoProvider.collect() }
         val context = LocalContext.current
         val runtime = remember { AgentRuntime(context) }
@@ -230,73 +237,69 @@ private fun AOSAgentApp(
 
         Box(modifier = Modifier.fillMaxSize()) {
             val driveMaskUp = driveRestricted && destination != Destination.Home
-            // 被遮罩盖住的页面继续组合（对话条目、终端会话不能因为上路就丢），
-            // 但从无障碍树里摘掉——否则 TalkBack 还能滑进藏起来的输入框
-            Box(
-                modifier = if (driveMaskUp) {
-                    Modifier.semantics { invisibleToUser() }
-                } else {
-                    Modifier
-                },
-            ) {
-                when (destination) {
-                    Destination.Home -> HomeScreen(
-                        systemInfo = systemInfo,
-                        // 语言标签走资源而非枚举，切换后由 Activity 重建自动刷新
-                        currentLanguageLabel = stringResource(R.string.language_current),
-                        targetLanguageLabel = stringResource(R.string.language_switch_to),
-                        languageSwitchable = languageSwitchable,
-                        driveRestricted = driveRestricted,
-                        driveStateKnown = driveStateKnown,
-                        onEngineerModeClick = { destination = Destination.Engineer },
-                        onChatClick = { destination = Destination.Chat },
-                        onTerminalClick = { destination = Destination.Terminal },
-                        onSystemPanelClick = { destination = Destination.SystemPanel },
-                        onSettingsClick = { destination = Destination.Settings },
-                        onLanguageToggle = onLanguageToggle,
-                    )
-
-                    Destination.Engineer -> EngineerModeScreen(
-                        systemInfo = systemInfo,
-                        wakePhrases = WakeWordPhrases.build(
-                            voiceSettings.agentName,
-                            voiceSettings.wakeVariants,
-                        ),
-                        driveDiagnostics = driveDiagnostics,
-                        onBackClick = { destination = Destination.Home },
-                    )
-
-                    Destination.Terminal -> TerminalScreen(
-                        viewModel = terminalViewModel,
-                        onBackClick = { destination = Destination.Home },
-                    )
-
-                    Destination.SystemPanel -> SystemPanelScreen(
-                        provider = systemInfoProvider,
-                        onBackClick = { destination = Destination.Home },
-                    )
-
-                    Destination.Chat -> ChatConsole(
+            // 遮罩覆盖导航和页面；底页保留组合但从无障碍树隐藏。
+            Box(modifier = if (driveMaskUp) Modifier.semantics { hideFromAccessibility() } else Modifier) {
+                AOSAppShell(destination, driveRestricted, onNavigate = { destination = it }) {
+                    // 宿主始终在组合中，rail 切页不会取消请求或留下已释放的语音回调。
+                    ChatConsole(
                         runtime = runtime,
                         voice = voiceController,
+                        visible = destination == Destination.Chat,
+                        pageStateHolder = pageStateHolder,
                         onBackClick = { destination = Destination.Home },
                         onOpenSettings = { destination = Destination.Settings },
                     )
-
-                    Destination.Settings -> SettingsHost(
-                        runtime = runtime,
-                        voiceSettingsStore = voiceSettingsStore,
-                        darkTheme = darkTheme,
-                        onToggleTheme = onToggleTheme,
-                        onBackClick = { destination = Destination.Home },
-                    )
+                    if (destination != Destination.Chat) {
+                        pageStateHolder.SaveableStateProvider(destination.name) {
+                            when (destination) {
+                                Destination.Home -> HomeScreen(
+                                    systemInfo = systemInfo,
+                                    provider = systemInfoProvider,
+                                    voiceState = voiceState,
+                                    appVersionLabel = remember { AppVersionReader.read(context).versionName },
+                                    currentLanguageLabel = stringResource(R.string.language_current),
+                                    targetLanguageLabel = stringResource(R.string.language_switch_to),
+                                    languageSwitchable = languageSwitchable,
+                                    driveRestricted = driveRestricted,
+                                    driveStateKnown = driveStateKnown,
+                                    onEngineerModeClick = { destination = Destination.Engineer },
+                                    onChatClick = { destination = Destination.Chat },
+                                    onTerminalClick = { destination = Destination.Terminal },
+                                    onSystemPanelClick = { destination = Destination.SystemPanel },
+                                    onSettingsClick = { destination = Destination.Settings },
+                                    onLanguageToggle = onLanguageToggle,
+                                )
+                                Destination.Engineer -> EngineerModeScreen(
+                                    systemInfo = systemInfo,
+                                    wakePhrases = WakeWordPhrases.build(voiceSettings.agentName, voiceSettings.wakeVariants),
+                                    driveDiagnostics = driveDiagnostics,
+                                    onBackClick = { destination = Destination.Home },
+                                )
+                                Destination.Terminal -> TerminalScreen(
+                                    viewModel = terminalViewModel,
+                                    onBackClick = { destination = Destination.Home },
+                                )
+                                Destination.SystemPanel -> SystemPanelScreen(
+                                    provider = systemInfoProvider,
+                                    onBackClick = { destination = Destination.Home },
+                                )
+                                Destination.Settings -> SettingsHost(
+                                    draft = settingsDraft,
+                                    runtime = runtime,
+                                    voiceSettingsStore = voiceSettingsStore,
+                                    speechInputAvailable = voiceController.speechInputAvailable,
+                                    speechOutputAvailable = voiceController.speechOutputAvailable,
+                                    darkTheme = darkTheme,
+                                    onToggleTheme = onToggleTheme,
+                                    onBackClick = { destination = Destination.Home },
+                                )
+                                Destination.Chat -> Unit
+                            }
+                        }
+                    }
                 }
             }
-
-            // 行驶受限：离开首页就只剩语音。首页不糊——首页本来没有文字输入，
-            // 把用户最后一块能看的地方也盖掉只会让人以为应用坏了。
             if (driveMaskUp) {
-                // 盖住的页面不会再刷新能力（授权对话框可能刚回来），遮罩自己确认一次
                 LaunchedEffect(Unit) { voiceController.refreshAvailability() }
                 DriveVoiceMask(
                     state = voiceState,
@@ -318,6 +321,8 @@ private fun AOSAgentApp(
 private fun ChatConsole(
     runtime: AgentRuntime,
     voice: VoiceController,
+    visible: Boolean,
+    pageStateHolder: SaveableStateHolder,
     onBackClick: () -> Unit,
     onOpenSettings: () -> Unit,
 ) {
@@ -372,10 +377,12 @@ private fun ChatConsole(
         }
     }
 
-    LaunchedEffect(Unit) {
-        runtime.refresh()
-        status = runtime.status()
-        voice.refreshAvailability()
+    LaunchedEffect(visible) {
+        if (visible) {
+            runtime.refresh()
+            status = runtime.status()
+            voice.refreshAvailability()
+        }
     }
 
     // 每次重组都重绑，避免回调里留住上一轮的 entries / busy
@@ -384,28 +391,35 @@ private fun ChatConsole(
         voice.onCommand = { command -> runCommand(command) }
     }
 
-    ChatScreen(
-        entries = entries,
-        status = status,
-        busy = busy,
-        voiceState = voiceState,
-        onBackClick = onBackClick,
-        onSend = { query -> submit(query) },
-        onVoiceToggle = {
-            if (voiceState.needsPermission) {
-                permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-            } else {
-                voice.toggle()
-            }
-        },
-    )
+    if (visible) {
+        pageStateHolder.SaveableStateProvider(Destination.Chat.name) {
+            ChatScreen(
+                entries = entries,
+                status = status,
+                busy = busy,
+                voiceState = voiceState,
+                onBackClick = onBackClick,
+                onSend = { query -> submit(query) },
+                onVoiceToggle = {
+                    if (voiceState.needsPermission) {
+                        permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                    } else {
+                        voice.toggle()
+                    }
+                },
+            )
+        }
+    }
 }
 
 /** 设置宿主：读写外观、模型、MCP 与语音偏好，保存后立刻刷新运行时并回到首页。 */
 @Composable
 private fun SettingsHost(
+    draft: SettingsDraft,
     runtime: AgentRuntime,
     voiceSettingsStore: VoiceSettingsStore,
+    speechInputAvailable: Boolean,
+    speechOutputAvailable: Boolean,
     darkTheme: Boolean,
     onToggleTheme: () -> Unit,
     onBackClick: () -> Unit,
@@ -452,6 +466,9 @@ private fun SettingsHost(
     }
 
     SettingsScreen(
+        draft = draft,
+        speechInputAvailable = speechInputAvailable,
+        speechOutputAvailable = speechOutputAvailable,
         currentLlm = current?.let { Triple(it.baseUrl, it.model, it.apiKey) },
         mcpServers = servers,
         darkTheme = darkTheme,

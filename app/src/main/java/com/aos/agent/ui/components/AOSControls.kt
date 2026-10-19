@@ -1,7 +1,8 @@
 package com.aos.agent.ui.components
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -15,12 +16,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,7 +43,7 @@ import com.aos.agent.ui.theme.AOSTheme
  * 交互控件：按钮、状态标签（灯）、点标导航行、语言开关。
  * 规范见 `.agent-rules/docs/原型/design.md` §5.1 / §5.2 / §5.10。
  *
- * 所有可点击控件最小高度为 [AOSSizing.touchTarget]（56dp）或 64dp 行高，满足驾驶场景触控要求。
+ * 所有可点击控件最小高度为 [AOSSizing.touchTarget]（72dp），满足驾驶场景触控要求。
  * 按压反馈统一为 0.97 缩放 / 100ms，符合 design.md §8.2。
  */
 
@@ -57,48 +58,14 @@ fun AOSPrimaryButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (pressed && enabled) PRESS_SCALE else 1f,
-        animationSpec = tween(PRESS_DURATION_MS),
-        label = "primaryButtonScale",
-    )
-
-    Box(
-        modifier = modifier
-            .scale(scale)
-            .height(AOSSizing.touchTarget)
-            .clip(RoundedCornerShape(AOSSizing.cardCorner))
-            .background(
-                if (enabled) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
-                },
-            )
-            .clickable(
-                enabled = enabled,
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick,
-            )
-            .padding(horizontal = AOSSpacing.lg),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.titleMedium,
-            color = if (enabled) {
-                MaterialTheme.colorScheme.onPrimary
-            } else {
-                AOSTheme.textTertiary
-            },
-        )
-    }
+    androidx.compose.material3.Button(
+        onClick = onClick, enabled = enabled,
+        modifier = modifier.heightIn(min = AOSSizing.touchTarget),
+        shape = RoundedCornerShape(AOSSizing.badgeCorner),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = AOSSpacing.xl, vertical = AOSSpacing.md),
+    ) { Text(text, style = MaterialTheme.typography.labelLarge) }
 }
 
-/** 次按钮：透明底 + 品牌色描边。禁用态降对比且不响应，原因由调用方在附近说明。 */
 @Composable
 fun AOSSecondaryButton(
     text: String,
@@ -107,43 +74,12 @@ fun AOSSecondaryButton(
     enabled: Boolean = true,
     height: Dp = AOSSizing.touchTarget,
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (pressed && enabled) PRESS_SCALE else 1f,
-        animationSpec = tween(PRESS_DURATION_MS),
-        label = "secondaryButtonScale",
-    )
-
-    Box(
-        modifier = modifier
-            .scale(scale)
-            .height(height)
-            .clip(RoundedCornerShape(AOSSizing.cardCorner))
-            .border(
-                width = AOSSizing.borderWidth,
-                color = if (enabled) AOSTheme.borderAccent else MaterialTheme.colorScheme.outlineVariant,
-                shape = RoundedCornerShape(AOSSizing.cardCorner),
-            )
-            .clickable(
-                enabled = enabled,
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick,
-            )
-            .padding(horizontal = AOSSpacing.lg),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.titleMedium,
-            color = if (enabled) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                AOSTheme.textTertiary
-            },
-        )
-    }
+    androidx.compose.material3.OutlinedButton(
+        onClick = onClick, enabled = enabled,
+        modifier = modifier.heightIn(min = height),
+        shape = RoundedCornerShape(AOSSizing.badgeCorner),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = AOSSpacing.lg, vertical = AOSSpacing.md),
+    ) { Text(text, style = MaterialTheme.typography.labelLarge) }
 }
 
 /** 状态标签语义。 */
@@ -177,13 +113,13 @@ fun AOSStatusBadge(
         }
         AOSStatusTone.NEUTRAL -> {
             background = MaterialTheme.colorScheme.surfaceVariant
-            foreground = extended.textTertiary
+            foreground = MaterialTheme.colorScheme.onSurfaceVariant
         }
     }
 
     Box(
         modifier = modifier
-            .height(AOSSizing.badgeHeight)
+            .heightIn(min = AOSSizing.badgeHeight)
             .clip(RoundedCornerShape(AOSSizing.badgeCorner))
             .background(background)
             .padding(horizontal = AOSSizing.badgePadding),
@@ -233,7 +169,7 @@ fun AOSStatusDot(
 /**
  * 点标导航行（design.md §5.10）：首页导航原语，"行即界面"。
  *
- * 结构：`灯点(亮/熄) + 名称 + 尾部状态徽章`。就绪行点亮荧光柠檬并可点击；
+ * 结构：`灯点(亮/熄) + 名称 + 尾部状态徽章`。就绪行点亮主题强调色并可点击；
  * 未开放行灯点熄灭、降对比、禁用点击，但仍可见——让用户知道能力路线图，
  * 而不是假装功能已存在。发丝分隔线由调用方的列表节奏提供。
  */
@@ -245,23 +181,12 @@ fun AOSDestinationRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (pressed && enabled) PRESS_SCALE else 1f,
-        animationSpec = tween(PRESS_DURATION_MS),
-        label = "destinationRowScale",
-    )
-
     Row(
         modifier = modifier
-            .scale(scale)
             .fillMaxWidth()
-            .heightIn(min = 64.dp)
+            .heightIn(min = AOSSizing.touchTarget)
             .clickable(
                 enabled = enabled,
-                interactionSource = interactionSource,
-                indication = null,
                 onClick = onClick,
             )
             .padding(vertical = AOSSpacing.md),
@@ -292,6 +217,7 @@ fun AOSDestinationRow(
         AOSStatusBadge(
             text = badgeText,
             tone = if (enabled) AOSStatusTone.SUCCESS else AOSStatusTone.NEUTRAL,
+            modifier = Modifier.widthIn(max = AOSSizing.sidebarWidth),
         )
     }
 }
@@ -335,7 +261,7 @@ fun AOSLanguageSwitch(
             modifier = Modifier
                 .fillMaxWidth()
                 .scale(scale)
-                .height(AOSSizing.touchTarget)
+                .heightIn(min = AOSSizing.touchTarget)
                 .clip(RoundedCornerShape(AOSSizing.cardCorner))
                 .background(
                     if (enabled) {

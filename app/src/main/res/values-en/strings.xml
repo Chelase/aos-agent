@@ -223,4 +223,25 @@
     <string name="settings_show_key">Show</string>
     <string name="settings_hide_key">Hide</string>
     <string name="settings_saved">Saved</string>
+
+    <!-- v6 原型：导航、会话和真实能力摘要 -->
+    <string name="nav_home">Home</string>
+    <string name="nav_panel">Panel</string>
+    <string name="nav_engineer">Engineer</string>
+    <string name="home_version">App version</string>
+    <string name="home_voice">Voice input</string>
+    <string name="home_vehicle">Vehicle &amp; device</string>
+    <string name="chat_model_ready">Model ready</string>
+    <string name="chat_model_missing">Model not configured</string>
+    <string name="chat_empty_title">How can I help?</string>
+    <string name="chat_configure_hint">Configure a model in Settings to start a conversation.</string>
+    <string name="chat_session">This session</string>
+    <string name="chat_session_messages">Messages</string>
+    <string name="chat_session_tools">Tool calls</string>
+    <string name="chat_session_skills">Loaded skills</string>
+    <string name="chat_session_mcp">MCP tools</string>
+    <string name="settings_capabilities">Device capabilities</string>
+    <string name="settings_capability_asr">Speech recognition</string>
+    <string name="settings_capability_tts">Speech synthesis</string>
+    <string name="settings_capability_hint">Unavailable voice controls are disabled. Type in Chat while parked. Voice features require the corresponding recognition or synthesis service on this device.</string>
 </resources>

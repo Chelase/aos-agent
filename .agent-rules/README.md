@@ -88,7 +88,7 @@
 - `mechanisms/risk-assessment.md` — 技术风险、开发风险与性能风险评估
 - mechanisms/terminal-architecture.md — 终端模块架构（Termux + PTY JNI + Compose）
 - mechanisms/engineer-mode-architecture.md — 工程师模式调试诊断面板
-- mechanisms/ui-design-system.md — UI 设计 token、共享组件库与中英双语机制
+- mechanisms/ui-design-system.md — v6 原生双主题 token、六目的地共享外壳、导航状态与中英双语机制
 - mechanisms/boot-and-foreground-service.md — 开机自启广播链路与前台服务保活
 - mechanisms/aoc-integration.md — AOC 生态接入契约（Entry 模式 HTTP 协议、身份、skill 请求回传）
 - mechanisms/voice-interaction.md — 语音交互机制（识别/播报/本地指令/连续对话/音频焦点/行驶遮罩）

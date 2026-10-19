@@ -1,5 +1,7 @@
 package com.aos.agent.ui.voice
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -19,7 +21,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,6 +29,8 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -41,8 +44,8 @@ import com.aos.agent.ui.theme.AOSTheme
 /**
  * 语音控件：麦克风按钮（灯语化）与状态行。
  *
- * 按钮最小高度由调用方给档位：常规界面取 `AOSSizing.touchTarget`（56dp），
- * 行驶遮罩取 `AOSSizing.driveTarget`（72dp）；尺寸一律走 token，不在界面里写死。
+ * 按钮最小高度由调用方给档位：常规界面取 `AOSSizing.touchTarget`（72dp），
+ * 行驶遮罩取 `AOSSizing.driveTarget`（88dp）；尺寸一律走 token，不在界面里写死。
  * 禁用态不隐藏也不装可用，原因文案紧邻其下（design.md §5.8）。
  */
 
@@ -54,7 +57,25 @@ fun VoiceMicButton(
     modifier: Modifier = Modifier,
     targetSize: Dp = AOSSizing.touchTarget,
     labelStyle: TextStyle = MaterialTheme.typography.labelSmall,
+    iconOnly: Boolean = false,
 ) {
+    val actionLabel = stringResource(labelOf(phase))
+    if (iconOnly) {
+        androidx.compose.material3.FilledIconButton(
+            onClick = onClick, enabled = enabled,
+            modifier = modifier.size(targetSize).semantics { contentDescription = actionLabel },
+            colors = androidx.compose.material3.IconButtonDefaults.filledIconButtonColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                contentColor = MaterialTheme.colorScheme.primary,
+            ),
+        ) {
+            Box {
+                MicGlyph(if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    Modifier.size(targetSize * 0.42f))
+            }
+        }
+        return
+    }
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
     val glyphColor = if (enabled) MaterialTheme.colorScheme.primary else AOSTheme.textTertiary

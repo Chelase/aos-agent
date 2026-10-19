@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="1024" height="1024">
+  <title>AOS-Agent original ring mark</title>
+  <rect width="108" height="108" rx="24" fill="#0B57D0"/>
+  <path d="M26,61 A29,29 0,1 1,82,61" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"/>
+  <path d="M50.2,34 a3.8,3.8 0,1 0,7.6,0 a3.8,3.8 0,1 0,-7.6,0 M51,54 a3,3 0,1 0,6,0 a3,3 0,1 0,-6,0" fill="#FFFFFF"/>
+  <path d="M68.321,44.0 a3,3 0,1 0,6,0 a3,3 0,1 0,-6,0 M68.321,64.0 a3,3 0,1 0,6,0 a3,3 0,1 0,-6,0 M51.0,74.0 a3,3 0,1 0,6,0 a3,3 0,1 0,-6,0 M33.679,64.0 a3,3 0,1 0,6,0 a3,3 0,1 0,-6,0 M33.679,44.0 a3,3 0,1 0,6,0 a3,3 0,1 0,-6,0" fill="#FFFFFF"/>
+</svg>

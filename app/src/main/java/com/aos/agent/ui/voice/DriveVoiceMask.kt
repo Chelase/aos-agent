@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
@@ -64,7 +63,7 @@ fun DriveVoiceMask(
         ) {
             Text(
                 text = stringResource(R.string.drive_mask_title),
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.displayLarge,
                 color = MaterialTheme.colorScheme.onBackground,
             )
             Spacer(modifier = Modifier.height(AOSSpacing.xs))
@@ -78,14 +77,12 @@ fun DriveVoiceMask(
                 phase = state.phase,
                 enabled = state.usable,
                 onClick = onMicClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .widthIn(min = AOSSizing.driveTarget),
-                targetSize = AOSSizing.driveTarget,
+                targetSize = AOSSizing.driveMic,
+                iconOnly = true,
                 labelStyle = MaterialTheme.typography.titleMedium,
             )
             Spacer(modifier = Modifier.height(AOSSpacing.sm))
-            VoiceStatusLine(state = state)
+            VoiceStatusLine(state = state, modifier = Modifier.widthIn(max = AOSSizing.sidebarWidth * 2))
             Spacer(modifier = Modifier.height(AOSSpacing.xl))
             AOSSecondaryButton(
                 text = stringResource(R.string.drive_mask_back_home),

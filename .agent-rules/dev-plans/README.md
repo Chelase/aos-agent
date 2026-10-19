@@ -53,7 +53,8 @@
 - [ui-design-system-plan-phase2.md](./ui-design-system-plan-phase2.md) — UI 样式重构 v2.0 琥珀仪表（已被 v3.0/v4.0 接替，留档）
 - [ui-design-system-plan-phase3.md](./ui-design-system-plan-phase3.md) — UI 样式从零重构 v3.0 竞速荧光（已被 v4.0 接替，留档）
 - [ui-design-system-plan-phase4.md](./ui-design-system-plan-phase4.md) — UI 样式 v4.0 深空蓝白暗色单主题（已被 v5.0 接替，留档）
-- [ui-design-system-plan-phase5.md](./ui-design-system-plan-phase5.md) — UI v5.0 双主题：日间蓝白浅色（默认）+ 夜间深色，可切换（当前生效）
+- [ui-design-system-plan-phase5.md](./ui-design-system-plan-phase5.md) — UI v5.0 双主题基础（视觉与页面结构已由 v6 接替，留档）
+- [ui-design-system-plan-phase6.md](./ui-design-system-plan-phase6.md) — v6 七页原型原生落地：共享导航轨、承载面和环形灯组图标（模拟器已验收，独立终审额度受限）
 - [voice-interaction-plan.md](./voice-interaction-plan.md) — 语音交互：ASR/TTS/语音指令（Phase A **已交付 2026-10-02**）+ 连续对话/离线唤醒（Phase B）+ 车机深度（Phase C），驾驶场景优先
 
 ### 子目录

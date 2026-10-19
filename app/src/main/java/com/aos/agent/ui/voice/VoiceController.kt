@@ -57,7 +57,11 @@ class VoiceController(
         refreshAvailability()
     }
 
-    /** 页面 onResume、权限结果回来后调用：能力与权限都可能刚发生变化。 */
+    /** 设置页展示现有通道真实能力，不另建探测与持久状态。 */
+    val speechInputAvailable: Boolean get() = transcriber.available
+    val speechOutputAvailable: Boolean get() = synthesizer.available
+
+    /** 页面恢复或权限结果回来后刷新能力与权限。 */
     fun refreshAvailability() {
         val serviceMissing = !transcriber.available
         val permissionMissing = !hasPermission()
