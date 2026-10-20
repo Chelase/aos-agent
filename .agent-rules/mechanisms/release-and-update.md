@@ -95,19 +95,16 @@ GitHub Actions 出签名 release 与一份 `update.json` 清单，车机端主�
 
 - **本地出版本**：`./gradlew :app:assembleRelease -PVERSION_CODE=… -PVERSION_NAME=…`，
   用 `apksigner verify --print-certs` 确认签名；缺 `keystore.properties` 时应立刻失败并说明原因。
-- **排查**：检查更新报"清单读不懂"→ 先看是不是还没发 Release（404 走的就是这条文案）；
-  报"连不上"→ 车机出网问题（模拟器无路由时用 `adb reverse tcp:7897 tcp:7897` +
-  `settings put global http_proxy 127.0.0.1:7897` 借宿主代理）；
-  报"来源不在白名单"→ 清单里的 `apkUrl` 被改到了非官方主机，属安全问题不是网络问题。
+- **排查**："清单读不懂"先查清单内容与 Release 是否存在（404 也归此类）；"连不上"只是 HTTP 非成功响应或连接异常的统称，当前没有细分无路由、DNS、TLS 和发布站点不可达。实车先分别验证外网与 GitHub 发布地址，再定位出口、认证门户或站点访问问题；"来源不在白名单"查清单 `apkUrl`。模拟器可用 `adb reverse tcp:7897 tcp:7897` 与系统代理借宿主出网，宿主构建代理不代表车机联网已修复。
 - **验证**：`./gradlew :app:testDebugUnitTest`（清单解析/版本比较/白名单/校验和/门控共 20 例，
   网络层用 OkHttp 拦截器灌假响应）。模拟器可验到"检查更新真发请求 + 四种回音文案 +
   FileProvider 与安装权限已注册"（`dumpsys package com.aos.agent`）。
 - **必须真机或首发版本才能验**：完整"下载→校验→系统安装器→升级成功"这一趟，
-  要有第一个真实 Release 才跑得通；**2026-10-03 已实测走通**（v1.0.0→v1.0.1，同签名升级，匿名拉公开清单）。
+  要有第一个真实 Release 才跑得通；**2026-10-03 模拟器已实测走通**（v1.0.0→v1.0.1，同签名升级，匿名拉公开清单）。截至 2026-10-20，实车报告 P1-1 的更新联网失败仍无修复与复测记录；当时 WiFi 断开、4G 未注册、默认以太网曾带认证门户标记，具体失败原因待连车定位。
 - **车机镜像的"允许未知来源"页是 stub**：AAOS 模拟器上 `ACTION_MANAGE_UNKNOWN_APP_SOURCES` 解析到
   `com.android.car.frameworkpackagestubs/.Stubs$ManageExternalSourcesActivityStub`（空页），
   应用内"去系统设置允许"点了等于没开，而 `runCatching` 会吞掉跳转、无任何提示；
   测试授权用 `adb shell appops set com.aos.agent REQUEST_INSTALL_PACKAGES allow`（等价于拨开关），
   真机要走 OEM 提供的入口。授权回来靠 ON_RESUME 重探解除按钮禁用，已实测。
 
-> 更新时间：2026-10-03
+> 更新时间：2026-10-20
