@@ -13,7 +13,7 @@
 
 当前 Git 远端平台：GitHub
 
-- 远端：`origin` → `https://github.com/Chelase/aos-agent.git`（私有仓库）
+- 远端：`origin` → `https://github.com/Chelase/aos-agent.git`（公开仓库）
 - 默认分支：`main`，本地 `main` 跟踪 `origin/main`
 - 推送前先确认工作区干净、提交粒度符合本文件第 5 节要求。
 

@@ -2,7 +2,7 @@
 
 ## 结论
 
-基于 Termux `terminal-emulator` 源码（v0.118.1）做 VT100/xterm 仿真，经自研 JNI PTY 桥接启动真实 `/system/bin/sh`，
+基于 Termux `terminal-emulator` 源码（v0.118.1，该模块列为 Apache-2.0 许可例外，来源与署名见根目录 `NOTICE` 和 `licenses/`）做 VT100/xterm 仿真，经自研 JNI PTY 桥接启动真实 `/system/bin/sh`，
 UI 侧用 Compose 逐行 `Text` 渲染等宽字符网格。Phase 1 已于 2026-10-02 在 AAOS 模拟器端到端验收。
 
 ## 涉及对象
@@ -88,4 +88,4 @@ shell stdout → PTY master → 读线程 read → mProcessToTerminalIOQueue(64K
 - **排查 shell 无法启动**：看 `pty.c` 的 `open /dev/ptmx` / `fork` / `execve` 返回值（抛 `IOException` 会折进 `Exited`）。
 - **验证**：`./gradlew :app:assembleDebug`（含 `libpty.so`）→ 模拟器打开终端 → `echo hello` 有回显 → `exit` 出现结束态。
 
-> 更新时间：2026-10-02（Phase 1 落地并实测；渲染路径由「Compose Canvas + Paint」改为「Compose Text」）
+> 更新时间：2026-10-20（Phase 1 落地并实测；渲染路径由「Compose Canvas + Paint」改为「Compose Text」）

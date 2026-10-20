@@ -1,0 +1,48 @@
+AOS-Agent
+Copyright 2026 Chelase
+
+Original contributions to AOS-Agent are licensed under the Apache License,
+Version 2.0. Third-party copyrights and license terms remain with their
+respective owners. This notice does not relicense third-party material.
+
+Termux terminal-emulator
+-----------------------
+The Java terminal-emulator sources in app/src/main/java/com/aos/agent/terminal/
+are adapted from termux/termux-app, tag v0.118.1, terminal-emulator module.
+Upstream source: https://github.com/termux/termux-app/tree/v0.118.1/terminal-emulator
+License statement: https://github.com/termux/termux-app/blob/v0.118.1/LICENSE.md
+
+That upstream statement identifies the terminal-emulator and terminal-view
+libraries as Apache License 2.0 exceptions to the repository's GPLv3-only
+license. The terminal emulator derives from Terminal Emulator for Android:
+https://github.com/jackpal/Android-Terminal-Emulator
+Copyright (c) 2005-2008, The Android Open Source Project
+See licenses/android-terminal-emulator-NOTICE.txt and LICENSE.
+
+Local adaptations include the com.aos.agent.terminal package, the pty native
+library binding, and app-specific session integration. TerminalViewModel.kt
+and app/src/main/cpp/pty.c provide the AOS-Agent integration.
+
+wcwidth
+-------
+WcWidth.java uses character-width tables originating from jquast/wcwidth,
+as identified by its upstream comments (commit
+1b9b6585b0080ea5cb88dc9815796505724793fe).
+Source: https://github.com/jquast/wcwidth
+See licenses/wcwidth-MIT.txt for the retained copyright and license text.
+
+Vosk and JNA
+------------
+Vosk Android 0.3.47 is a runtime dependency under Apache License 2.0.
+Source: https://github.com/alphacep/vosk-api
+JNA 5.13.0 is a transitive dependency with an Apache-2.0 or LGPL-2.1-or-later
+license choice. AOS-Agent uses the Apache-2.0 option.
+Source: https://github.com/java-native-access/jna/tree/5.13.0
+
+The optional vosk-model-small-cn-0.22 model is downloaded separately; its
+publisher lists it under Apache License 2.0:
+https://alphacephei.com/vosk/models
+
+See licenses/README.md for source links, additional dependency information,
+and the scope of these notices. External reference articles and their images
+under docs/ retain their original authors' rights.

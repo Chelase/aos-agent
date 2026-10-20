@@ -1,3 +1,9 @@
+/*
+ * Adapted from Termux terminal-emulator v0.118.1.
+ * Modified for the AOS-Agent package namespace and app integration.
+ * Upstream Apache-2.0 exception: https://github.com/termux/termux-app/blob/v0.118.1/LICENSE.md
+ * See NOTICE and licenses/ at the repository root for third-party terms.
+ */
 package com.aos.agent.terminal;
 
 import android.graphics.Color;
