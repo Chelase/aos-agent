@@ -46,3 +46,11 @@ https://alphacephei.com/vosk/models
 See licenses/README.md for source links, additional dependency information,
 and the scope of these notices. External reference articles and their images
 under docs/ retain their original authors' rights.
+
+Website assets
+--------------
+Tabler Icons are used under the MIT license. Retained license text:
+site/assets/licenses/tabler-MIT.txt.
+Noto Sans SC is subsetted for the website under SIL Open Font License 1.1.
+Retained license text: site/assets/licenses/noto-sans-sc-OFL.txt.
+Pinned upstream revisions and source URLs: site/assets/sources.json.

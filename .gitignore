@@ -38,3 +38,12 @@ app/.cxx/
 *.apk
 *.aab
 .devctx/
+
+# 站点构建与本地 Python 缓存
+site/dist/
+site/**/__pycache__/
+
+# 网站设计 token 单独留档，其余设计工具缓存仍忽略
+!site/.impeccable/
+site/.impeccable/*
+!site/.impeccable/design.json

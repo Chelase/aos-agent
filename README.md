@@ -8,7 +8,7 @@
 [![Release](https://img.shields.io/github/v/release/Chelase/aos-agent)](https://github.com/Chelase/aos-agent/releases/latest)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 
-[下载安装](https://github.com/Chelase/aos-agent/releases/latest) · [更新日志](CHANGELOG.md) · [反馈问题](https://github.com/Chelase/aos-agent/issues)
+[项目官网](https://chelase.github.io/aos-agent/) · [下载安装](https://github.com/Chelase/aos-agent/releases/latest) · [更新日志](CHANGELOG.md) · [反馈问题](https://github.com/Chelase/aos-agent/issues)
 
 面向原生 AAOS 车机，不是手机端 Android Auto 投屏应用。当前处于开发与车型适配阶段：停车时使用完整触控界面，检测到驾驶受限状态时使用语音遮罩；设备缺少能力时显示具体原因。
 
@@ -156,6 +156,7 @@ app/src/main/
 - [语音交互](.agent-rules/mechanisms/voice-interaction.md)与[本地唤醒](.agent-rules/mechanisms/wake-word-kws.md)。
 - [发布与更新](.agent-rules/mechanisms/release-and-update.md)：签名、更新清单与安装门控。
 - [图标母版与来源](artwork/README.md)。
+- [官网开发与部署](site/README.md)：独立静态页面、资源来源和 Pages 工作流。
 - [Agent 协作入口](AGENTS.md)：参与代码修改前读取项目规则。
 
 欢迎通过 Issue 提交问题和改进建议，通过 Pull Request 参与开发。请先区分真实设备能力缺失、网络配置问题与应用缺陷，并提供可复现的信息。

@@ -30,3 +30,7 @@ AndroidX / Compose、Kotlin、kotlinx 和 OkHttp 等其他依赖的版本集中�
 `docs/参考文档/` 中收录的外部文章和配图保留原作者版权，不属于 Chelase 的原创软件授权范围；转发、再分发或用于商业材料前需确认原作者授权。
 
 项目图标的创作与生成来源见 [artwork/README.md](../artwork/README.md)。
+
+## 官网资源
+
+官网自托管 Tabler Icons（MIT）与 Noto Sans SC 字体子集（OFL-1.1）。固定版本和来源见 [资源清单](../site/assets/sources.json)，完整许可文本分别保留在 [Tabler MIT](../site/assets/licenses/tabler-MIT.txt) 和 [Noto OFL](../site/assets/licenses/noto-sans-sc-OFL.txt)。这些许可随网站部署产物一起提供。

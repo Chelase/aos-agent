@@ -94,6 +94,7 @@
 - mechanisms/voice-interaction.md — 语音交互机制（识别/播报/本地指令/连续对话/音频焦点/行驶遮罩）
 - mechanisms/wake-word-kws.md — 离线唤醒词机制（Vosk KWS、唤醒词由 Agent 名字生成、常驻麦隐私边界）
 - mechanisms/release-and-update.md — 发布与更新机制（签名/CI/检查更新/校验后拉起安装器）
+- mechanisms/website-and-pages.md — 独立静态官网、正式版本元数据校验与 Pages 自动部署
 
 新增机制文档必须按 `mechanisms/README.md` 的七段强制结构编写（结论 → 涉及对象 → 运行链路 → 使用点 → 修改点 → 关键约束 → 维护方式），并遵守禁止写入内容清单。
 

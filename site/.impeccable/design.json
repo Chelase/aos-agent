@@ -1,0 +1,335 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-21T05:53:19.156Z",
+  "title": "Design System: AOS-Agent Website",
+  "extensions": {
+    "colorMeta": {
+      "blue": {
+        "role": "primary",
+        "displayName": "品牌蓝",
+        "tonalRamp": [
+          "oklch(15% 0.19916 260.60)",
+          "oklch(26.43% 0.19916 260.60)",
+          "oklch(37.86% 0.19916 260.60)",
+          "oklch(49.29% 0.19916 260.60)",
+          "oklch(60.71% 0.19916 260.60)",
+          "oklch(72.14% 0.19916 260.60)",
+          "oklch(83.57% 0.19916 260.60)",
+          "oklch(95% 0.19916 260.60)"
+        ]
+      },
+      "blue-hover": {
+        "role": "primary",
+        "displayName": "悬停深蓝",
+        "tonalRamp": [
+          "oklch(15% 0.17363 260.69)",
+          "oklch(26.43% 0.17363 260.69)",
+          "oklch(37.86% 0.17363 260.69)",
+          "oklch(49.29% 0.17363 260.69)",
+          "oklch(60.71% 0.17363 260.69)",
+          "oklch(72.14% 0.17363 260.69)",
+          "oklch(83.57% 0.17363 260.69)",
+          "oklch(95% 0.17363 260.69)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "墨色",
+        "tonalRamp": [
+          "oklch(15% 0.01254 264.28)",
+          "oklch(26.43% 0.01254 264.28)",
+          "oklch(37.86% 0.01254 264.28)",
+          "oklch(49.29% 0.01254 264.28)",
+          "oklch(60.71% 0.01254 264.28)",
+          "oklch(72.14% 0.01254 264.28)",
+          "oklch(83.57% 0.01254 264.28)",
+          "oklch(95% 0.01254 264.28)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "灰蓝文字",
+        "tonalRamp": [
+          "oklch(15% 0.02609 260.68)",
+          "oklch(26.43% 0.02609 260.68)",
+          "oklch(37.86% 0.02609 260.68)",
+          "oklch(49.29% 0.02609 260.68)",
+          "oklch(60.71% 0.02609 260.68)",
+          "oklch(72.14% 0.02609 260.68)",
+          "oklch(83.57% 0.02609 260.68)",
+          "oklch(95% 0.02609 260.68)"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "浅分隔线",
+        "tonalRamp": [
+          "oklch(15% 0.01507 260.73)",
+          "oklch(26.43% 0.01507 260.73)",
+          "oklch(37.86% 0.01507 260.73)",
+          "oklch(49.29% 0.01507 260.73)",
+          "oklch(60.71% 0.01507 260.73)",
+          "oklch(72.14% 0.01507 260.73)",
+          "oklch(83.57% 0.01507 260.73)",
+          "oklch(95% 0.01507 260.73)"
+        ]
+      },
+      "pale": {
+        "role": "neutral",
+        "displayName": "浅灰底",
+        "tonalRamp": [
+          "oklch(15% 0.00574 264.53)",
+          "oklch(26.43% 0.00574 264.53)",
+          "oklch(37.86% 0.00574 264.53)",
+          "oklch(49.29% 0.00574 264.53)",
+          "oklch(60.71% 0.00574 264.53)",
+          "oklch(72.14% 0.00574 264.53)",
+          "oklch(83.57% 0.00574 264.53)",
+          "oklch(95% 0.00574 264.53)"
+        ]
+      },
+      "white": {
+        "role": "neutral",
+        "displayName": "白色",
+        "tonalRamp": [
+          "oklch(15% 0.00000 0.00)",
+          "oklch(26.43% 0.00000 0.00)",
+          "oklch(37.86% 0.00000 0.00)",
+          "oklch(49.29% 0.00000 0.00)",
+          "oklch(60.71% 0.00000 0.00)",
+          "oklch(72.14% 0.00000 0.00)",
+          "oklch(83.57% 0.00000 0.00)",
+          "oklch(95% 0.00000 0.00)"
+        ]
+      },
+      "secondary-bg": {
+        "role": "neutral",
+        "displayName": "次要按钮浅底",
+        "tonalRamp": [
+          "oklch(15% 0.00742 260.73)",
+          "oklch(26.43% 0.00742 260.73)",
+          "oklch(37.86% 0.00742 260.73)",
+          "oklch(49.29% 0.00742 260.73)",
+          "oklch(60.71% 0.00742 260.73)",
+          "oklch(72.14% 0.00742 260.73)",
+          "oklch(83.57% 0.00742 260.73)",
+          "oklch(95% 0.00742 260.73)"
+        ]
+      },
+      "secondary-hover": {
+        "role": "neutral",
+        "displayName": "次要按钮悬停底",
+        "tonalRamp": [
+          "oklch(15% 0.01377 258.35)",
+          "oklch(26.43% 0.01377 258.35)",
+          "oklch(37.86% 0.01377 258.35)",
+          "oklch(49.29% 0.01377 258.35)",
+          "oklch(60.71% 0.01377 258.35)",
+          "oklch(72.14% 0.01377 258.35)",
+          "oklch(83.57% 0.01377 258.35)",
+          "oklch(95% 0.01377 258.35)"
+        ]
+      },
+      "download-bg": {
+        "role": "neutral",
+        "displayName": "浅蓝下载区",
+        "tonalRamp": [
+          "oklch(15% 0.01654 259.42)",
+          "oklch(26.43% 0.01654 259.42)",
+          "oklch(37.86% 0.01654 259.42)",
+          "oklch(49.29% 0.01654 259.42)",
+          "oklch(60.71% 0.01654 259.42)",
+          "oklch(72.14% 0.01654 259.42)",
+          "oklch(83.57% 0.01654 259.42)",
+          "oklch(95% 0.01654 259.42)"
+        ]
+      },
+      "screenshot-bg": {
+        "role": "neutral",
+        "displayName": "截图深底",
+        "tonalRamp": [
+          "oklch(15% 0.01806 263.90)",
+          "oklch(26.43% 0.01806 263.90)",
+          "oklch(37.86% 0.01806 263.90)",
+          "oklch(49.29% 0.01806 263.90)",
+          "oklch(60.71% 0.01806 263.90)",
+          "oklch(72.14% 0.01806 263.90)",
+          "oklch(83.57% 0.01806 263.90)",
+          "oklch(95% 0.01806 263.90)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "首屏双行大标题",
+        "purpose": "仅官网 hero 的产品主张；响应式值见 DESIGN.md。"
+      },
+      "headline": {
+        "displayName": "区块标题",
+        "purpose": "功能、安装、开发者和 FAQ 区块。"
+      },
+      "title-scene": {
+        "displayName": "场景标题",
+        "purpose": "被选功能场景的解释标题。"
+      },
+      "body": {
+        "displayName": "基础正文",
+        "purpose": "站点默认文字。"
+      },
+      "body-section": {
+        "displayName": "区块说明",
+        "purpose": "标题后的主要解释。"
+      },
+      "label-action": {
+        "displayName": "行动按钮",
+        "purpose": "默认 CTA 文字；首屏桌面和手机有 CSS 覆盖。"
+      },
+      "label-tab": {
+        "displayName": "场景标签",
+        "purpose": "默认未选场景，选中后字重 700。"
+      },
+      "caption": {
+        "displayName": "截图来源",
+        "purpose": "图注和测试环境说明。"
+      }
+    },
+    "shadows": [],
+    "motion": [
+      {
+        "name": "intro-arrive",
+        "value": "arrive .65s cubic-bezier(.22,1,.36,1) both",
+        "purpose": "仅首屏文字，opacity .45→1、translateY(12px)→0；仅 no-preference 启用。"
+      },
+      {
+        "name": "button-state",
+        "value": "background .2s, color .2s, border-color .2s",
+        "purpose": "按钮悬停颜色。"
+      },
+      {
+        "name": "navigation-color",
+        "value": "color .18s",
+        "purpose": "导航悬停。"
+      },
+      {
+        "name": "image-hint",
+        "value": "opacity .2s",
+        "purpose": "桌面图片提示。"
+      },
+      {
+        "name": "faq-chevron",
+        "value": "transform .2s",
+        "purpose": "FAQ 展开箭头 180deg。"
+      },
+      {
+        "name": "reduced-motion",
+        "value": "animation:none!important; transition:none!important; scroll-behavior:auto",
+        "purpose": "prefers-reduced-motion: reduce；已检查 CSS，未模拟操作系统偏好切换。"
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "mobile-max",
+        "value": "700px"
+      },
+      {
+        "name": "desktop-navigation-min",
+        "value": "701px"
+      },
+      {
+        "name": "tablet-max",
+        "value": "1000px"
+      },
+      {
+        "name": "wide-min",
+        "value": "1600px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary download button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "下载主入口的基础按钮；示例版本来自记录时已校验的 release.json，生产值由构建注入。",
+      "html": "<a class=\"ds-primary\" href=\"https://github.com/Chelase/aos-agent/releases/download/v1.1.0/aos-agent-1.1.0.apk\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"25\" height=\"25\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2\"/><path d=\"M7 11l5 5l5 -5\"/><path d=\"M12 4l0 12\"/></svg>下载最新版 <span class=\"ds-version\">v1.1.0</span></a>",
+      "css": ".ds-primary{display:inline-flex;align-items:center;justify-content:center;gap:13px;min-height:64px;padding:14px 26px;border:1px solid transparent;border-radius:12px;font-family:\"AOS Sans\",\"Noto Sans SC\",sans-serif;font-size:20px;font-weight:650;line-height:1.5;text-decoration:none;transition:background .2s,color .2s,border-color .2s;background:var(--blue,#0b57d0);color:var(--white,#fff)}.ds-primary:hover{background:var(--blue-hover,#0847ad)}.ds-primary:focus-visible{outline:3px solid var(--blue,#0b57d0);outline-offset:5px;}.ds-primary svg{flex-shrink:0}.ds-primary .ds-version{font-weight:550}@media(max-width:1000px){.ds-primary{font-size:18px;min-height:60px;padding:13px 23px}}@media(max-width:700px){.ds-primary{min-height:55px;padding:13px 18px;font-size:16px;gap:9px;border-radius:10px}.ds-primary svg{width:22px;height:22px}.ds-primary .ds-version{font-size:14px}}@media(prefers-reduced-motion:reduce){.ds-primary{transition:none}}"
+    },
+    {
+      "name": "Secondary GitHub button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "在下载按钮旁提供源码入口，使用同一按钮形状和较低背景对比。",
+      "html": "<a class=\"ds-secondary\" href=\"https://github.com/Chelase/aos-agent\" target=\"_blank\" rel=\"noopener\" aria-label=\"在 GitHub 上查看（新窗口）\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"25\" height=\"25\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5\"/></svg>在 GitHub 上查看</a>",
+      "css": ".ds-secondary{display:inline-flex;align-items:center;justify-content:center;gap:13px;min-height:64px;padding:14px 26px;border:1px solid transparent;border-radius:12px;font-family:\"AOS Sans\",\"Noto Sans SC\",sans-serif;font-size:20px;font-weight:650;line-height:1.5;text-decoration:none;transition:background .2s,color .2s,border-color .2s;background:#f0f3f8;color:var(--ink,#191c22)}.ds-secondary:hover{background:#e4eaf3}.ds-secondary:focus-visible{outline:3px solid var(--blue,#0b57d0);outline-offset:5px;}.ds-secondary svg{flex-shrink:0}.ds-secondary .ds-version{font-weight:550}@media(max-width:1000px){.ds-secondary{font-size:18px;min-height:60px;padding:13px 23px}}@media(max-width:700px){.ds-secondary{min-height:55px;padding:13px 18px;font-size:16px;gap:9px;border-radius:10px}.ds-secondary svg{width:22px;height:22px}.ds-secondary .ds-version{font-size:14px}}@media(prefers-reduced-motion:reduce){.ds-secondary{transition:none}}"
+    },
+    {
+      "name": "Main navigation links",
+      "kind": "nav",
+      "description": "桌面导航及手机已展开菜单中的链接；菜单开合由站点脚本负责。",
+      "html": "<nav class=\"ds-nav\" aria-label=\"主导航\"><a href=\"#features\">功能</a><a href=\"#install\">安装</a><a href=\"#developers\">开发者</a><a class=\"ds-nav-github\" href=\"https://github.com/Chelase/aos-agent\" target=\"_blank\" rel=\"noopener\" aria-label=\"GitHub（新窗口）\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"25\" height=\"25\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5\"/></svg>GitHub</a></nav>",
+      "css": ".ds-nav{display:flex;gap:42px;align-items:center;font-family:\"AOS Sans\",\"Noto Sans SC\",sans-serif;font-size:17px;font-weight:550;line-height:1.75;color:var(--ink,#191c22)}.ds-nav a{padding:12px 0;color:inherit;text-decoration:none;transition:color .18s}.ds-nav a:hover{color:var(--blue,#0b57d0)}.ds-nav a:focus-visible{outline:3px solid var(--blue,#0b57d0);outline-offset:5px;}.ds-nav .ds-nav-github{display:flex;align-items:center;gap:10px;font-size:19px}@media(max-width:1000px){.ds-nav{gap:26px;font-size:15px}.ds-nav .ds-nav-github{font-size:17px}}@media(max-width:700px){.ds-nav{background:var(--white,#fff);border-bottom:1px solid var(--line,#dde3ed);padding:15px 24px 24px;flex-direction:column;align-items:stretch;gap:0}}@media(prefers-reduced-motion:reduce){.ds-nav a{transition:none}}"
+    },
+    {
+      "name": "Scene tab states",
+      "kind": "custom",
+      "refersTo": "tab",
+      "description": "活动项的蓝色字与下划线、未选项的灰蓝字；完整切换、roving tabindex 和面板更新在 site.js。",
+      "html": "<div class=\"ds-tabs\" role=\"tablist\" aria-label=\"查看功能界面\"><button class=\"ds-tab\" type=\"button\" role=\"tab\" aria-selected=\"true\">对话</button><button class=\"ds-tab\" type=\"button\" role=\"tab\" aria-selected=\"false\" tabindex=\"-1\">终端</button><button class=\"ds-tab\" type=\"button\" role=\"tab\" aria-selected=\"false\" tabindex=\"-1\">车辆信息</button><button class=\"ds-tab\" type=\"button\" role=\"tab\" aria-selected=\"false\" tabindex=\"-1\">语音<span class=\"ds-tab-note\">（设备支持时）</span></button></div>",
+      "css": ".ds-tabs{display:flex;gap:34px;border-bottom:1px solid var(--line,#dde3ed);overflow-x:auto;scrollbar-width:thin;scrollbar-color:#b9c7dc transparent}.ds-tab{position:relative;flex:none;border:0;border-bottom:3px solid transparent;padding:14px 8px 15px;background:none;color:var(--muted,#626b7a);font-family:\"AOS Sans\",\"Noto Sans SC\",sans-serif;font-weight:550;font-size:17px;line-height:1.75;white-space:nowrap;cursor:pointer}.ds-tab[aria-selected=\"true\"]{border-color:var(--blue,#0b57d0);color:var(--blue,#0b57d0);font-weight:700}.ds-tab:hover{color:var(--blue,#0b57d0)}.ds-tab:focus-visible{outline:3px solid var(--blue,#0b57d0);outline-offset:-5px}.ds-tab-note{font-size:14px;font-weight:400}@media(max-width:700px){.ds-tabs{gap:12px}.ds-tab{font-size:15px;padding:11px 7px}.ds-tab-note{font-size:12px}}"
+    },
+    {
+      "name": "Open capability item",
+      "kind": "custom",
+      "description": "能力概览第一项；开放排版、蓝色图标与细线分组，不生成卡片表面。",
+      "html": "<article class=\"ds-capability\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"39\" height=\"39\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 20l1.3 -3.9c-2.324 -3.437 -1.426 -7.872 2.1 -10.374c3.526 -2.501 8.59 -2.296 11.845 .48c3.255 2.777 3.695 7.266 1.029 10.501c-2.666 3.235 -7.615 4.215 -11.574 2.293l-4.7 1\"/></svg><h3>AI 对话</h3><p>连接自己的模型，让对话与工具调用在车机里自然发生。</p></article>",
+      "css": ".ds-capability{font-family:\"AOS Sans\",\"Noto Sans SC\",sans-serif;color:var(--ink,#191c22);padding:0 28px 0 0;border-right:1px solid var(--line,#dde3ed)}.ds-capability>svg{color:var(--blue,#0b57d0);display:block;margin-bottom:18px}.ds-capability h3{margin:0;font-size:19px;font-weight:700;line-height:1.5;letter-spacing:-.025em}.ds-capability p{margin:10px 0 0;font-size:15px;line-height:1.9;color:var(--muted,#626b7a)}@media(max-width:1000px){.ds-capability{padding-right:18px}.ds-capability h3{font-size:17px}.ds-capability p{font-size:14px}}@media(max-width:700px){.ds-capability{padding:0;border:0}.ds-capability>svg{width:31px;height:31px;margin-bottom:12px}.ds-capability h3{font-size:16px}.ds-capability p{font-size:13px;line-height:1.85}}"
+    },
+    {
+      "name": "FAQ disclosure",
+      "kind": "custom",
+      "description": "原生 details/summary，可直接展开与键盘聚焦；展示与安装相关的限制。",
+      "html": "<details class=\"ds-faq\"><summary>这是 Android Auto 投屏应用吗？<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"25\" height=\"25\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M6 9l6 6l6 -6\"/></svg></summary><p>不是。AOS-Agent 是安装在 Android Automotive OS 车机上的原生应用，面向 Android 12 / API 31 及以上设备，不是手机端投屏插件。</p></details>",
+      "css": ".ds-faq{font-family:\"AOS Sans\",\"Noto Sans SC\",sans-serif;color:var(--ink,#191c22);border-bottom:1px solid var(--line,#dde3ed)}.ds-faq summary{display:flex;align-items:center;justify-content:space-between;gap:24px;list-style:none;cursor:pointer;padding:23px 0;font-size:18px;font-weight:600;line-height:1.75}.ds-faq summary::-webkit-details-marker{display:none}.ds-faq summary:focus-visible{outline:3px solid var(--blue,#0b57d0);outline-offset:5px;}.ds-faq summary svg{color:var(--muted,#626b7a);flex:none;transition:transform .2s}.ds-faq[open] summary svg{transform:rotate(180deg)}.ds-faq p{margin:0;color:var(--muted,#626b7a);font-size:15px;line-height:1.9;padding-bottom:25px;max-width:680px}@media(max-width:700px){.ds-faq summary{font-size:16px;gap:15px;padding:20px 0}.ds-faq p{font-size:14px}}@media(prefers-reduced-motion:reduce){.ds-faq summary svg{transition:none}}"
+    }
+  ],
+  "narrative": {
+    "northStar": "把 Agent，放进你的车机。",
+    "overview": "这是独立官网 `site/` 的设计记录，按已经实现并通过独立终审的页面提取。模式为 **Persuade**：先用清楚的产品主张和真实 AAOS 界面建立理解，再提供下载、安装和源码入口。用户明确选定的 Product Design 第三版是视觉依据（[reference.png](reference.png)）；没有重新探索或替换方向。\n\n网站采用白色场域、左对齐的黑蓝双行大标题、下载 APK 与 GitHub 双 CTA、比正文更宽的真实截图及连续功能介绍。版面开放，组件平实，以中文粗体、品牌蓝和产品画面形成记忆点。原生 App 是画面里的产品，不把 App 的深色界面扩散为官网背景。\n\n本文件只约束网站；原生 App 的真来源仍按 [skill-routing.md](../../.agent-rules/rules/skill-routing.md) 映射到既有视觉规范和机制文档。产品定位读取需求分析与统一生态愿景；网站实施事实读取 [website-and-pages.md](../../.agent-rules/mechanisms/website-and-pages.md)。本文件及 `site/.impeccable/design.json` 不替代根目录或原生 App 的设计源。",
+    "keyCharacteristics": [
+      "白底、黑蓝标题，下载主行动清晰。",
+      "大幅真实 16:9 AAOS 截图，配可见来源说明。",
+      "场景标签、细分隔线和开放网格，避免把所有内容装进卡片。",
+      "自托管中文可变字体、轮廓图标，以及完整键盘状态。"
+    ],
+    "rules": [
+      {
+        "name": "The One Accent Rule",
+        "body": "网站操作与重点沿用同一个品牌蓝，截图内部颜色属于产品素材，不新增为网页强调色。",
+        "section": "colors"
+      },
+      {
+        "name": "The Subset Maintenance Rule",
+        "body": "新增文案后按 README 的页面 HTML、脚本字符及 ASCII 字符集更新字体子集；不要把字体缺字产生的回退视为新的字形风格。",
+        "section": "typography"
+      },
+      {
+        "name": "The Image Owns Depth Rule",
+        "body": "产品截图自带车机层次；网页容器延续当前的平面和细线表达，不把截图内部的材质当作网页卡片规则。",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** 延续已确认第三版的白底、左对齐黑蓝双行标题、下载优先双 CTA 与宽幅真实截图。",
+      "**Do** 从网站 CSS 提取及维护 token；让正文容器、场景网格和手机重排一起工作。",
+      "**Do** 使用原比例截图，保留模拟器、fixture、权限及设备条件说明，并保留放大与焦点返回。",
+      "**Do** 新文案同步检查字体子集；以官方正式版数据渲染下载版本和日期。",
+      "**Do** 后续迭代核对源稿与同尺度实现，同时检查手机、桌面、宽屏、键盘和减少动态效果；验收依据见 design-qa.md 与独立终审。"
+    ],
+    "donts": [
+      "**Don't** 为追求生成稿像素分数压扁真实 16:9 截图，或恢复生成稿的错误发布日期。",
+      "**Don't** 把原生 App 深色截图里的颜色、卡片和状态提炼成官网通用 token。",
+      "**Don't** 用虚构实时车辆数据、车型兼容承诺、下载量或能力填补页面证据。",
+      "**Don't** 把网站规范写回根 PRODUCT.md、DESIGN.md 或原生 App 设计文档；网站实现继续采用独立静态 HTML/CSS/JS。"
+    ]
+  }
+}

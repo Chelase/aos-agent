@@ -97,6 +97,7 @@
 - [voice-interaction.md](./voice-interaction.md) — 语音交互机制（识别/播报/本地指令/连续对话/音频焦点/行驶遮罩）
 - [wake-word-kws.md](./wake-word-kws.md) — 离线唤醒词机制（Vosk KWS：名字→说法→受限语法、常驻服务、观测面板）
 - [release-and-update.md](./release-and-update.md) — 发布与更新机制（签名/CI/检查更新/校验后拉起安装器）
+- [website-and-pages.md](./website-and-pages.md) — 独立静态官网、版本元数据与 GitHub Pages 自动部署
 
 
 

@@ -42,6 +42,8 @@
 
 ## 5. 当前在册
 
+- [website-plan.md](./website-plan.md) — 官网第三版落地、版本联动与 Pages 部署
+
 - [roadmap.md](./roadmap.md) — 三阶段开发路线图（Phase 0-3）
 - [mvp-core-plan.md](./mvp-core-plan.md) — 最小 MVP：Agent 执行 + Skill + AOC 接入（当前最高优先级专项）
 - [framework-foundation-plan.md](./framework-foundation-plan.md) — 批次 0：框架搭建计划

@@ -1,0 +1,75 @@
+name: Website
+
+on:
+  push:
+    branches: [main]
+    paths: ['site/**', '.github/workflows/pages.yml', 'LICENSE', 'NOTICE']
+  pull_request:
+    paths: ['site/**', '.github/workflows/pages.yml']
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.event_name == 'pull_request' && github.event.pull_request.number || 'production' }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      deploy: ${{ steps.mode.outputs.deploy }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: 确定是否为生产部署
+        id: mode
+        env:
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+        run: |
+          if [ "$EVENT" != pull_request ] && [ "$REF" = refs/heads/main ]; then
+            echo 'deploy=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'deploy=false' >> "$GITHUB_OUTPUT"
+          fi
+      - name: 读取官方最新正式版本
+        if: steps.mode.outputs.deploy == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api repos/Chelase/aos-agent/releases/latest > "$RUNNER_TEMP/latest-release.json"
+          python site/scripts/sync_release.py --input "$RUNNER_TEMP/latest-release.json"
+      - name: 元数据测试与静态站点检查
+        run: |
+          python -m unittest discover -s site/tests -v
+          python site/scripts/build.py
+          python site/scripts/check.py
+      - name: 上传 Pages 产物
+        if: steps.mode.outputs.deploy == 'true'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site/dist
+  deploy:
+    if: needs.build.outputs.deploy == 'true'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: 部署项目官网
+        id: deployment
+        uses: actions/deploy-pages@v4

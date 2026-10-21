@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="1024" height="1024">
+  <title>AOS-Agent ring mark, enlarged and strengthened</title>
+  <rect width="108" height="108" rx="24" fill="#0B57D0"/>
+  <g transform="translate(54 54) scale(1.075) translate(-54 -54)">
+    <path d="M26,61 A29,29 0,1 1,82,61" fill="none" stroke="#FFFFFF" stroke-width="2.16" stroke-linecap="round"/>
+    <path d="M49.9,34 a4.1,4.1 0,1 0,8.2,0 a4.1,4.1 0,1 0,-8.2,0 M50.75,54 a3.25,3.25 0,1 0,6.5,0 a3.25,3.25 0,1 0,-6.5,0" fill="#FFFFFF"/>
+    <path d="M68.071,44 a3.25,3.25 0,1 0,6.5,0 a3.25,3.25 0,1 0,-6.5,0 M68.071,64 a3.25,3.25 0,1 0,6.5,0 a3.25,3.25 0,1 0,-6.5,0 M50.75,74 a3.25,3.25 0,1 0,6.5,0 a3.25,3.25 0,1 0,-6.5,0 M33.429,64 a3.25,3.25 0,1 0,6.5,0 a3.25,3.25 0,1 0,-6.5,0 M33.429,44 a3.25,3.25 0,1 0,6.5,0 a3.25,3.25 0,1 0,-6.5,0" fill="#FFFFFF"/>
+  </g>
+</svg>

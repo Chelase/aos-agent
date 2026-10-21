@@ -1,11 +1,13 @@
 name: CI
 
-# 每次 PR 与主干推送都跑：单测 + 能否出包。
+# Android 相关 PR 与主干推送运行：单测 + 能否出包；网站有独立工作流。
 # 这里刻意不碰签名——debug 包不需要密钥，CI 也不该拿到发布私钥。
 on:
   push:
     branches: [main]
+    paths: ['app/**', 'gradle/**', 'gradlew', 'gradlew.bat', '*.gradle.kts', 'gradle.properties', '.github/workflows/ci.yml', '.github/workflows/release.yml']
   pull_request:
+    paths: ['app/**', 'gradle/**', 'gradlew', 'gradlew.bat', '*.gradle.kts', 'gradle.properties', '.github/workflows/ci.yml', '.github/workflows/release.yml']
 
 concurrency:
   group: ci-${{ github.ref }}
