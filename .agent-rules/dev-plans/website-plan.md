@@ -27,7 +27,7 @@
 - [x] 构建、链接检查与元数据测试通过
 - [x] 桌面、手机和键盘检查通过；减少动态效果检查已加载 CSS 分支，未模拟系统偏好
 - [x] Product Design 视觉 QA 通过
-- [ ] Pages 部署及公开 URL 核验通过
+- [x] Pages 部署及公开 URL 核验通过（HTTP 与资源一致性；公网浏览器捕获超时）
 
 ## 不在本期做的事
 
@@ -38,3 +38,6 @@
 - 2026-10-21：用户最终选定第三版，开始实现。
 
 - 2026-10-21：第三版实现与独立终审通过；Pages 已启用，等待推送部署核验。
+- 2026-10-21：`06842d4` 已推送，Website [构建与部署通过](https://github.com/Chelase/aos-agent/actions/runs/39552443178)，Android [CI 通过](https://github.com/Chelase/aos-agent/actions/runs/39552443150)。
+- 官网 <https://chelase.github.io/aos-agent/> 与 `release.json` 返回 HTTP 200。生产 CSS、JS、字体、首页截图与提交源码一致，canonical 和 v1.1.0 官方 APK 入口正确。
+- 公网 IAB 页面读取连续超时，未取得公网浏览器截图；本地同源页面已完成四尺寸及交互验收并保留预览。减少动态效果仅验证加载后的 CSS 分支，未模拟系统偏好切换。
