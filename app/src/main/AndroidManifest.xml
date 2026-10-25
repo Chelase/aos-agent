@@ -100,6 +100,12 @@
             </intent-filter>
         </receiver>
 
+        <!-- 模型服务配置 CLI 的写通道：仅显式组件广播可达（应用内终端 / adb）。
+             保持非 exported，不给第三方 App 改配置的口子；见 mechanisms/llm-config-cli.md -->
+        <receiver
+            android:name=".receiver.LlmConfigReceiver"
+            android:exported="false" />
+
     </application>
 
 </manifest>

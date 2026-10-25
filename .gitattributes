@@ -1,0 +1,2 @@
+*.sh text eol=lf
+app/src/main/assets/bin/*.sh text eol=lf

@@ -20,7 +20,9 @@ import com.aos.agent.core.tools.mcp.McpSourceStatus
 import com.aos.agent.core.tools.mcp.McpToolSource
 import com.aos.agent.core.tools.mcp.StreamableHttpTransport
 import com.aos.agent.data.store.LlmConfigStore
+import com.aos.agent.data.store.LlmProfileStore
 import com.aos.agent.data.store.McpServerStore
+import com.aos.agent.system.llm.LlmStateMirror
 import com.aos.agent.system.AndroidSystemInfoReader
 import com.aos.agent.system.vehicle.AndroidVehicleReader
 import com.aos.agent.system.vehicle.VehiclePropertyAllowlist
@@ -168,6 +170,9 @@ class AgentRuntime(context: Context) {
         llmConfigStore.save(
             LlmConfig(baseUrl = baseUrl.trim(), model = model.trim(), apiKey = apiKey.trim()),
         )
+        // 界面手改后「当前配置来自哪个档案」的提示失效；档案列表保留
+        LlmProfileStore(appContext).saveActiveProfile(null)
+        LlmStateMirror(appContext).refresh()
     }
 
     suspend fun saveMcpServer(id: String, url: String) {

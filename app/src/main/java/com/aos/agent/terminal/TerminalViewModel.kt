@@ -9,6 +9,7 @@ import android.os.Looper
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.aos.agent.system.llm.LlmCliInstaller
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -44,6 +45,8 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
         if (_state.value is TerminalUiState.Running) return
         _state.value = TerminalUiState.Starting
         viewModelScope.launch(Dispatchers.IO) {
+            // 装CLI脚本（幂等）：应用内终端是 aos-llm 的主入口，会话起来前必须就位
+            LlmCliInstaller(getApplication<Application>()).ensureInstalled()
             val shell = findShell()
             if (shell == null) {
                 withContext(Dispatchers.Main) { _state.value = TerminalUiState.Exited(EXIT_NO_SHELL) }
@@ -92,8 +95,10 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
     private fun createSession(shell: String) {
         val app = getApplication<Application>()
         val cwd = app.filesDir.absolutePath
+        val binDir = java.io.File(app.filesDir, "bin")
         val env = arrayOf(
-            "PATH=${System.getenv("PATH") ?: "/system/bin"}",
+            // bin 目录放 aos-llm 等应用自带 CLI，放最前以便同名覆盖系统命令
+            "PATH=$binDir:${System.getenv("PATH") ?: "/system/bin"}",
             "HOME=$cwd",
             "TMPDIR=${app.cacheDir.absolutePath}",
             "TERM=xterm-256color",

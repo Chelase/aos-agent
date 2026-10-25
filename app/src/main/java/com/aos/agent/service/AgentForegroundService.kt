@@ -18,6 +18,8 @@ import com.aos.agent.core.voice.WakeWordEngine
 import com.aos.agent.core.voice.WakeWordGate
 import com.aos.agent.core.voice.WakeWordPhrases
 import com.aos.agent.data.store.VoiceSettingsStore
+import com.aos.agent.system.llm.LlmCliInstaller
+import com.aos.agent.system.llm.LlmStateMirror
 import com.aos.agent.system.voice.VoskWakeWordEngine
 import com.aos.agent.system.voice.WakeModelInstaller
 import com.aos.agent.system.voice.WakeModelState
@@ -65,6 +67,11 @@ class AgentForegroundService : Service() {
         super.onCreate()
         ensureNotificationChannel()
         Log.i(TAG, "Service created")
+        // CLI 脚本与状态镜像提前就位：终端和 adb 广播依赖它们（幂等，失败不阻塞服务）
+        scope.launch(Dispatchers.IO) {
+            LlmCliInstaller(this@AgentForegroundService).ensureInstalled()
+            LlmStateMirror(this@AgentForegroundService).refresh()
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
