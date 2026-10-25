@@ -57,6 +57,7 @@ shell stdout → PTY master → 读线程 read → mProcessToTerminalIOQueue(64K
 | 改渲染/配色/光标 | `ui/terminal/TerminalCanvas.kt` | 逐行取文本处与光标矩形；字号取 `AOSDataText.terminal` |
 | 加逐 cell ANSI 色（Phase 2） | `ui/terminal/TerminalCanvas.kt` | 用 `TerminalRow.getStyle(col)` + `TextStyle.decode*` 拆 run，再按 run 上色 |
 | 调整终端行为 | `terminal/TerminalSession.java` | I/O 线程模型与回调；与上游同步时只改包名与 `loadLibrary("pty")` |
+| 加应用自带 CLI 命令（如 aos-llm） | `system/llm/LlmCliInstaller` + `TerminalViewModel` | assets 模板装 `filesDir/bin` 并在会话环境前插 PATH；机制见 `llm-config-cli.md` |
 | 更新 VT100 解析 | `terminal/TerminalEmulator.java` | 从 Termux 上游同步 |
 | 改 PTY 行为 | `app/src/main/cpp/pty.c` | 符号前缀必须是 `Java_com_aos_agent_terminal_JNI_` |
 | 改字号 | `ui/theme/Type.kt` 的 `AOSDataText.terminal` | 字号参与行列数计算，改值需重开终端 |
