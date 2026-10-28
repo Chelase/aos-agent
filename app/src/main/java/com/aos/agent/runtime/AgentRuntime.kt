@@ -122,12 +122,14 @@ class AgentRuntime(context: Context) {
         val localTools: List<Tool> = listOf(
             SystemInfoTool(AndroidSystemInfoReader(appContext)),
             VehicleBasicTool(vehicleAllowlist, AndroidVehicleReader(appContext)),
-            // shell 只放只读诊断命令；名单外一律走确认，未注入确认器即拒。
+            // shell 只放免确认的只读诊断命令；名单外一律走确认，未注入确认器即拒。
+            // pm/cmd/am 等调度器不黑名单：查隐藏模块、启用隐藏功能要靠它们，
+            // 车辆硬件动作另有 VehicleHardware 硬禁令兜底。
             ShellTool(
                 runner = ProcessCommandRunner(),
                 autoCommands = setOf("getprop", "uptime", "date", "dumpsys"),
                 askCommands = setOf("settings", "wm"),
-                blockedCommands = setOf("rm", "mv", "dd", "reboot", "pm"),
+                blockedCommands = setOf("rm", "mv", "dd", "reboot"),
                 outputDir = toolOutputDir,
             ),
             // 只读分页：读 shell 落盘全文，不重新执行命令，给 shell 减负。

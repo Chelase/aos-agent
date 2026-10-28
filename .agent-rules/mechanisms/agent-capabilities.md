@@ -11,8 +11,8 @@ Agent 通过工具调用与用户协作：本地只读探针查车查系统，�
 | 上下文 | `core/engine/ContextManager.kt` | 跨轮历史 + 分级降级 + 持久化恢复 |
 | 会话落盘 | `core/session/SessionLog.kt` | append-only JSONL：落盘与最近一轮恢复 |
 | 提示装配 | `core/engine/PromptAssembler.kt` | 分节 + 稳定节快照 |
-| 权限闸 | `core/tools/ToolSystem.kt` | 三级权限 + 驾驶拒绝 + 确认器注入 + 车辆操控硬禁令 |
-| 车辆禁令 | `core/tools/VehicleActuation.kt` | 命令与远端工具的"禁止操控车辆"判定 |
+| 权限闸 | `core/tools/ToolSystem.kt` | 三级权限 + 驾驶拒绝 + 确认器注入 + 车辆硬件硬禁令 |
+| 车辆禁令 | `core/tools/VehicleHardware.kt` | 命令与远端工具的"禁止操控车辆硬件"判定 |
 | 结构化提问 | `core/tools/AskUserTool.kt` + `ui/chat/UiAskUserChannel.kt` | 模型问用户：弹窗 / 驾驶态语音 |
 | 工具集 | `core/tools/ShellTool.kt` 等 | 只读探针 + 输出后处理 |
 
@@ -121,28 +121,47 @@ Completed 自带 toolExchange，运行时落盘到 SessionLog。
 
 | `RejectionReason` | wire | 触发点 | 模型该做什么 |
 |---|---|---|---|
-| `Forbidden` | `forbidden` | 工具 `permission = Forbid`（rm/reboot/pm 等） | 换工具或如实说明该操作不可用，不要重试 |
+| `Forbidden` | `forbidden` | 工具 `permission = Forbid`（rm/reboot 等） | 换工具或如实说明该操作不可用，不要重试 |
 | `ApprovalUnavailable` | `approval_unavailable` | Ask 级但没注入确认器 | 换免确认工具或说明需要人工授权 |
 | `UserDenied` | `user_denied` | 人工确认被拒 | 停止该操作，如实转述被拒 |
 | `DriveRestricted` | `drive_restricted` | 驾驶态不允许人工确认 | 提示停车后重试 |
 | `InvalidInput` | `invalid_input` | 参数非法（如 shell 元字符） | 改参数后重试 |
-| `VehicleControlForbidden` | `vehicle_control_forbidden` | 命中"禁止操控车辆"硬禁令 | 改用只读诊断工具，或如实说明该操作不可用 |
+| `VehicleHardwareForbidden` | `vehicle_hardware_forbidden` | 命中"禁止操控车辆硬件"硬禁令 | 改用只读诊断工具，或如实说明该操作不可用 |
 
-### 车辆操控禁令（2026-10-28）
+### 车辆硬件禁令（2026-10-28）
 
-硬约束：**允许操作底层，禁止操控车辆**。这条约束不靠提示词兜底——模型会换参数、
-换工具重试，甚至拼一条绕过白名单的命令，所以判定固化在 harness。
+硬约束：**允许操作车机系统内部，禁止操控车辆硬件**。
+
+边界两侧（2026-10-28 明确）：
+
+| 允许 | 禁止 |
+|---|---|
+| 查隐藏模块/功能/数据 | 让车动、开关车门/车窗/空调 |
+| 启用被隐藏的功能（如行车记录仪） | 动方向盘/刹车/油门/换挡 |
+| 查隐藏服务、包、overlay | 注入物理按键事件 |
+| 车机内部调度（`pm`/`cmd`/`am`/`settings`/`setprop`） | 提权、块设备写入、断电重启 |
+
+这条约束不靠提示词兜底——模型会换参数、换工具重试，甚至拼一条绕过白名单的
+命令，所以判定固化在 harness。
 
 `Tool.hardBlockReason(args)` 是新增契约：命中即**不执行、不弹确认框**，直接以
-`Rejected(VehicleControlForbidden)` 拒掉，优先于三级权限判定。
+`Rejected(VehicleHardwareForbidden)` 拒掉，优先于三级权限判定。
 
-| 判定面 | 位置 | 拦什么 |
-|---|---|---|
-| 命令 | `VehicleActuation.commandReason` | `service`/`cmd`/`input`/`sendevent`/`am`/`monkey` 等动作注入与车辆服务通道；`sh`/`bash`/`python`/`toybox`/`timeout`/`env` 等**命令包装器**；`pm`/`su`/`setprop` 等提权 |
-| 远端工具 | `VehicleActuation.toolReason` | MCP 工具名同时含"写动作 + 车辆名词"；server 属车辆域时除读前缀外全拦 |
+| 判定面 | 位置 | 拦什么 | 放行什么 |
+|---|---|---|---|
+| 命令 | `VehicleHardware.commandReason` | `input`/`sendevent`/`evemu`（事件注入）；`su`/`sudo`/`dd`/`mount`/`insmod`/`reboot`（提权与硬件写入）；`sh`/`python`/`toybox`/`timeout`/`env` 等**命令包装器**；`cmd <车辆服务> <写动作>`；`service call`（车辆服务或纯数字服务号） | `cmd`/`pm`/`am`/`settings`/`setprop` 等车机内部调度；`service list`；`cmd car_service list`；只读 `find` |
+| 远端工具 | `VehicleHardware.toolReason` | 工具名同时含"写动作 + 硬件名词"；server 属车辆域时写动作工具一律拦 | 带读前缀（`get_`/`list_`/`query_`…）的工具 |
+
+关键取舍：
 
 - **包装器必须一起禁**：`sh -c "cmd car_service set-power off"` 会让按名限制形同虚设。
-- 只读诊断不受影响：`getprop`/`dumpsys`/`uptime`/`date`/`settings`/`wm` 照常。
+- **调度器不整条禁**：上一版把 `pm`/`cmd`/`service`/`am` 全禁了，正好挡在
+  "调出隐藏功能"这条主线上——查隐藏包（`pm list packages -u`）、启用隐藏功能
+  （`pm enable com.oem.dashcam`）全靠它们。
+- **子命令要按词拆**：`cmd car_service set-power off` 的动作是连字符形式，
+  整串比对会漏判。
+- **纯数字服务号无法判定**：`service call 12 ...` 看不到指向哪个服务，等于无法
+  判定，一律拦。
 - 车辆写属性另有结构性防线：`vehicle_properties.json` 里 `access=write` 的条目
   永不注册为工具（见 `VehiclePropertyAllowlist.parse`）。硬禁令是第二道防线。
 
@@ -295,7 +314,7 @@ user → assistant(tool_calls, 空 content) → tool → assistant(最终答案)
 | shell 过滤/截断 | `ShellTool.kt` | 参数侧 grep/head；展示截断与 `full_output` 落盘 |
 | 落盘分页重读 | `FileReadTool.kt` + `AgentRuntime.refresh` | 只读工具输出目录；`path/offset/limit/grep` 翻页，不重跑命令；注册时传入同一 `toolOutputDir` |
 | 拒绝原因分类 | `Tool.kt` 的 `RejectionReason` | 新增分类要同步改 `ToolSystem`/`ShellTool` 触发点与引擎回灌 payload |
-| 车辆操控禁令 | `VehicleActuation.kt` + `Tool.hardBlockReason` | 新增拦截面要同步改判定函数与 `ToolSystem.dispatch`；工具需覆写 `hardBlockReason` |
+| 车辆操控禁令 | `VehicleHardware.kt` + `Tool.hardBlockReason` | 新增拦截面要同步改判定函数与 `ToolSystem.dispatch`；工具需覆写 `hardBlockReason` |
 | 跨轮轨迹 | `ContextManager.recordTurn` / `AgentEngine` | 只保留最近一轮，总长 ≤400 字符 |
 
 ## 关键约束
@@ -324,4 +343,4 @@ user → assistant(tool_calls, 空 content) → tool → assistant(最终答案)
 - **新增插件**：编写 plugin.yaml + 实现代码，放入插件目录。
 - **验证**：与 Agent 对话 -> 工具调用正确 -> 回复合理。
 
-> 更新时间：2026-10-28（车辆操控硬禁令；P3：独立只读 file_read；P2：会话 JSONL 持久化 + 结构化 ask_user；P1：分级降级 + 稳定节快照；Harness H1–H4；P0 对齐）
+> 更新时间：2026-10-28（车辆硬件禁令：允许车机内部、禁操控硬件；P3：独立只读 file_read；P2：会话 JSONL 持久化 + 结构化 ask_user；P1：分级降级 + 稳定节快照；Harness H1–H4；P0 对齐）

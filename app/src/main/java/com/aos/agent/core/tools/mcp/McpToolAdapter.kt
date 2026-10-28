@@ -3,7 +3,7 @@ package com.aos.agent.core.tools.mcp
 import com.aos.agent.core.tools.Tool
 import com.aos.agent.core.tools.ToolPermission
 import com.aos.agent.core.tools.ToolResult
-import com.aos.agent.core.tools.VehicleActuation
+import com.aos.agent.core.tools.VehicleHardware
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -30,10 +30,10 @@ class McpToolAdapter(
 
     /**
      * 远端工具在服务端实现，行为不可知，只能按命名与描述里的特征拦。
-     * 命中即拒，不进确认流程——"禁止操控车辆"不是可以用确认绕过的偏好。
+     * 命中即拒，不进确认流程——"禁止操控车辆硬件"不是可以用确认绕过的偏好。
      */
     override fun hardBlockReason(args: JsonObject): String? =
-        VehicleActuation.toolReason(serverId, remoteName, remoteDescription)
+        VehicleHardware.toolReason(serverId, remoteName, remoteDescription)
 
     override val description: String = buildString {
         append("远端 MCP 工具（server=$serverId）。")

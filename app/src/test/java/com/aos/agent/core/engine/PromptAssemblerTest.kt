@@ -92,10 +92,11 @@ class PromptAssemblerTest {
 
     /** 硬约束必须出现在提示里：模型要提前知道边界，而不是撞墙后才学。 */
     @Test
-    fun defaultRulesStateTheVehicleControlBan() {
+    fun defaultRulesStateTheVehicleHardwareBan() {
         val prompt = PromptAssembler(PromptSections.defaults()).assemble(PromptContext())
 
-        assertTrue(prompt.contains("禁止操控车辆"))
+        assertTrue(prompt.contains("禁止操控车辆硬件"))
+        assertTrue(prompt.contains("隐藏"))
     }
 
     /** C6：稳定节首帧渲染后逐字复用，动态节每轮重算。 */

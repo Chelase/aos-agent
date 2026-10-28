@@ -78,7 +78,7 @@ class ShellTool(
     override val permission: ToolPermission = ToolPermission.Ask
 
     override val description: String = buildString {
-        append("执行单条只读诊断命令，参数 command 为整条命令行。免确认命令：")
+        append("执行单条命令，参数 command 为整条命令行。免确认命令：")
         append(autoCommands.sorted().joinToString(", ").ifEmpty { "（无）" })
         append("；需确认命令：")
         append(askCommands.sorted().joinToString(", ").ifEmpty { "（无）" })
@@ -86,6 +86,8 @@ class ShellTool(
         append("可用可选参数 grep（按子串过滤 stdout 行）与 head（过滤后保留前 N 行）。")
         append("超长输出会头尾截断；完整结果路径在 full_output，可用 total_lines / truncated 判断是否需二次读取。")
         append("truncated 为 true 时，truncation_notice 会给出完整输出的落盘路径，可再次读取该文件取回全部内容。")
+        append("可操作车机系统内部：查隐藏模块/功能/数据、启用被隐藏的功能都可以做；")
+        append("但禁止操控车辆硬件（让车动、开关车门车窗空调、动方向盘刹车油门、注入按键事件），这类命令会被直接拒绝。")
     }
 
     override val inputSchema: JsonObject = buildJsonObject {
@@ -126,10 +128,10 @@ class ShellTool(
         }
     }
 
-    /** 车辆操控禁令：命中则无论命令在哪个白名单里都不执行。 */
+    /** 车辆硬件禁令：命中则无论命令在哪个白名单里都不执行。 */
     override fun hardBlockReason(args: JsonObject): String? {
         val raw = args.string("command") ?: return null
-        return VehicleActuation.commandReason(tokenize(raw))
+        return VehicleHardware.commandReason(tokenize(raw))
     }
 
     override suspend fun execute(args: JsonObject): ToolResult {

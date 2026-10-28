@@ -50,7 +50,7 @@ class ToolSystem(
     private suspend fun dispatch(tool: Tool, args: JsonObject): ToolResult {
         // 硬禁令优先于权限分级：命中即拒，不弹确认框、不执行。
         tool.hardBlockReason(args)?.let { reason ->
-            return ToolResult.Rejected(RejectionReason.VehicleControlForbidden, reason)
+            return ToolResult.Rejected(RejectionReason.VehicleHardwareForbidden, reason)
         }
         return when (tool.permissionFor(args)) {
         ToolPermission.Forbid ->

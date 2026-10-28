@@ -38,8 +38,8 @@ enum class RejectionReason(val wire: String) {
     /** 参数不合法（命令含元字符、缺参数等）。 */
     InvalidInput("invalid_input"),
 
-    /** 违反"禁止操控车辆"这类不可协商的硬约束。 */
-    VehicleControlForbidden("vehicle_control_forbidden"),
+    /** 违反"禁止操控车辆硬件"这类不可协商的硬约束。 */
+    VehicleHardwareForbidden("vehicle_hardware_forbidden"),
 }
 
 sealed interface ToolResult {
@@ -93,10 +93,10 @@ interface Tool {
      *
      * 与 `permission = Forbid` 的区别：Forbid 是"这个工具整体禁用"，
      * 硬禁令是"这个工具的这次调用越界"——同一工具的其他调用仍可用
-     * （例如 `shell_exec` 里 `getprop` 放行、`service` 拦掉）。
+     * （例如 `shell_exec` 里 `getprop` 放行、`service call` 拦掉）。
      *
-     * 用途：把"允许操作底层、禁止操控车辆"这类不可协商的约束固化在 harness，
-     * 不依赖模型自觉，也不依赖用户点确认。
+     * 用途：把"允许操作车机系统内部、禁止操控车辆硬件"这类不可协商的约束
+     * 固化在 harness，不依赖模型自觉，也不依赖用户点确认。
      */
     fun hardBlockReason(args: JsonObject): String? = null
 
