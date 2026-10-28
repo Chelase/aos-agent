@@ -65,6 +65,7 @@ AOS-Agent 是一个车载 AI Agent，具备工具调用、插件扩展、多步�
 | Core | TaskPlanner.kt | 多步任务规划与执行 | 待规划，参考 OpenClaw / Hermes |
 | Tools | `core/tools/VehicleBasicTool.kt` | 唯一车辆只读工具，字段由 allowlist 决定 | 已实现（MVP Step 3） |
 | Tools | `core/tools/ShellTool.kt` | argv 直执；`grep`/`head` 参数过滤；头尾截断 + `full_output` 落盘 + `truncation_notice` 二次读取指引 | 已实现（Harness H4；截断指引 2026-10-28） |
+| Tools | `core/tools/FileReadTool.kt` | 只读分页读 `shell_exec` 落盘全文：`path/offset/limit/grep`，只限工具输出目录，目录外拒 | 已实现（P3 2026-10-28） |
 | Tools | `core/tools/SystemInfoTool.kt` | 复用 SystemInfoReader | 已实现（MVP Step 3） |
 | Tools | FileSystemTool.kt | 文件读写操作工具 | 待规划 |
 | Tools | AppManagerTool.kt | 应用安装管理工具 | 待规划 |
@@ -105,7 +106,8 @@ LLM function-call -> ToolSystem.dispatch
   Ask    -> 驾驶中直接拒 drive_restricted / 无 confirmer 拒 approval_unavailable
             / 用户拒 user_denied / 放行后执行
   Auto   -> 执行（shell_exec 可带 grep/head；超长头尾截断，完整落盘 + 截断指引；
-            ask_user 走通道问用户，回灌选中全文或 dismissed）
+            ask_user 走通道问用户，回灌选中全文或 dismissed；
+            file_read 分页读落盘全文，不重跑命令）
 
 结果回灌 LLM；回合结束把 ToolTrace 写入 ContextManager，供下一轮系统提示引用；
 Completed 自带 toolExchange，运行时落盘到 SessionLog。
@@ -271,6 +273,7 @@ user → assistant(tool_calls, 空 content) → tool → assistant(最终答案)
 | 结构化提问 | `AskUserTool.kt` + `UiAskUserChannel.kt` + `MainActivity.answerAsk` | 工具 Auto 直调；通道由 ChatConsole 注入；驾驶态语音解析在 MainActivity |
 | 会话落盘/恢复 | `SessionLog.kt` + `AgentRuntime.persistTurn/send` | append 只存 Completed；冷启动恢复最近一轮 |
 | shell 过滤/截断 | `ShellTool.kt` | 参数侧 grep/head；展示截断与 `full_output` 落盘 |
+| 落盘分页重读 | `FileReadTool.kt` + `AgentRuntime.refresh` | 只读工具输出目录；`path/offset/limit/grep` 翻页，不重跑命令；注册时传入同一 `toolOutputDir` |
 | 拒绝原因分类 | `Tool.kt` 的 `RejectionReason` | 新增分类要同步改 `ToolSystem`/`ShellTool` 触发点与引擎回灌 payload |
 | 跨轮轨迹 | `ContextManager.recordTurn` / `AgentEngine` | 只保留最近一轮，总长 ≤400 字符 |
 
@@ -300,4 +303,4 @@ user → assistant(tool_calls, 空 content) → tool → assistant(最终答案)
 - **新增插件**：编写 plugin.yaml + 实现代码，放入插件目录。
 - **验证**：与 Agent 对话 -> 工具调用正确 -> 回复合理。
 
-> 更新时间：2026-10-28（P2：会话 JSONL 持久化 + 结构化 ask_user；P1：分级降级 + 稳定节快照；Harness H1–H4；P0 对齐）
+> 更新时间：2026-10-28（P3：独立只读 file_read；P2：会话 JSONL 持久化 + 结构化 ask_user；P1：分级降级 + 稳定节快照；Harness H1–H4；P0 对齐）

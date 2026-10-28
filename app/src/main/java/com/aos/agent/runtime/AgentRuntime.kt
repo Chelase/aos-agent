@@ -15,6 +15,7 @@ import com.aos.agent.core.skills.SkillDefinition
 import com.aos.agent.core.skills.SkillRegistry
 import com.aos.agent.core.tools.AskUserChannel
 import com.aos.agent.core.tools.AskUserTool
+import com.aos.agent.core.tools.FileReadTool
 import com.aos.agent.core.tools.ProcessCommandRunner
 import com.aos.agent.core.tools.ShellTool
 import com.aos.agent.core.tools.SystemInfoTool
@@ -117,6 +118,7 @@ class AgentRuntime(context: Context) {
 
     /** 本地工具 + 已加载的远端工具；进页面与每次发送前都可以再调一次。 */
     suspend fun refresh() {
+        val toolOutputDir = File(appContext.filesDir, "tool-output")
         val localTools: List<Tool> = listOf(
             SystemInfoTool(AndroidSystemInfoReader(appContext)),
             VehicleBasicTool(vehicleAllowlist, AndroidVehicleReader(appContext)),
@@ -126,8 +128,10 @@ class AgentRuntime(context: Context) {
                 autoCommands = setOf("getprop", "uptime", "date", "dumpsys"),
                 askCommands = setOf("settings", "wm"),
                 blockedCommands = setOf("rm", "mv", "dd", "reboot", "pm"),
-                outputDir = File(appContext.filesDir, "tool-output"),
+                outputDir = toolOutputDir,
             ),
+            // 只读分页：读 shell 落盘全文，不重新执行命令，给 shell 减负。
+            FileReadTool(listOf(toolOutputDir)),
             // 结构化提问：模型拿不准时问用户，不是危险操作，不经过 Ask 闸。
             AskUserTool(askUserChannel),
         )

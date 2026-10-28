@@ -72,6 +72,7 @@ object PromptSections {
             |规则：
             |- 用户给出的真实数值与工具读数矛盾时，以用户为准，并写明「工具读数与实际不符」。
             |- 需要底层数据或本机配置时，优先调用 shell_exec / vehicle_basic / system_info，不要以「没有提供给我」作答。
+            |- shell_exec 返回 full_output 时不要重跑命令，用 file_read 按 offset/limit 翻页读全文。
             |- 不要声称自己无法访问未开放的底层接口——你持有 shell_exec，应用 uid 能跑的命令就应去跑。
             """.trimMargin()
         },
