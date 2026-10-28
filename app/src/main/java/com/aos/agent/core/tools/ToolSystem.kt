@@ -47,8 +47,12 @@ class ToolSystem(
         ToolResult.Error("tool $name threw ${error.javaClass.simpleName}")
     }
 
-    private suspend fun dispatch(tool: Tool, args: JsonObject): ToolResult =
-        when (tool.permissionFor(args)) {
+    private suspend fun dispatch(tool: Tool, args: JsonObject): ToolResult {
+        // 硬禁令优先于权限分级：命中即拒，不弹确认框、不执行。
+        tool.hardBlockReason(args)?.let { reason ->
+            return ToolResult.Rejected(RejectionReason.VehicleControlForbidden, reason)
+        }
+        return when (tool.permissionFor(args)) {
         ToolPermission.Forbid ->
             ToolResult.Rejected(RejectionReason.Forbidden, "${tool.name} 属禁用级，本期不可调用")
 
@@ -77,6 +81,7 @@ class ToolSystem(
         }
 
         ToolPermission.Auto -> withDeadline(tool, args)
+        }
     }
 
     private suspend fun withDeadline(tool: Tool, args: JsonObject): ToolResult = try {

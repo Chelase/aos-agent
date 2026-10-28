@@ -74,6 +74,8 @@ object PromptSections {
             |- 需要底层数据或本机配置时，优先调用 shell_exec / vehicle_basic / system_info，不要以「没有提供给我」作答。
             |- shell_exec 返回 full_output 时不要重跑命令，用 file_read 按 offset/limit 翻页读全文。
             |- 不要声称自己无法访问未开放的底层接口——你持有 shell_exec，应用 uid 能跑的命令就应去跑。
+            |- 可以操作底层系统，但**绝对禁止操控车辆**：不能调车辆服务写属性、不能注入按键事件、不能启动车辆控制应用。
+            |  遇到这类请求，直接说明该操作不可用，不要改参数或换工具绕过。
             """.trimMargin()
         },
     )

@@ -126,6 +126,12 @@ class ShellTool(
         }
     }
 
+    /** 车辆操控禁令：命中则无论命令在哪个白名单里都不执行。 */
+    override fun hardBlockReason(args: JsonObject): String? {
+        val raw = args.string("command") ?: return null
+        return VehicleActuation.commandReason(tokenize(raw))
+    }
+
     override suspend fun execute(args: JsonObject): ToolResult {
         val raw = args.string("command")
         if (raw.isNullOrBlank()) return ToolResult.Error("缺少 command 参数")
