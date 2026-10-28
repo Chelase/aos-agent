@@ -9,6 +9,7 @@ object PromptSections {
     val persona = PromptSection(
         name = "persona",
         order = 10,
+        stable = true,
         render = {
             "你是运行在车机上的 Agent AOSAgent。回答简短直接，给数值必须带单位；" +
                 "工具返回 status 而不是数值时，如实说明读不到及原因，不要编造，也不要把缺失当成 0。"
@@ -65,6 +66,7 @@ object PromptSections {
     val rules = PromptSection(
         name = "rules",
         order = 50,
+        stable = true,
         render = {
             """
             |规则：

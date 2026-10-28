@@ -291,6 +291,8 @@ fun recordTurn(userText: String, assistantText: String, traces: List<ToolTrace> 
 | H3 会话工具轨迹 | 完成 2026-10-28（单测绿；真机多轮待装车） |
 | P0-a `ShellTool` 截断指引（C2） | 完成 2026-10-28（`truncation_notice` 带落盘路径 + 原始字符数 + 「再次读取」；单测绿；真机待装车） |
 | P0-b `Rejected` 结构化 reason（C1） | 完成 2026-10-28（`RejectionReason` 五分类 + 引擎回灌 `reason`/`message`；单测绿；真机待装车） |
+| P1-a 上下文分级降级（C4） | 完成 2026-10-28（一级压旧工具结果 + 二级按回合组丢；单测绿；真机长会话待装车） |
+| P1-b 稳定节快照（C6） | 完成 2026-10-28（`PromptSection.stable` + 首帧快照复用；单测绿；真机待装车） |
 
 ### P0 对齐补充说明（2026-10-28）
 
@@ -301,5 +303,18 @@ fun recordTurn(userText: String, assistantText: String, traces: List<ToolTrace> 
   分类为稳定契约，措辞与语义分离；引擎回灌 payload 改为
   `{status:"rejected", reason:<wire>, message:<措辞>}`。分类与触发点见
   [`../mechanisms/agent-capabilities.md`](../mechanisms/agent-capabilities.md)「拒绝原因分类」。
-- 回归：267 项单测中仅 `LlmStateMirrorTest.valuesWithSingleQuotesStayShellSafe` 失败，
+
+### P1 对齐补充说明（2026-10-28）
+
+- **C4 分级降级**：`core/engine/ContextDegradation.kt`，一级压缩旧工具结果里的长字符串字段
+  （JSON 保留结构，加 `compacted`/`original_chars` 记账；`full_output` 路径字段得以保留），
+  最近 2 条工具结果保持原样；二级按**回合组**丢弃最旧历史——逐条丢会拆散
+  `assistant(tool_calls)` 与 `tool` 的配对，OpenAI 兼容服务端会拒整个请求。
+- **C4 前提**：`AgentEngine` 把整个工具交换序列原样存入 `ContextManager`
+  （`recordToolTurn`），三段分离 `user → assistant(tool_calls) → tool → assistant(最终答案)`，
+  最终答案单独成一条 assistant 消息，合并会被服务端拒。
+- **C6 稳定节快照**：`PromptSection.stable` 首帧渲染后逐字复用，动态节每轮重算；
+  `persona`/`rules` 为稳定节，`environment`/`capabilities`/`cli` 为动态节。
+  稳定节只能用于纯常量文本，标错会固化过期环境。
+- 回归：284 项单测中仅 `LlmStateMirrorTest.valuesWithSingleQuotesStayShellSafe` 失败，
   原因是 Windows 环境缺 `sh`（已知环境问题，与本次改动无关）。

@@ -3,6 +3,7 @@ package com.aos.agent.core.engine
 import com.aos.agent.core.llm.LlmMessage
 import com.aos.agent.core.llm.LlmRequest
 import com.aos.agent.core.llm.LlmRole
+import com.aos.agent.core.llm.LlmToolCall
 import com.aos.agent.core.llm.ToolDefinition
 
 interface TokenBudget {
@@ -112,19 +113,39 @@ class ContextManager(
         lastTraces = compressTraces(traces)
     }
 
+    /**
+     * 记录一个含工具调用的回合。
+     *
+     * [toolExchange] 是引擎产生的中间消息序列：一条 assistant(tool_calls) 后面跟若干 tool 消息。
+     * 必须原样保留配对关系——OpenAI 兼容协议要求 tool 消息前有对应的 assistant(tool_calls)，
+     * 且最终答案要单独作为最后一条 assistant 消息，合并会被服务端拒。
+     */
+    fun recordToolTurn(
+        userText: String,
+        toolExchange: List<LlmMessage>,
+        finalText: String,
+        traces: List<ToolTrace> = emptyList(),
+    ) {
+        turns += LlmMessage(LlmRole.User, userText)
+        turns += toolExchange
+        turns += LlmMessage(LlmRole.Assistant, finalText)
+        lastTraces = compressTraces(traces)
+    }
+
     fun reset() {
         turns.clear()
         lastTraces = emptyList()
     }
 
+    /**
+     * 两级降级：先压旧工具结果（保留问答脉络），仍超限再按回合组丢最旧历史。
+     * 丢整轮是最后手段——一次丢光最伤，车载场景的上下文本来就更小。
+     */
     private fun trim(messages: List<LlmMessage>, prompt: String): List<LlmMessage> {
-        var total = budget.estimate(prompt) + messages.sumOf { budget.estimate(it.content) }
-        val kept = messages.toMutableList()
-        // kept.size > 1 保证当前这条用户提问永远留在窗口里。
-        while (total > budget.maxTokens && kept.size > 1) {
-            total -= budget.estimate(kept.removeAt(0).content)
-        }
-        return kept
+        val compacted = ContextDegradation.compactToolResults(messages)
+        val promptTokens = budget.estimate(prompt)
+        val target = (budget.maxTokens - promptTokens).coerceAtLeast(0)
+        return ContextDegradation.dropOldestTurns(compacted, target, budget)
     }
 
     companion object {

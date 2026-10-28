@@ -43,6 +43,9 @@ class AgentEngine(
         guard.reset()
         var step = 0
         val traces = mutableListOf<ToolTrace>()
+        // 本轮工具交换序列：assistant(tool_calls) + tool 消息，回合结束后原样入历史。
+        // 分段必须原样保留：OpenAI 兼容协议要求最终答案单独成一条 assistant 消息。
+        val toolExchange = mutableListOf<LlmMessage>()
 
         while (true) {
             step++
@@ -84,7 +87,12 @@ class AgentEngine(
             val toolCalls = calls.values.mapNotNull { it.toCall() }
             if (toolCalls.isEmpty()) {
                 val answer = text.toString()
-                context.recordTurn(query, answer, traces.toList())
+                // 有工具调用过就要把整段工具回合存回去，否则降级无对象可清
+                if (toolExchange.isEmpty()) {
+                    context.recordTurn(query, answer, traces.toList())
+                } else {
+                    context.recordToolTurn(query, toolExchange.toList(), answer, traces.toList())
+                }
                 emit(AgentEvent.Completed(answer))
                 return@flow
             }
@@ -94,7 +102,9 @@ class AgentEngine(
                 return@flow
             }
 
-            messages += LlmMessage(LlmRole.Assistant, text.toString(), toolCalls)
+            val assistantToolCall = LlmMessage(LlmRole.Assistant, text.toString(), toolCalls)
+            messages += assistantToolCall
+            toolExchange += assistantToolCall
             for (call in toolCalls) {
                 if (guard.isRepeat(call)) {
                     emit(AgentEvent.Failed("检测到重复调用：${call.name} 的参数与上一步完全相同"))
@@ -104,12 +114,14 @@ class AgentEngine(
                 val outcome = executeTool(tools, call)
                 traces += ToolTrace(call.name, outcome.kind, outcome.payload.take(120))
                 emit(AgentEvent.ToolFinished(call.id, call.name, outcome.kind, outcome.payload))
-                messages += LlmMessage(
+                val toolMessage = LlmMessage(
                     role = LlmRole.Tool,
                     content = outcome.payload,
                     toolCallId = call.id,
                     toolName = call.name,
                 )
+                messages += toolMessage
+                toolExchange += toolMessage
             }
         }
     }

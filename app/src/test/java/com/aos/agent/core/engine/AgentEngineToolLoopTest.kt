@@ -192,8 +192,7 @@ class AgentEngineToolLoopTest {
 
     /** 拒绝要带原因分类回灌给模型，模型才知道该换参数、换工具还是如实说明。 */
     @Test
-    fun rejectionReasonReachesTheModel() = runTest {
-        val system = ToolSystem(confirmer = ToolConfirmer { _, _ -> false })
+    fun rejectionReasonReachesTheModel() = runTest {        val system = ToolSystem(confirmer = ToolConfirmer { _, _ -> false })
         system.register(
             object : Tool {
                 override val name = "risky"
@@ -213,5 +212,37 @@ class AgentEngineToolLoopTest {
 
         val toolMessage = provider.requests[1].messages.single { it.role == LlmRole.Tool }
         assertTrue("应回灌原因分类：${toolMessage.content}", toolMessage.content.contains("user_denied"))
+    }
+
+    /**
+     * 工具回合要入历史，下一轮才有东西可降级；但 tool 消息必须配对在
+     * assistant(tool_calls) 之后，且最终答案单独成一条 assistant 消息，
+     * 否则 OpenAI 兼容服务端会拒整个请求。
+     */
+    @Test
+    fun toolTurnIsRecordedWithProperPairing() = runTest {
+        val context = ContextManager(systemPrompt = "sys")
+        val system = ToolSystem().apply { register(FakeTool("vehicle_basic")) }
+        val provider = ScriptedProvider(
+            listOf(
+                toolCall("call_1", "vehicle_basic", "{}"),
+                answer("车速 12 m/s"),
+            ),
+        )
+
+        AgentEngine(provider, context, system).run("现在车速多少").toList()
+
+        val next = context.beginTurn("再确认")
+        val assistantIndex = next.indexOfFirst { it.role == LlmRole.Assistant && it.toolCalls.isNotEmpty() }
+        assertTrue("工具回合应入历史", assistantIndex >= 0)
+        val toolIndex = next.indexOfFirst { it.role == LlmRole.Tool }
+        assertTrue("tool 消息应紧随 assistant(tool_calls)", toolIndex == assistantIndex + 1)
+        assertEquals("call_1", next[toolIndex].toolCallId)
+        assertEquals(listOf("call_1"), next[assistantIndex].toolCalls.map { it.id })
+
+        val finalIndex = next.indexOfLast { it.role == LlmRole.Assistant }
+        assertTrue("最终答案应单独成一条 assistant", finalIndex > toolIndex)
+        assertEquals("车速 12 m/s", next[finalIndex].content)
+        assertTrue("最终答案那条不能带 tool_calls", next[finalIndex].toolCalls.isEmpty())
     }
 }

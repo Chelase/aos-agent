@@ -93,6 +93,53 @@ LLM function-call -> ToolSystem.dispatch
 未配置 `outputDir` 时 `truncation_notice` 如实说明拿不到全文，并建议改用 `grep`/`head` 缩小范围，
 不编造路径。
 
+### 上下文分级降级（2026-10-28）
+
+对标 Claude Code 的 C4 结论：上下文超限要**分级降级**，不要一次性丢历史。
+
+| 级别 | 动作 | 代价 |
+|---|---|---|
+| 一级 | 压缩旧工具结果里的长字符串字段（JSON 结构保留） | 问答脉络全留 |
+| 二级 | 按**回合组**丢弃最旧历史 | 丢掉最老的问答 |
+
+- 一级只压工具返回的原文：JSON 保留结构，`full_output` 这类路径字段因此得以保留，
+  同时追加 `compacted: true` 与 `original_chars` 让模型知道原文被压过。
+- 最近 `DEFAULT_KEEP_RECENT`（2）条工具结果保持原样——模型多半正要基于它继续追问。
+- 二级**按回合组**丢，不逐条丢：一组 = 一条 user 消息 + 其后连续的 assistant / tool 消息。
+  逐条丢会拆散 `assistant(tool_calls)` 与 `tool` 的配对，OpenAI 兼容服务端会拒整个请求。
+- 当前提问永远留在窗口内。
+
+实现：`core/engine/ContextDegradation.kt`，由 `ContextManager.trim()` 两级串联调用。
+
+### 系统提示稳定节快照（2026-10-28）
+
+对标 Claude Code 的 C6 结论：`systemPromptSnapshot` 默认开启——首帧渲染后逐字复用。
+
+`PromptSection.stable = true` 的节首帧渲染后快照复用，动态节每轮重算：
+
+| 节 | stable | 理由 |
+|---|---|---|
+| `persona` | 是 | 纯常量文本 |
+| `rules` | 是 | 纯常量文本 |
+| `environment` | 否 | 时间、版本、屏幕会变 |
+| `capabilities` | 否 | 工具清单随 `refresh()` 变 |
+| `cli` | 否 | CLI 是否安装会变 |
+
+**约束**：稳定节只能用于与会话上下文无关的常量文本。标错会把过期的环境信息固化下来。
+`PromptAssembler.resetSnapshots()` 用于外部条件变化时显式失效。
+
+### 工具回合入历史（2026-10-28）
+
+C4 的前提：历史里必须有工具结果，否则"先清旧 tool_result"无从谈起。
+
+`AgentEngine` 把整个工具交换序列原样存入 `ContextManager`，协议要求三段分离：
+
+```
+user → assistant(tool_calls, 空 content) → tool → assistant(最终答案)
+```
+
+最终答案单独成一条 assistant 消息，与 `tool_calls` 合并会被服务端拒。
+
 ### 插件系统（参考 OpenClaw Plugin）
 
 ```
