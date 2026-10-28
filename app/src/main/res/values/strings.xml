@@ -279,6 +279,10 @@
     <string name="chat_session_tools">工具调用</string>
     <string name="chat_session_skills">已加载 Skill</string>
     <string name="chat_session_mcp">MCP 工具</string>
+    <string name="chat_tool_confirm_title">允许调用 %1$s？</string>
+    <string name="chat_tool_confirm_body">参数摘要：%1$s</string>
+    <string name="chat_tool_confirm_allow">允许</string>
+    <string name="chat_tool_confirm_deny">拒绝</string>
     <string name="settings_capabilities">能力总览 · 本机</string>
     <string name="settings_capability_asr">语音识别</string>
     <string name="settings_capability_tts">语音播报</string>

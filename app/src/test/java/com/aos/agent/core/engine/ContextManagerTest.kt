@@ -71,4 +71,53 @@ class ContextManagerTest {
         assertEquals(0, context.turnCount)
         assertEquals(2, context.buildRequest("q2").messages.size)
     }
+
+    @Test
+    fun secondTurnSystemPromptIncludesPreviousToolTraces() {
+        val context = ContextManager(systemPrompt = "sys")
+        context.recordTurn(
+            "查电量",
+            "目前 80%",
+            listOf(ToolTrace("vehicle_basic", "ok", """{"soc":80}""")),
+        )
+
+        val system = context.beginTurn("再确认一次").first().content
+
+        assertTrue(system.contains("上一轮工具轨迹"))
+        assertTrue(system.contains("vehicle_basic → ok"))
+    }
+
+    @Test
+    fun longTracesAreTruncatedWithoutBreakingHistory() {
+        val context = ContextManager(systemPrompt = "sys")
+        val traces = (1..20).map { i ->
+            ToolTrace("tool_$i", "ok", "summary-" + "x".repeat(80))
+        }
+        context.recordTurn("q", "a", traces)
+
+        val system = context.beginTurn("next").first().content
+        assertTrue(system.contains("上一轮工具轨迹"))
+        assertTrue(system.length < 900)
+        assertEquals(listOf(LlmRole.System, LlmRole.User, LlmRole.Assistant, LlmRole.User),
+            context.beginTurn("next").map { it.role })
+    }
+
+    @Test
+    fun resetClearsTracesToo() {
+        val context = ContextManager(systemPrompt = "sys")
+        context.recordTurn("q", "a", listOf(ToolTrace("shell_exec", "ok", "hi")))
+        context.reset()
+
+        val system = context.beginTurn("fresh").first().content
+        assertTrue(!system.contains("上一轮工具轨迹"))
+    }
+
+    @Test
+    fun dynamicSystemPromptIsReevaluatedEachTurn() {
+        var stamp = "t1"
+        val context = ContextManager(systemPromptProvider = { "sys-$stamp" })
+        assertTrue(context.beginTurn("a").first().content.startsWith("sys-t1"))
+        stamp = "t2"
+        assertTrue(context.beginTurn("b").first().content.startsWith("sys-t2"))
+    }
 }

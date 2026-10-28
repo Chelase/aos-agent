@@ -4,6 +4,8 @@ import android.content.Context
 import com.aos.agent.core.engine.AgentEngine
 import com.aos.agent.core.engine.AgentEvent
 import com.aos.agent.core.engine.ContextManager
+import com.aos.agent.core.engine.PromptAssembler
+import com.aos.agent.core.engine.PromptSections
 import com.aos.agent.core.llm.LlmConfig
 import com.aos.agent.core.llm.OpenAiCompatibleProvider
 import com.aos.agent.core.skills.AssetSkillLoader
@@ -26,6 +28,7 @@ import com.aos.agent.system.llm.LlmStateMirror
 import com.aos.agent.system.AndroidSystemInfoReader
 import com.aos.agent.system.vehicle.AndroidVehicleReader
 import com.aos.agent.system.vehicle.VehiclePropertyAllowlist
+import java.io.File
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -82,8 +85,20 @@ class AgentRuntime(context: Context) {
 
     private var skillRegistry: SkillRegistry = SkillRegistry.parseAll(AssetSkillLoader(appContext).load())
     private var toolSystem: ToolSystem = ToolSystem()
+    private var toolConfirmer: com.aos.agent.core.tools.ToolConfirmer? = null
+    private var driveRestricted: () -> Boolean = { false }
     private var mcpStatuses: List<McpSourceStatus> = emptyList()
     private var mcpToolNames: List<String> = emptyList()
+    private val promptAssembler = PromptAssembler(PromptSections.defaults())
+    private var sessionContext: ContextManager? = null
+
+    fun setToolApproval(
+        confirmer: com.aos.agent.core.tools.ToolConfirmer?,
+        isDriveRestricted: () -> Boolean,
+    ) {
+        toolConfirmer = confirmer
+        driveRestricted = isDriveRestricted
+    }
 
     /** 本地工具 + 已加载的远端工具；进页面与每次发送前都可以再调一次。 */
     suspend fun refresh() {
@@ -94,12 +109,13 @@ class AgentRuntime(context: Context) {
             ShellTool(
                 runner = ProcessCommandRunner(),
                 autoCommands = setOf("getprop", "uptime", "date", "dumpsys"),
-                askCommands = setOf("settings", "pm", "wm"),
+                askCommands = setOf("settings", "wm"),
                 blockedCommands = setOf("rm", "mv", "dd", "reboot", "pm"),
+                outputDir = File(appContext.filesDir, "tool-output"),
             ),
         )
         val registry = SkillRegistry.parseAll(AssetSkillLoader(appContext).load())
-        val system = ToolSystem()
+        val system = ToolSystem(confirmer = toolConfirmer) { driveRestricted() }
         localTools.forEach(system::register)
 
         val statuses = mutableListOf<McpSourceStatus>()
@@ -142,14 +158,31 @@ class AgentRuntime(context: Context) {
 
     fun availableToolNames(): Set<String> = toolSystem.all.map { it.name }.toSet()
 
+    /** 新会话：清掉跨轮历史与工具轨迹。 */
+    fun resetSession() {
+        sessionContext?.reset()
+        sessionContext = null
+    }
+
     suspend fun send(query: String): Flow<AgentEvent> {
         val config = llmConfigStore.current()
         if (config?.isUsable != true) {
             return flow { emit(AgentEvent.Failed("未配置模型服务：请先在右侧填入 baseURL 与模型名")) }
         }
+        val context = sessionContext ?: ContextManager(
+            systemPromptProvider = {
+                promptAssembler.assemble(
+                    RuntimeEnvironment.snapshot(
+                        context = appContext,
+                        tools = toolSystem.all,
+                        skillSummary = skillRegistry.capabilitySummary(),
+                    ),
+                )
+            },
+        ).also { sessionContext = it }
         val engine = AgentEngine(
             provider = OpenAiCompatibleProvider(httpClient, config),
-            context = ContextManager(BASE_SYSTEM_PROMPT + skillRegistry.capabilitySummary()),
+            context = context,
             tools = toolSystem,
         )
         val skill = skillRegistry.match(query)
@@ -190,8 +223,5 @@ class AgentRuntime(context: Context) {
     private companion object {
         const val CLIENT_NAME = "aos-agent"
         const val CLIENT_VERSION = "0.1.0"
-        const val BASE_SYSTEM_PROMPT =
-            "你是运行在车机上的 Agent AOSAgent。回答简短直接，给数值必须带单位；" +
-                "工具返回 status 而不是数值时，如实说明读不到及原因，不要编造，也不要把缺失当成 0。当前能力：\n"
     }
 }

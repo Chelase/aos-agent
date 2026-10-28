@@ -240,6 +240,10 @@
     <string name="chat_session_tools">Tool calls</string>
     <string name="chat_session_skills">Loaded skills</string>
     <string name="chat_session_mcp">MCP tools</string>
+    <string name="chat_tool_confirm_title">Allow %1$s?</string>
+    <string name="chat_tool_confirm_body">Args: %1$s</string>
+    <string name="chat_tool_confirm_allow">Allow</string>
+    <string name="chat_tool_confirm_deny">Deny</string>
     <string name="settings_capabilities">Device capabilities</string>
     <string name="settings_capability_asr">Speech recognition</string>
     <string name="settings_capability_tts">Speech synthesis</string>

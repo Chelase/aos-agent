@@ -41,14 +41,32 @@ class CharEstimateBudget(override val maxTokens: Int = DEFAULT_MAX_TOKENS) : Tok
     }
 }
 
-/** 单轮对话的上下文装配：系统提示常驻，历史按预算从最旧开始丢。 */
+/** 上一轮工具调用的压缩轨迹，供下一轮系统提示引用。 */
+data class ToolTrace(
+    val name: String,
+    val status: String,
+    val summary: String,
+)
+
+/**
+ * 单轮对话的上下文装配：系统提示每轮求值，历史按预算从最旧开始丢。
+ * [systemPromptProvider] 用于 harness 分节等动态内容；固定字符串场景可直接传字面量。
+ */
 class ContextManager(
-    val systemPrompt: String,
+    private val systemPromptProvider: () -> String,
     private val budget: TokenBudget = CharEstimateBudget(),
 ) {
+    constructor(
+        systemPrompt: String,
+        budget: TokenBudget = CharEstimateBudget(),
+    ) : this({ systemPrompt }, budget)
+
     private val turns = mutableListOf<LlmMessage>()
+    private var lastTraces: List<ToolTrace> = emptyList()
 
     val turnCount: Int get() = turns.size
+
+    val systemPrompt: String get() = systemPromptProvider()
 
     /**
      * 开一轮：返回可追加的副本（系统提示 + 预算内历史 + 本次提问），不改动已存历史。
@@ -63,34 +81,85 @@ class ContextManager(
         extraInstruction: String? = null,
     ): LlmRequest {
         val candidate = turns + LlmMessage(LlmRole.User, userText)
+        val prompt = systemPromptWith(extraInstruction)
         return LlmRequest(
-            messages = listOf(LlmMessage(LlmRole.System, systemPromptWith(extraInstruction))) + trim(candidate),
+            messages = listOf(LlmMessage(LlmRole.System, prompt)) + trim(candidate, prompt),
             toolDefinitions = tools,
         )
     }
 
     private fun systemPromptWith(extraInstruction: String?): String {
+        val base = buildString {
+            append(systemPromptProvider().trim())
+            val traceBlock = renderTraces(lastTraces)
+            if (traceBlock.isNotEmpty()) {
+                if (isNotEmpty()) append("\n\n")
+                append(traceBlock)
+            }
+        }
         val instruction = extraInstruction?.trim()
-        return if (instruction.isNullOrEmpty()) systemPrompt else "$systemPrompt\n\n$instruction"
+        return if (instruction.isNullOrEmpty()) base else "$base\n\n$instruction"
     }
 
     /** 只有正常完成的轮次才入历史，失败轮次不留半截内容。 */
     fun recordExchange(userText: String, assistantText: String) {
+        recordTurn(userText, assistantText, emptyList())
+    }
+
+    fun recordTurn(userText: String, assistantText: String, traces: List<ToolTrace> = emptyList()) {
         turns += LlmMessage(LlmRole.User, userText)
         turns += LlmMessage(LlmRole.Assistant, assistantText)
+        lastTraces = compressTraces(traces)
     }
 
     fun reset() {
         turns.clear()
+        lastTraces = emptyList()
     }
 
-    private fun trim(messages: List<LlmMessage>): List<LlmMessage> {
-        var total = budget.estimate(systemPrompt) + messages.sumOf { budget.estimate(it.content) }
+    private fun trim(messages: List<LlmMessage>, prompt: String): List<LlmMessage> {
+        var total = budget.estimate(prompt) + messages.sumOf { budget.estimate(it.content) }
         val kept = messages.toMutableList()
         // kept.size > 1 保证当前这条用户提问永远留在窗口里。
         while (total > budget.maxTokens && kept.size > 1) {
             total -= budget.estimate(kept.removeAt(0).content)
         }
         return kept
+    }
+
+    companion object {
+        private const val TRACE_BUDGET_CHARS = 400
+        private const val SUMMARY_CHARS = 120
+
+        fun compressTraces(traces: List<ToolTrace>): List<ToolTrace> {
+            if (traces.isEmpty()) return emptyList()
+            val clipped = traces.map {
+                it.copy(summary = it.summary.replace('\n', ' ').take(SUMMARY_CHARS))
+            }
+            var used = 0
+            val kept = mutableListOf<ToolTrace>()
+            for (trace in clipped) {
+                val piece = renderOne(trace)
+                if (kept.isNotEmpty() && used + 1 + piece.length > TRACE_BUDGET_CHARS) break
+                kept += trace
+                used += piece.length + if (kept.size == 1) 0 else 1
+            }
+            return kept
+        }
+
+        fun renderTraces(traces: List<ToolTrace>): String {
+            if (traces.isEmpty()) return ""
+            val body = traces.joinToString("；") { renderOne(it) }
+            return "上一轮工具轨迹：$body"
+        }
+
+        private fun renderOne(trace: ToolTrace): String {
+            val summary = trace.summary.trim()
+            return if (summary.isEmpty()) {
+                "${trace.name} → ${trace.status}"
+            } else {
+                "${trace.name} → ${trace.status}，${summary}"
+            }
+        }
     }
 }

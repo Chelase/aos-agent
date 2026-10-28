@@ -29,6 +29,8 @@ import com.aos.agent.runtime.RuntimeStatus
 import com.aos.agent.ui.chat.ChatEntry
 import com.aos.agent.ui.chat.ChatScreen
 import com.aos.agent.ui.chat.ChatTranscript
+import com.aos.agent.ui.chat.ToolConfirmDialog
+import com.aos.agent.ui.chat.UiToolConfirmer
 import com.aos.agent.ui.settings.SettingsDraft
 import com.aos.agent.ui.settings.SettingsScreen
 import kotlinx.coroutines.Dispatchers
@@ -245,6 +247,7 @@ private fun AOSAgentApp(
                         runtime = runtime,
                         voice = voiceController,
                         visible = destination == Destination.Chat,
+                        driveRestricted = driveRestricted,
                         pageStateHolder = pageStateHolder,
                         onBackClick = { destination = Destination.Home },
                         onOpenSettings = { destination = Destination.Settings },
@@ -322,6 +325,7 @@ private fun ChatConsole(
     runtime: AgentRuntime,
     voice: VoiceController,
     visible: Boolean,
+    driveRestricted: Boolean,
     pageStateHolder: SaveableStateHolder,
     onBackClick: () -> Unit,
     onOpenSettings: () -> Unit,
@@ -331,6 +335,8 @@ private fun ChatConsole(
     var busy by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val confirmer = remember { UiToolConfirmer() }
+    val pendingConfirm by confirmer.pending.collectAsStateWithLifecycle()
     val voiceState by voice.state.collectAsStateWithLifecycle()
     val noPermission = stringResource(R.string.voice_err_permission)
     val skillMissing = { name: String -> context.getString(R.string.voice_skill_missing, name) }
@@ -367,7 +373,10 @@ private fun ChatConsole(
 
     fun runCommand(command: VoiceCommand) {
         when (command) {
-            VoiceCommand.NewSession -> entries.clear()
+            VoiceCommand.NewSession -> {
+                entries.clear()
+                runtime.resetSession()
+            }
             VoiceCommand.OpenSettings, VoiceCommand.UseMcp -> onOpenSettings()
             VoiceCommand.CloseSettings, VoiceCommand.GoHome -> onBackClick()
             is VoiceCommand.UseSkill -> {
@@ -377,7 +386,8 @@ private fun ChatConsole(
         }
     }
 
-    LaunchedEffect(visible) {
+    LaunchedEffect(visible, driveRestricted) {
+        runtime.setToolApproval(confirmer) { driveRestricted }
         if (visible) {
             runtime.refresh()
             status = runtime.status()
@@ -408,6 +418,13 @@ private fun ChatConsole(
                     }
                 },
             )
+            pendingConfirm?.let { pending ->
+                ToolConfirmDialog(
+                    pending = pending,
+                    onAllow = { confirmer.respond(true) },
+                    onDeny = { confirmer.respond(false) },
+                )
+            }
         }
     }
 }
