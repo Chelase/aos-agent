@@ -23,8 +23,15 @@ sealed interface AgentEvent {
         val payload: String,
     ) : AgentEvent
 
-    /** 本轮正常结束，[text] 为完整回复。 */
-    data class Completed(val text: String) : AgentEvent
+    /**
+     * 本轮正常结束，[text] 为完整回复。
+     * [toolExchange] 是本轮的工具交换序列（assistant(tool_calls) + tool 消息），
+     * 供运行时落盘；无工具调用时为空。带默认值，老调用方不受影响。
+     */
+    data class Completed(
+        val text: String,
+        val toolExchange: List<com.aos.agent.core.llm.LlmMessage> = emptyList(),
+    ) : AgentEvent
 
     /** 本轮失败。失败也走事件流，不向调用方抛异常，避免半截流卡死宿主。 */
     data class Failed(val message: String, val cause: Throwable? = null) : AgentEvent

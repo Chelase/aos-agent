@@ -5,6 +5,7 @@ import com.aos.agent.core.llm.LlmRequest
 import com.aos.agent.core.llm.LlmRole
 import com.aos.agent.core.llm.LlmToolCall
 import com.aos.agent.core.llm.ToolDefinition
+import com.aos.agent.core.session.SessionLog
 
 interface TokenBudget {
     val maxTokens: Int
@@ -134,6 +135,19 @@ class ContextManager(
 
     fun reset() {
         turns.clear()
+        lastTraces = emptyList()
+    }
+
+    /**
+     * 从持久化恢复：只取最近一轮（含工具交换序列），避免冷启动塞爆上下文。
+     * 恢复的是"上一轮发生过什么"，不是"把所有历史都搬回来"。
+     */
+    fun restore(records: List<SessionLog.TurnRecord>) {
+        records.forEach { record ->
+            turns += LlmMessage(LlmRole.User, record.user)
+            turns += record.toolExchange
+            turns += LlmMessage(LlmRole.Assistant, record.assistant)
+        }
         lastTraces = emptyList()
     }
 

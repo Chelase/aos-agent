@@ -293,6 +293,8 @@ fun recordTurn(userText: String, assistantText: String, traces: List<ToolTrace> 
 | P0-b `Rejected` 结构化 reason（C1） | 完成 2026-10-28（`RejectionReason` 五分类 + 引擎回灌 `reason`/`message`；单测绿；真机待装车） |
 | P1-a 上下文分级降级（C4） | 完成 2026-10-28（一级压旧工具结果 + 二级按回合组丢；单测绿；真机长会话待装车） |
 | P1-b 稳定节快照（C6） | 完成 2026-10-28（`PromptSection.stable` + 首帧快照复用；单测绿；真机待装车） |
+| P2 会话 JSONL 持久化 | 完成 2026-10-28（`SessionLog` append-only + 冷启动恢复最近一轮；单测绿；真机进程被杀恢复待装车） |
+| P2 结构化 `ask_user` 提问 | 完成 2026-10-28（`AskUserTool` + 弹窗/驾驶态语音回答；单测绿；真机待装车） |
 
 ### P0 对齐补充说明（2026-10-28）
 

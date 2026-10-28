@@ -286,6 +286,9 @@
     <string name="chat_tool_confirm_body">参数摘要：%1$s</string>
     <string name="chat_tool_confirm_allow">允许</string>
     <string name="chat_tool_confirm_deny">拒绝</string>
+    <string name="ask_user_free_text">或直接输入你的回答</string>
+    <string name="ask_user_send">发送</string>
+    <string name="ask_user_skip">跳过</string>
     <string name="settings_capabilities">能力总览 · 本机</string>
     <string name="settings_capability_asr">语音识别</string>
     <string name="settings_capability_tts">语音播报</string>

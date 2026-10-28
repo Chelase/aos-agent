@@ -93,7 +93,7 @@ class AgentEngine(
                 } else {
                     context.recordToolTurn(query, toolExchange.toList(), answer, traces.toList())
                 }
-                emit(AgentEvent.Completed(answer))
+                emit(AgentEvent.Completed(answer, toolExchange.toList()))
                 return@flow
             }
 

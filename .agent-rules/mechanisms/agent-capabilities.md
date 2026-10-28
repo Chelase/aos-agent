@@ -2,6 +2,43 @@
 
 ## 结论
 
+Agent 通过工具调用与用户协作：本地只读探针查车查系统，危险操作走确认，拿不准走结构化提问，会话落盘保证进程被杀不断片。
+
+## 涉及对象
+| 层 | 文件/表 | 角色 |
+|---|---|---|
+| 引擎 | `core/engine/AgentEngine.kt` | 无头主循环：流式推理 → 工具调用 → 答案 |
+| 上下文 | `core/engine/ContextManager.kt` | 跨轮历史 + 分级降级 + 持久化恢复 |
+| 会话落盘 | `core/session/SessionLog.kt` | append-only JSONL：落盘与最近一轮恢复 |
+| 提示装配 | `core/engine/PromptAssembler.kt` | 分节 + 稳定节快照 |
+| 权限闸 | `core/tools/ToolSystem.kt` | 三级权限 + 驾驶拒绝 + 确认器注入 |
+| 结构化提问 | `core/tools/AskUserTool.kt` + `ui/chat/UiAskUserChannel.kt` | 模型问用户：弹窗 / 驾驶态语音 |
+| 工具集 | `core/tools/ShellTool.kt` 等 | 只读探针 + 输出后处理 |
+
+## 运行链路
+
+```
+[用户输入（文本/语音）]
+    |
+    v
+[AgentRuntime.send]
+    | ContextManager（历史 + 上一轮 ToolTrace，冷启动从 SessionLog 恢复最近一轮）
+    | PromptAssembler 按 PromptContext 组装分节系统提示
+    v
+[AgentEngine]
+    | beginTurn -> LLM 流式推理
+    | 工具调用 -> ToolSystem（Ask 可弹窗 / 驾驶中拒绝；ask_user 直接执行）
+    | 用户问句 -> ask_user 工具 -> UiAskUserChannel（弹窗 / 驾驶态语音问答）
+    | 文本回复 -> recordTurn/recordToolTurn(Q/A + 工具交换序列) -> Completed（含 toolExchange）
+    v
+[AgentRuntime.persistTurn]
+    | SessionLog.append（IO 线程，只存正常完成的轮次）
+    v
+[输出（文本/TTS）]
+```
+
+## 结论
+
 AOS-Agent 是一个车载 AI Agent，具备工具调用、插件扩展、多步推理、上下文管理等核心能力。架构参考 OpenClaw、Hermes、Claude Code、OpenCode、Pi 等开源 AI Agent 系统的设计模式；架构层调整的技能路由见 `../rules/skill-routing.md` §3。
 
 ## 涉及对象
@@ -45,13 +82,17 @@ AOS-Agent 是一个车载 AI Agent，具备工具调用、插件扩展、多步�
     |
     v
 [AgentRuntime.send]
+    | ContextManager（历史 + ToolTrace；冷启动从 SessionLog 恢复最近一轮）
     | PromptAssembler 按 PromptContext 组装分节系统提示
-    | 复用会话级 ContextManager（历史 + 上一轮 ToolTrace）
     v
 [AgentEngine]
     | beginTurn -> LLM 流式推理
-    | 工具调用 -> ToolSystem（Ask 可弹窗 / 驾驶中拒绝）
-    | 文本回复 -> recordTurn(Q/A + traces) -> Completed
+    | 工具调用 -> ToolSystem（Ask 可弹窗 / 驾驶中拒绝；ask_user 直接执行）
+    | 结构化提问 -> ask_user -> UiAskUserChannel（弹窗 / 驾驶态语音问答）
+    | 文本回复 -> recordTurn/recordToolTurn -> Completed（含 toolExchange）
+    v
+[AgentRuntime.persistTurn]
+    | SessionLog.append（IO 线程，只存正常完成的轮次）
     v
 [输出（文本/TTS）]
 ```
@@ -63,9 +104,11 @@ LLM function-call -> ToolSystem.dispatch
   Forbid -> Rejected(forbidden)
   Ask    -> 驾驶中直接拒 drive_restricted / 无 confirmer 拒 approval_unavailable
             / 用户拒 user_denied / 放行后执行
-  Auto   -> 执行（shell_exec 可带 grep/head；超长头尾截断，完整落盘 + 截断指引）
+  Auto   -> 执行（shell_exec 可带 grep/head；超长头尾截断，完整落盘 + 截断指引；
+            ask_user 走通道问用户，回灌选中全文或 dismissed）
 
-结果回灌 LLM；回合结束把 ToolTrace 写入 ContextManager，供下一轮系统提示引用。
+结果回灌 LLM；回合结束把 ToolTrace 写入 ContextManager，供下一轮系统提示引用；
+Completed 自带 toolExchange，运行时落盘到 SessionLog。
 ```
 
 ### 拒绝原因分类（2026-10-28）
@@ -140,6 +183,29 @@ user → assistant(tool_calls, 空 content) → tool → assistant(最终答案)
 
 最终答案单独成一条 assistant 消息，与 `tool_calls` 合并会被服务端拒。
 
+### 结构化提问（2026-10-28）
+
+模型拿不准时调 `ask_user` 问用户，而不是瞎猜——猜错在车上比多问一句更贵。
+
+- 独立工具 `ask_user`：`permission = Auto`（它本身就是确认通道，不经过 Ask 闸）。
+- 输入：`question` + `options[1..4]`（`{label, description}`）+ `allow_free_text`。
+- 回答回灌选中项全文（`label` + `description`）或用户自由输入；超时 60s 返回
+  `{status: "dismissed"}`，此时模型自行决定继续或放弃，不要反复追问。
+- 非驾驶态弹 `AskUserDialog` 弹窗点选；驾驶态不弹窗，走语音播报问题+选项，
+  用户说"第 N 个"/选项关键词回答，`answerAsk` 解析（中文数字也认）。
+- 语音回答先给待回答的问句做选项匹配，匹配不上才当新问题发给引擎。
+
+### 会话持久化（2026-10-28）
+
+`core/session/SessionLog.kt`：append-only JSONL，落盘到应用私有目录
+`files/sessions/session.jsonl`（卸载即清）。
+
+- 每轮一条 `{ts, user, tool_exchange?, assistant}`，工具交换序列原样保留配对关系；
+  损坏的行跳过，不让整段历史作废。
+- 只存正常完成的轮次（`Completed` 事件时落盘，IO 线程，不堵事件流）。
+- 冷启动只恢复最近一轮：知道上一轮发生过什么，不把所有历史搬回来。
+- `resetSession` 时 rotate 旧文件保留作排查证据，新会话从空文件开始。
+
 ### 插件系统（参考 OpenClaw Plugin）
 
 ```
@@ -202,6 +268,8 @@ user → assistant(tool_calls, 空 content) → tool → assistant(最终答案)
 |---|---|---|
 | 改系统提示分节 | `PromptSections.kt` / `RuntimeEnvironment.kt` | 增删 section 或快照字段；勿在构造期烘焙 |
 | Ask 确认 / 驾驶策略 | `ToolSystem.kt` + `UiToolConfirmer.kt` | 确认器由 ChatConsole 注入；驾驶拒绝文案在 ToolSystem |
+| 结构化提问 | `AskUserTool.kt` + `UiAskUserChannel.kt` + `MainActivity.answerAsk` | 工具 Auto 直调；通道由 ChatConsole 注入；驾驶态语音解析在 MainActivity |
+| 会话落盘/恢复 | `SessionLog.kt` + `AgentRuntime.persistTurn/send` | append 只存 Completed；冷启动恢复最近一轮 |
 | shell 过滤/截断 | `ShellTool.kt` | 参数侧 grep/head；展示截断与 `full_output` 落盘 |
 | 拒绝原因分类 | `Tool.kt` 的 `RejectionReason` | 新增分类要同步改 `ToolSystem`/`ShellTool` 触发点与引擎回灌 payload |
 | 跨轮轨迹 | `ContextManager.recordTurn` / `AgentEngine` | 只保留最近一轮，总长 ≤400 字符 |
@@ -232,4 +300,4 @@ user → assistant(tool_calls, 空 content) → tool → assistant(最终答案)
 - **新增插件**：编写 plugin.yaml + 实现代码，放入插件目录。
 - **验证**：与 Agent 对话 -> 工具调用正确 -> 回复合理。
 
-> 更新时间：2026-10-28（Harness H1–H4：提示分节 / 审批 / 轨迹 / shell 后处理；P0 对齐：拒绝原因分类 + 截断二次读取指引）
+> 更新时间：2026-10-28（P2：会话 JSONL 持久化 + 结构化 ask_user；P1：分级降级 + 稳定节快照；Harness H1–H4；P0 对齐）

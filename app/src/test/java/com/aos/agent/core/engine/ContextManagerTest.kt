@@ -1,6 +1,9 @@
 package com.aos.agent.core.engine
 
+import com.aos.agent.core.llm.LlmMessage
 import com.aos.agent.core.llm.LlmRole
+import com.aos.agent.core.llm.LlmToolCall
+import com.aos.agent.core.session.SessionLog
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -110,6 +113,40 @@ class ContextManagerTest {
 
         val system = context.beginTurn("fresh").first().content
         assertTrue(!system.contains("上一轮工具轨迹"))
+    }
+
+    /** 持久化恢复：最近一轮（含工具交换序列）回到历史里，下一轮能接着用。 */
+    @Test
+    fun restorePutsLastTurnBackIntoHistory() {
+        val context = ContextManager(systemPrompt = "sys")
+        context.restore(
+            listOf(
+                SessionLog.TurnRecord(
+                    timestamp = 1L,
+                    user = "查电量",
+                    toolExchange = listOf(
+                        LlmMessage(LlmRole.Assistant, "", listOf(LlmToolCall("c1", "shell_exec", "{}"))),
+                        LlmMessage(LlmRole.Tool, """{"stdout":"80"}""", toolCallId = "c1", toolName = "shell_exec"),
+                    ),
+                    assistant = "目前 80%",
+                ),
+            ),
+        )
+
+        val roles = context.beginTurn("再确认").map { it.role }
+
+        assertEquals(
+            listOf(
+                LlmRole.System,
+                LlmRole.User,
+                LlmRole.Assistant,
+                LlmRole.Tool,
+                LlmRole.Assistant,
+                LlmRole.User,
+            ),
+            roles,
+        )
+        assertTrue(context.beginTurn("再确认").any { it.content == "查电量" })
     }
 
     @Test

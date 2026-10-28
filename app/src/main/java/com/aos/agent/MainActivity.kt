@@ -27,10 +27,14 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aos.agent.runtime.AgentRuntime
 import com.aos.agent.runtime.RuntimeStatus
+import com.aos.agent.core.tools.AskUserAnswer
+import com.aos.agent.ui.chat.AskUserDialog
 import com.aos.agent.ui.chat.ChatEntry
 import com.aos.agent.ui.chat.ChatScreen
 import com.aos.agent.ui.chat.ChatTranscript
+import com.aos.agent.ui.chat.PendingQuestion
 import com.aos.agent.ui.chat.ToolConfirmDialog
+import com.aos.agent.ui.chat.UiAskUserChannel
 import com.aos.agent.ui.chat.UiToolConfirmer
 import com.aos.agent.ui.settings.SettingsDraft
 import com.aos.agent.ui.settings.SettingsScreen
@@ -348,6 +352,8 @@ private fun ChatConsole(
     val context = LocalContext.current
     val confirmer = remember { UiToolConfirmer() }
     val pendingConfirm by confirmer.pending.collectAsStateWithLifecycle()
+    val askChannel = remember { UiAskUserChannel() }
+    val pendingQuestion by askChannel.pending.collectAsStateWithLifecycle()
     val voiceState by voice.state.collectAsStateWithLifecycle()
     val noPermission = stringResource(R.string.voice_err_permission)
     val skillMissing = { name: String -> context.getString(R.string.voice_skill_missing, name) }
@@ -399,6 +405,7 @@ private fun ChatConsole(
 
     LaunchedEffect(visible, driveRestricted) {
         runtime.setToolApproval(confirmer) { driveRestricted }
+        runtime.setAskUserChannel(askChannel)
         if (visible) {
             runtime.refresh()
             status = runtime.status()
@@ -407,8 +414,41 @@ private fun ChatConsole(
     }
 
     // 每次重组都重绑，避免回调里留住上一轮的 entries / busy
+    // （问句拦截在下面的 SideEffect 里，这里只保留命令通道）
     SideEffect {
-        voice.onQuery = { text -> submit(text) }
+        voice.onCommand = { command -> runCommand(command) }
+    }
+
+    // 驾驶态不弹窗：播报问题 + 选项，用户说"第 N 个"或选项关键词回答。
+    // 非驾驶态走下面的 AskUserDialog 弹窗；语音可用时同样播报一遍。
+    // 问句播报复用 onAnswer：播完按连续模式回聆听，正好接住用户的语音回答。
+    LaunchedEffect(pendingQuestion, driveRestricted) {
+        val pending = pendingQuestion ?: return@LaunchedEffect
+        val spoken = buildString {
+            append(pending.question)
+            pending.options.forEachIndexed { index, option ->
+                append("第${index + 1}个，${option.label}")
+                if (option.description.isNotBlank()) append("，${option.description}")
+                append("；")
+            }
+        }
+        if (driveRestricted || voiceState.usable) {
+            voice.onAnswer(spoken)
+        }
+    }
+
+    // 问句待回答时，语音识别到的文本先给 askChannel 做选项匹配，
+    // 匹配不上才当新问题发给引擎。
+    SideEffect {
+        val askPending = pendingQuestion
+        voice.onQuery = { text ->
+            val pending = askPending
+            if (pending != null && answerAsk(askChannel, pending, text)) {
+                // 已作为问句回答消费
+            } else {
+                submit(text)
+            }
+        }
         voice.onCommand = { command -> runCommand(command) }
     }
 
@@ -436,8 +476,66 @@ private fun ChatConsole(
                     onDeny = { confirmer.respond(false) },
                 )
             }
+            // 驾驶态不弹这个框（遮罩盖住），只走语音；非驾驶态弹窗点选。
+            if (!driveRestricted) {
+                pendingQuestion?.let { pending ->
+                    AskUserDialog(
+                        pending = pending,
+                        onAnswer = { askChannel.respond(it) },
+                        onDismiss = { askChannel.dismiss() },
+                    )
+                }
+            }
         }
     }
+}
+
+/**
+ * 语音回答解析："第 N 个"/"N"/"选第一个"按序号；选项 label 原样出现按关键词。
+ * 自由输入允许时，匹配不上就当自由文本回灌；否则返回 false 让调用方当新问题处理。
+ */
+private fun answerAsk(
+    channel: UiAskUserChannel,
+    pending: PendingQuestion,
+    heard: String,
+): Boolean {
+    val text = heard.trim()
+    if (text.isEmpty()) return false
+    val index = parseOptionIndex(text, pending.options.size)
+    if (index != null) {
+        val option = pending.options[index]
+        channel.respond(
+            AskUserAnswer(
+                selectedIndex = index,
+                text = if (option.description.isNotBlank()) "${option.label}：${option.description}" else option.label,
+            ),
+        )
+        return true
+    }
+    pending.options.forEachIndexed { i, option ->
+        if (option.label.isNotBlank() && text.contains(option.label)) {
+            channel.respond(
+                AskUserAnswer(
+                    selectedIndex = i,
+                    text = if (option.description.isNotBlank()) "${option.label}：${option.description}" else option.label,
+                ),
+            )
+            return true
+        }
+    }
+    if (pending.allowFreeText) {
+        channel.respond(AskUserAnswer(selectedIndex = null, text = text))
+        return true
+    }
+    return false
+}
+
+private fun parseOptionIndex(text: String, optionCount: Int): Int? {
+    // "第2个"/"选第一个"/"2"都认；中文数字一二三四也认。
+    val digit = Regex("第?\\s*([1-4])\\s*个?").find(text)?.groupValues?.get(1)?.toIntOrNull()
+        ?: (text.trim().toIntOrNull()?.takeIf { it in 1..4 })
+        ?: "一二三四".indexOf(text.filter { it in "一二三四" }.takeIf { it.length == 1 } ?: "").takeIf { it >= 0 }?.plus(1)
+    return digit?.minus(1)?.takeIf { it in 0 until optionCount }
 }
 
 /** 设置宿主：读写外观、模型、MCP 与语音偏好，保存后立刻刷新运行时并回到首页。 */

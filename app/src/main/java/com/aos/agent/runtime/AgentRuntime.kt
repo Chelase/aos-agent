@@ -7,10 +7,14 @@ import com.aos.agent.core.engine.ContextManager
 import com.aos.agent.core.engine.PromptAssembler
 import com.aos.agent.core.engine.PromptSections
 import com.aos.agent.core.llm.LlmConfig
+import com.aos.agent.core.llm.LlmMessage
 import com.aos.agent.core.llm.OpenAiCompatibleProvider
+import com.aos.agent.core.session.SessionLog
 import com.aos.agent.core.skills.AssetSkillLoader
 import com.aos.agent.core.skills.SkillDefinition
 import com.aos.agent.core.skills.SkillRegistry
+import com.aos.agent.core.tools.AskUserChannel
+import com.aos.agent.core.tools.AskUserTool
 import com.aos.agent.core.tools.ProcessCommandRunner
 import com.aos.agent.core.tools.ShellTool
 import com.aos.agent.core.tools.SystemInfoTool
@@ -30,8 +34,11 @@ import com.aos.agent.system.vehicle.AndroidVehicleReader
 import com.aos.agent.system.vehicle.VehiclePropertyAllowlist
 import java.io.File
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 
 /** 运行状态快照：只给描述与掩码，绝不含 apiKey / MCP token 明文。 */
@@ -86,7 +93,10 @@ class AgentRuntime(context: Context) {
     private var skillRegistry: SkillRegistry = SkillRegistry.parseAll(AssetSkillLoader(appContext).load())
     private var toolSystem: ToolSystem = ToolSystem()
     private var toolConfirmer: com.aos.agent.core.tools.ToolConfirmer? = null
+    private var askUserChannel: AskUserChannel? = null
     private var driveRestricted: () -> Boolean = { false }
+
+    val sessionDir: File get() = File(appContext.filesDir, "sessions")
     private var mcpStatuses: List<McpSourceStatus> = emptyList()
     private var mcpToolNames: List<String> = emptyList()
     private val promptAssembler = PromptAssembler(PromptSections.defaults())
@@ -98,6 +108,11 @@ class AgentRuntime(context: Context) {
     ) {
         toolConfirmer = confirmer
         driveRestricted = isDriveRestricted
+    }
+
+    /** 结构化提问通道：弹窗（非驾驶）或语音（驾驶），由界面层注入。 */
+    fun setAskUserChannel(channel: AskUserChannel?) {
+        askUserChannel = channel
     }
 
     /** 本地工具 + 已加载的远端工具；进页面与每次发送前都可以再调一次。 */
@@ -113,6 +128,8 @@ class AgentRuntime(context: Context) {
                 blockedCommands = setOf("rm", "mv", "dd", "reboot", "pm"),
                 outputDir = File(appContext.filesDir, "tool-output"),
             ),
+            // 结构化提问：模型拿不准时问用户，不是危险操作，不经过 Ask 闸。
+            AskUserTool(askUserChannel),
         )
         val registry = SkillRegistry.parseAll(AssetSkillLoader(appContext).load())
         val system = ToolSystem(confirmer = toolConfirmer) { driveRestricted() }
@@ -158,10 +175,11 @@ class AgentRuntime(context: Context) {
 
     fun availableToolNames(): Set<String> = toolSystem.all.map { it.name }.toSet()
 
-    /** 新会话：清掉跨轮历史与工具轨迹。 */
+    /** 新会话：清掉跨轮历史与工具轨迹，旧日志保留作排查证据。 */
     fun resetSession() {
         sessionContext?.reset()
         sessionContext = null
+        SessionLog.rotate(sessionDir)
     }
 
     suspend fun send(query: String): Flow<AgentEvent> {
@@ -179,7 +197,11 @@ class AgentRuntime(context: Context) {
                     ),
                 )
             },
-        ).also { sessionContext = it }
+        ).also {
+            // 进程被杀后只恢复最近一轮：知道上一轮发生过什么，不把所有历史搬回来。
+            it.restore(SessionLog.readRecent(sessionDir, lastTurns = 1))
+            sessionContext = it
+        }
         val engine = AgentEngine(
             provider = OpenAiCompatibleProvider(httpClient, config),
             context = context,
@@ -187,11 +209,37 @@ class AgentRuntime(context: Context) {
         )
         val skill = skillRegistry.match(query)
         val subset = skill?.effectiveToolNames(availableToolNames())
-        return engine.run(
+        val upstream = engine.run(
             query = query,
             instruction = skill?.prompt?.takeIf { it.isNotBlank() },
             toolNames = subset,
         )
+        // 只存正常完成的轮次：Completed 自带本轮工具交换序列，直接落盘。
+        return flow {
+            upstream.collect { event ->
+                if (event is AgentEvent.Completed) {
+                    persistTurn(query, event.toolExchange, event.text)
+                }
+                emit(event)
+            }
+        }
+    }
+
+    private fun persistTurn(query: String, exchange: List<LlmMessage>, answer: String) {
+        // IO 上后台线程做，不堵模型事件流；失败只记日志，不让落盘拖垮对话。
+        CoroutineScope(Dispatchers.IO).launch {
+            runCatching {
+                SessionLog.append(
+                    sessionDir,
+                    SessionLog.TurnRecord(
+                        timestamp = System.currentTimeMillis(),
+                        user = query,
+                        toolExchange = exchange,
+                        assistant = answer,
+                    ),
+                )
+            }
+        }
     }
 
     // ---- 配置写入（界面用） ----
