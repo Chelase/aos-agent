@@ -72,10 +72,18 @@ android {
     }
 
     buildTypes {
+        debug {
+            // 与发布包并存：包名加 .debug 后缀，签名用本机 debug keystore，
+            // 这样车上可以同时留着正式版日常用、debug 版做断点与 Apply Changes。
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+            manifestPlaceholders["appLabel"] = "AOS-Agent Debug"
+        }
         release {
             optimization {
                 enable = false
             }
+            manifestPlaceholders["appLabel"] = "@string/app_name"
             if (releaseSigningReady) {
                 signingConfig = signingConfigs.getByName("release")
             }

@@ -39,7 +39,7 @@ class LlmConfigReceiver : BroadcastReceiver() {
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             val reply = runCatching {
                 when {
-                    intent.action == LlmCliParser.ACTION_REFRESH -> {
+                    LlmCliParser.isRefresh(intent.action) -> {
                         LlmStateMirror(appContext).refresh()
                         "已重建状态镜像"
                     }

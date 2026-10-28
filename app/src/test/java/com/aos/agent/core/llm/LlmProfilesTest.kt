@@ -209,4 +209,28 @@ class LlmProfilesTest {
         assertNull(LlmCliParser.parse(LlmCliParser.ACTION_USE_PROFILE, "", null, null, null, false))
         assertNull(LlmCliParser.parse(null, null, null, null, null, false))
     }
+
+    /**
+     * 调试包的 applicationId 带 `.debug` 后缀，aos-llm 脚本用 @PKG@ 拼出的 action
+     * 因此与发布包不同；解析只认 `.llm.` 之后的命令段，两种包名都必须成立。
+     */
+    @Test
+    fun parserAcceptsPackageSuffix() {
+        assertEquals(
+            LlmCommand.UseProfile("work"),
+            LlmCliParser.parse("com.aos.agent.debug.llm.USE_PROFILE", "work", null, null, null, false),
+        )
+        assertEquals(
+            LlmCommand.SetActive("https://a/v1", "m", "k", null, false),
+            LlmCliParser.parse("com.aos.agent.debug.llm.SET_ACTIVE", null, "https://a/v1", "m", "k", false),
+        )
+    }
+
+    @Test
+    fun refreshMatchesRegardlessOfPackageSuffix() {
+        assertTrue(LlmCliParser.isRefresh(LlmCliParser.ACTION_REFRESH))
+        assertTrue(LlmCliParser.isRefresh("com.aos.agent.debug.llm.REFRESH"))
+        assertFalse(LlmCliParser.isRefresh(LlmCliParser.ACTION_USE_PROFILE))
+        assertFalse(LlmCliParser.isRefresh(null))
+    }
 }

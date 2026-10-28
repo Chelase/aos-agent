@@ -192,34 +192,57 @@ object LlmProfiles {
     }
 }
 
-/** 广播 action + extras → [LlmCommand] 的纯解析，接收器只做搬运。 */
+/**
+ * 广播 action + extras → [LlmCommand] 的纯解析，接收器只做搬运。
+ *
+ * action 形如 `<applicationId>.llm.<命令>`。只按 `.llm.` 之后的命令段分发，
+ * 不比对完整包名：调试包带 `.debug` 后缀时，aos-llm 脚本用 `@PKG@` 拼出来的
+ * action 与发布包不同，若按完整字符串匹配会静默失效。
+ */
 object LlmCliParser {
+    private const val COMMAND_SET_ACTIVE = "SET_ACTIVE"
+    private const val COMMAND_ADD_PROFILE = "ADD_PROFILE"
+    private const val COMMAND_USE_PROFILE = "USE_PROFILE"
+    private const val COMMAND_REMOVE_PROFILE = "REMOVE_PROFILE"
+    private const val COMMAND_REFRESH = "REFRESH"
+
+    /** 包名与命令之间的分隔，命令段由它定位。 */
+    private const val NAMESPACE_MARKER = ".llm."
+
     const val ACTION_PREFIX = "com.aos.agent.llm."
-    const val ACTION_SET_ACTIVE = "${ACTION_PREFIX}SET_ACTIVE"
-    const val ACTION_ADD_PROFILE = "${ACTION_PREFIX}ADD_PROFILE"
-    const val ACTION_USE_PROFILE = "${ACTION_PREFIX}USE_PROFILE"
-    const val ACTION_REMOVE_PROFILE = "${ACTION_PREFIX}REMOVE_PROFILE"
-    const val ACTION_REFRESH = "${ACTION_PREFIX}REFRESH"
+    const val ACTION_SET_ACTIVE = ACTION_PREFIX + COMMAND_SET_ACTIVE
+    const val ACTION_ADD_PROFILE = ACTION_PREFIX + COMMAND_ADD_PROFILE
+    const val ACTION_USE_PROFILE = ACTION_PREFIX + COMMAND_USE_PROFILE
+    const val ACTION_REMOVE_PROFILE = ACTION_PREFIX + COMMAND_REMOVE_PROFILE
+    const val ACTION_REFRESH = ACTION_PREFIX + COMMAND_REFRESH
 
     const val EXTRA_NAME = "name"
     const val EXTRA_URL = "url"
     const val EXTRA_MODEL = "model"
     const val EXTRA_KEY = "key"
 
+    private fun commandOf(action: String?): String? {
+        val index = action?.lastIndexOf(NAMESPACE_MARKER) ?: return null
+        if (index < 0) return null
+        return action.substring(index + NAMESPACE_MARKER.length)
+    }
+
+    fun isRefresh(action: String?): Boolean = commandOf(action) == COMMAND_REFRESH
+
     fun parse(action: String?, name: String?, url: String?, model: String?, key: String?, keepKey: Boolean): LlmCommand? =
-        when (action) {
-            ACTION_SET_ACTIVE -> LlmCommand.SetActive(
+        when (commandOf(action)) {
+            COMMAND_SET_ACTIVE -> LlmCommand.SetActive(
                 baseUrl = url.orEmpty(),
                 model = model.orEmpty(),
                 apiKey = key.orEmpty(),
                 saveAs = name?.takeIf { it.isNotBlank() },
                 keepKey = keepKey,
             )
-            ACTION_ADD_PROFILE -> name?.takeIf { it.isNotBlank() }?.let {
+            COMMAND_ADD_PROFILE -> name?.takeIf { it.isNotBlank() }?.let {
                 LlmCommand.AddProfile(baseUrl = url.orEmpty(), model = model.orEmpty(), apiKey = key.orEmpty(), name = it)
             }
-            ACTION_USE_PROFILE -> name?.takeIf { it.isNotBlank() }?.let { LlmCommand.UseProfile(it) }
-            ACTION_REMOVE_PROFILE -> name?.takeIf { it.isNotBlank() }?.let { LlmCommand.RemoveProfile(it) }
+            COMMAND_USE_PROFILE -> name?.takeIf { it.isNotBlank() }?.let { LlmCommand.UseProfile(it) }
+            COMMAND_REMOVE_PROFILE -> name?.takeIf { it.isNotBlank() }?.let { LlmCommand.RemoveProfile(it) }
             else -> null
         }
 }
