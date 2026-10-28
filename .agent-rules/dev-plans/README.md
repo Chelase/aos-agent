@@ -66,6 +66,8 @@
 - [voice/](./voice/README.md) — 语音 Phase B 子计划：连续对话回路 / Vosk 离线唤醒 / 驾驶遮罩 / 唤醒调试面板
 - [release-update-plan.md](./release-update-plan.md) — 发布与更新：签名 + CI + 检查更新 + 下载安装（真机交付前置）
 - [llm-config-cli-plan.md](./llm-config-cli-plan.md) — LLM 配置 CLI（aos-llm）：装车现场快速配置/切换模型服务
+- [agent-harness-plan.md](./agent-harness-plan.md) — Agent harness 层：提示分节 / 审批通道 / 会话工具轨迹 / shell 输出后处理（H1–H4）
+- [real-car-readonly-probe-plan.md](./real-car-readonly-probe-plan.md) — 实车只读数据挖取：47 条测量（A–G 组），结论只认原始输出
 
 ## 6. 已归档
 

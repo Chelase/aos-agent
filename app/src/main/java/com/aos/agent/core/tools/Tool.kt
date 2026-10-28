@@ -18,6 +18,27 @@ enum class DegradeStatus(val wire: String) {
     NotConfigured("not_configured"),
 }
 
+/**
+ * 拒绝原因分类。模型据此换策略：换参数、换工具、还是放弃并如实说明。
+ * 分类名是稳定契约，`message` 只负责措辞，不承载语义。
+ */
+enum class RejectionReason(val wire: String) {
+    /** 工具本身被禁用（如 rm、reboot）。 */
+    Forbidden("forbidden"),
+
+    /** 需要人工确认但没人能确认（无确认器）。 */
+    ApprovalUnavailable("approval_unavailable"),
+
+    /** 人工确认被拒绝。 */
+    UserDenied("user_denied"),
+
+    /** 驾驶中不允许人工确认。 */
+    DriveRestricted("drive_restricted"),
+
+    /** 参数不合法（命令含元字符、缺参数等）。 */
+    InvalidInput("invalid_input"),
+}
+
 sealed interface ToolResult {
     /**
      * 成功。[fields] 里放结构化值（数字/枚举/布尔），不要塞散文——
@@ -26,8 +47,11 @@ sealed interface ToolResult {
      */
     data class Ok(val fields: JsonObject) : ToolResult
 
-    /** 权限或确认环节挡下了，没有执行。 */
-    data class Rejected(val reason: String) : ToolResult
+    /**
+     * 权限或确认环节挡下了，没有执行。
+     * [reason] 是分类（供模型换策略），[message] 是可读措辞。
+     */
+    data class Rejected(val reason: RejectionReason, val message: String) : ToolResult
 
     data class TimedOut(val timeoutMillis: Long) : ToolResult
 

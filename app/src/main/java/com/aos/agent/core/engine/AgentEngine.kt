@@ -42,6 +42,7 @@ class AgentEngine(
         val toolDefinitions = tools?.let { it.definitions(it.exposedFor(toolNames)) }.orEmpty()
         guard.reset()
         var step = 0
+        val traces = mutableListOf<ToolTrace>()
 
         while (true) {
             step++
@@ -83,7 +84,7 @@ class AgentEngine(
             val toolCalls = calls.values.mapNotNull { it.toCall() }
             if (toolCalls.isEmpty()) {
                 val answer = text.toString()
-                context.recordExchange(query, answer)
+                context.recordTurn(query, answer, traces.toList())
                 emit(AgentEvent.Completed(answer))
                 return@flow
             }
@@ -101,6 +102,7 @@ class AgentEngine(
                 }
                 emit(AgentEvent.ToolCalled(call.id, call.name, call.argumentsJson))
                 val outcome = executeTool(tools, call)
+                traces += ToolTrace(call.name, outcome.kind, outcome.payload.take(120))
                 emit(AgentEvent.ToolFinished(call.id, call.name, outcome.kind, outcome.payload))
                 messages += LlmMessage(
                     role = LlmRole.Tool,
@@ -126,7 +128,8 @@ class AgentEngine(
                 "rejected",
                 buildJsonObject {
                     put("status", "rejected")
-                    put("reason", result.reason)
+                    put("reason", result.reason.wire)
+                    put("message", result.message)
                 }.toString(),
             )
 

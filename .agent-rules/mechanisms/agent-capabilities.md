@@ -8,13 +8,16 @@ AOS-Agent 是一个车载 AI Agent，具备工具调用、插件扩展、多步�
 
 | 层 | 文件/模块 | 角色 | 状态 |
 |---|---|---|---|
-| Core | `core/engine/AgentEngine.kt` | 无头主循环 + 工具调用回灌，产出 `Flow<AgentEvent>` | 已实现（Step 2，Step 3 扩展工具循环） |
-| Core | `core/engine/ContextManager.kt` | 系统提示常驻 + 历史按预算从最旧丢弃 | 已实现（MVP Step 2） |
+| Core | `core/engine/AgentEngine.kt` | 无头主循环 + 工具调用回灌，产出 `Flow<AgentEvent>`；回合结束回写 `ToolTrace` | 已实现（Harness H3） |
+| Core | `core/engine/ContextManager.kt` | 动态系统提示 + 历史按预算丢弃 + 上一轮工具轨迹 | 已实现（Harness H1/H3） |
+| Core | `core/engine/PromptAssembler.kt` + `PromptSections.kt` | 系统提示分节（persona/environment/capabilities/cli/rules），每轮求值 | 已实现（Harness H1） |
 | Core | `core/engine/AgentEvent.kt` | `Started`/`Token`/`Completed`/`Failed` 事件契约 | 已实现（MVP Step 2） |
+| Runtime | `runtime/RuntimeEnvironment.kt` | 环境快照（包名/版本/API/CLI 路径/工具清单） | 已实现（Harness H1） |
+| UI | `ui/chat/UiToolConfirmer.kt` + `ToolConfirmDialog.kt` | Ask 级工具确认弹窗；驾驶态由 ToolSystem 先拒 | 已实现（Harness H2） |
 | Core | `core/llm/LlmProvider.kt` + `OpenAiCompatibleProvider.kt` | 流式模型接入；SSE 解析为纯函数 | 已实现（MVP Step 2） |
 | Core | `core/llm/LlmConfig.kt` + `data/store/LlmConfigStore.kt` | 配置与私有 DataStore 持久化 | 已实现（MVP Step 2） |
-| Core | `core/tools/ToolSystem.kt` | 工具注册、子集暴露、三级权限、30s 超时、异常包装 | 已实现（MVP Step 3） |
-| Core | `core/tools/Tool.kt` / `ToolJsonRepair.kt` / `ToolLoopGuard.kt` | 工具契约（name/version/category）、参数畸形保守修复、步数与重复调用防护 | 已实现（MVP Step 3） |
+| Core | `core/tools/ToolSystem.kt` | 工具注册、子集暴露、三级权限、确认器注入、驾驶态拒绝、30s 超时 | 已实现（Harness H2） |
+| Core | `core/tools/Tool.kt` / `ToolJsonRepair.kt` / `ToolLoopGuard.kt` | 工具契约（name/version/category）、参数畸形保守修复、步数与重复调用防护；`Rejected` 带 `RejectionReason` 分类 | 已实现（MVP Step 3；分类 2026-10-28） |
 | System | `system/vehicle/VehiclePropertyAllowlist.kt` + `assets/vehicle/vehicle_properties.json` | 车辆属性声明式 allowlist，写与特权条目挡下并留原因 | 已实现（MVP Step 3） |
 | System | `system/vehicle/AndroidVehicleReader.kt` | 真车 Car API 读取（`useLibrary` 编译期 + 运行期探测降级） | 已实现（MVP Step 3，模拟器实测） |
 | System | `system/vehicle/VehicleBattery.kt` | 动力电池 SOC：`EV_BATTERY_LEVEL` 换算成百分比，读不到给结构化原因 | 已实现（2026-10-15，模拟器与单测；真车口径待确认） |
@@ -24,7 +27,7 @@ AOS-Agent 是一个车载 AI Agent，具备工具调用、插件扩展、多步�
 | Core | PluginManager.kt | 插件热加载与管理 | 待规划（Batch 3），参考 OpenClaw Plugin System |
 | Core | TaskPlanner.kt | 多步任务规划与执行 | 待规划，参考 OpenClaw / Hermes |
 | Tools | `core/tools/VehicleBasicTool.kt` | 唯一车辆只读工具，字段由 allowlist 决定 | 已实现（MVP Step 3） |
-| Tools | `core/tools/ShellTool.kt` | argv 直接执行，不经 shell；白名单 auto / 名单外 ask / 黑名单 forbid | 已实现（MVP Step 3） |
+| Tools | `core/tools/ShellTool.kt` | argv 直执；`grep`/`head` 参数过滤；头尾截断 + `full_output` 落盘 + `truncation_notice` 二次读取指引 | 已实现（Harness H4；截断指引 2026-10-28） |
 | Tools | `core/tools/SystemInfoTool.kt` | 复用 SystemInfoReader | 已实现（MVP Step 3） |
 | Tools | FileSystemTool.kt | 文件读写操作工具 | 待规划 |
 | Tools | AppManagerTool.kt | 应用安装管理工具 | 待规划 |
@@ -41,47 +44,54 @@ AOS-Agent 是一个车载 AI Agent，具备工具调用、插件扩展、多步�
 [用户输入（文本/语音）]
     |
     v
-[ContextManager]
-    | 组装对话历史 + 系统提示 + 工具定义
-    v
-[LLM Router]
-    | 路由到 Gemini API 或本地 llama.cpp
+[AgentRuntime.send]
+    | PromptAssembler 按 PromptContext 组装分节系统提示
+    | 复用会话级 ContextManager（历史 + 上一轮 ToolTrace）
     v
 [AgentEngine]
-    | 解析 LLM 响应
-    | 如果是工具调用 -> ToolSystem
-    | 如果是文本回复 -> 直接输出
-    v
-[ToolSystem]
-    | 查找已注册的工具
-    | 执行工具（带超时和错误处理）
-    | 工具结果返回给 LLM 继续推理
-    v
-[AgentEngine]
-    | LLM 根据工具结果生成最终回复
+    | beginTurn -> LLM 流式推理
+    | 工具调用 -> ToolSystem（Ask 可弹窗 / 驾驶中拒绝）
+    | 文本回复 -> recordTurn(Q/A + traces) -> Completed
     v
 [输出（文本/TTS）]
 ```
 
-### 工具调用模式（参考 Claude Code / OpenCode）
+### 工具调用模式
 
 ```
-工具定义格式（Function Calling）：
+LLM function-call -> ToolSystem.dispatch
+  Forbid -> Rejected(forbidden)
+  Ask    -> 驾驶中直接拒 drive_restricted / 无 confirmer 拒 approval_unavailable
+            / 用户拒 user_denied / 放行后执行
+  Auto   -> 执行（shell_exec 可带 grep/head；超长头尾截断，完整落盘 + 截断指引）
 
-tool_describe(name="car_get_speed", description="获取当前车速")
-tool_describe(name="shell_exec", description="执行 shell 命令")
-tool_describe(name="app_install", description="安装 APK 应用")
-tool_describe(name="web_search", description="搜索网络信息")
-
-LLM 输出工具调用：
-{
-  "tool": "car_get_speed",
-  "params": {}
-}
-
-ToolSystem 执行 -> 结果返回 LLM
-LLM 整合结果 -> 自然语言回复
+结果回灌 LLM；回合结束把 ToolTrace 写入 ContextManager，供下一轮系统提示引用。
 ```
+
+### 拒绝原因分类（2026-10-28）
+
+`ToolResult.Rejected` = `reason: RejectionReason` + `message: String`。分类是稳定契约，
+`message` 只负责措辞；引擎回灌给模型的 payload 为
+`{status: "rejected", reason: <wire>, message: <措辞>}`。
+
+| `RejectionReason` | wire | 触发点 | 模型该做什么 |
+|---|---|---|---|
+| `Forbidden` | `forbidden` | 工具 `permission = Forbid`（rm/reboot/pm 等） | 换工具或如实说明该操作不可用，不要重试 |
+| `ApprovalUnavailable` | `approval_unavailable` | Ask 级但没注入确认器 | 换免确认工具或说明需要人工授权 |
+| `UserDenied` | `user_denied` | 人工确认被拒 | 停止该操作，如实转述被拒 |
+| `DriveRestricted` | `drive_restricted` | 驾驶态不允许人工确认 | 提示停车后重试 |
+| `InvalidInput` | `invalid_input` | 参数非法（如 shell 元字符） | 改参数后重试 |
+
+### Shell 输出截断指引（2026-10-28）
+
+`shell_exec` 输出超过 `DEFAULT_KEEP_EACH_SIDE`（4000 字符）时头尾截断，并在结果里给：
+
+- `truncated: true`
+- `full_output`: 完整内容落盘绝对路径（`files/tool-output/<uuid>.txt`）
+- `truncation_notice`: 人话指引，含原始字符数与落盘路径，明确写「可再次读取该文件取回全部内容」
+
+未配置 `outputDir` 时 `truncation_notice` 如实说明拿不到全文，并建议改用 `grep`/`head` 缩小范围，
+不编造路径。
 
 ### 插件系统（参考 OpenClaw Plugin）
 
@@ -143,11 +153,11 @@ LLM 整合结果 -> 自然语言回复
 
 | 要做什么 | 改哪里 | 怎么改 |
 |---|---|---|
-| Agent 核心循环 | core/engine/AgentEngine.kt | LLM 调用 + 工具调度 + 多步推理 |
-| 工具系统 | core/engine/ToolSystem.kt | 工具注册/查找/执行/超时 |
-| 插件系统 | core/engine/PluginManager.kt | 插件加载/卸载/依赖管理 |
-| 上下文管理 | core/engine/ContextManager.kt | 对话历史、Token 限制、摘要 |
-| 任务规划 | core/engine/TaskPlanner.kt | 任务分解、依赖排序、并行执行 |
+| 改系统提示分节 | `PromptSections.kt` / `RuntimeEnvironment.kt` | 增删 section 或快照字段；勿在构造期烘焙 |
+| Ask 确认 / 驾驶策略 | `ToolSystem.kt` + `UiToolConfirmer.kt` | 确认器由 ChatConsole 注入；驾驶拒绝文案在 ToolSystem |
+| shell 过滤/截断 | `ShellTool.kt` | 参数侧 grep/head；展示截断与 `full_output` 落盘 |
+| 拒绝原因分类 | `Tool.kt` 的 `RejectionReason` | 新增分类要同步改 `ToolSystem`/`ShellTool` 触发点与引擎回灌 payload |
+| 跨轮轨迹 | `ContextManager.recordTurn` / `AgentEngine` | 只保留最近一轮，总长 ≤400 字符 |
 
 ## 关键约束
 
@@ -175,4 +185,4 @@ LLM 整合结果 -> 自然语言回复
 - **新增插件**：编写 plugin.yaml + 实现代码，放入插件目录。
 - **验证**：与 Agent 对话 -> 工具调用正确 -> 回复合理。
 
-> 更新时间：2026-09-27（MVP Step 2 无头引擎落地，涉及对象补实现状态）；2026-10-15 补关键约束 7（动力电池 SOC 单位口径）
+> 更新时间：2026-10-28（Harness H1–H4：提示分节 / 审批 / 轨迹 / shell 后处理；P0 对齐：拒绝原因分类 + 截断二次读取指引）

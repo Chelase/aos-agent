@@ -15,6 +15,7 @@ import kotlinx.serialization.json.JsonObject
 class ToolSystem(
     private val confirmer: ToolConfirmer? = null,
     private val timeoutMillis: Long = DEFAULT_TIMEOUT_MS,
+    private val isDriveRestricted: () -> Boolean = { false },
 ) {
     private val tools = LinkedHashMap<String, Tool>()
 
@@ -48,16 +49,30 @@ class ToolSystem(
 
     private suspend fun dispatch(tool: Tool, args: JsonObject): ToolResult =
         when (tool.permissionFor(args)) {
-        ToolPermission.Forbid -> ToolResult.Rejected("${tool.name} 属禁用级，本期不可调用")
+        ToolPermission.Forbid ->
+            ToolResult.Rejected(RejectionReason.Forbidden, "${tool.name} 属禁用级，本期不可调用")
 
         ToolPermission.Ask -> {
-            val currentConfirmer = confirmer
-            if (currentConfirmer == null) {
-                ToolResult.Rejected("${tool.name} 需要确认，但当前没有注入确认器")
-            } else if (!currentConfirmer.confirm(tool.name, args)) {
-                ToolResult.Rejected("${tool.name} 的确认被拒绝")
+            if (isDriveRestricted()) {
+                ToolResult.Rejected(
+                    RejectionReason.DriveRestricted,
+                    "驾驶中不允许人工确认 ${tool.name}；请停车后重试",
+                )
             } else {
-                withDeadline(tool, args)
+                val currentConfirmer = confirmer
+                if (currentConfirmer == null) {
+                    ToolResult.Rejected(
+                        RejectionReason.ApprovalUnavailable,
+                        "${tool.name} 需要确认，但当前没有注入确认器",
+                    )
+                } else if (!currentConfirmer.confirm(tool.name, args)) {
+                    ToolResult.Rejected(
+                        RejectionReason.UserDenied,
+                        "${tool.name} 的确认被拒绝",
+                    )
+                } else {
+                    withDeadline(tool, args)
+                }
             }
         }
 

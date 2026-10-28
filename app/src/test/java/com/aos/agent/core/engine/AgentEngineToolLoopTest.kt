@@ -5,6 +5,7 @@ import com.aos.agent.core.llm.LlmRequest
 import com.aos.agent.core.llm.LlmRole
 import com.aos.agent.core.llm.LlmStreamChunk
 import com.aos.agent.core.tools.Tool
+import com.aos.agent.core.tools.ToolConfirmer
 import com.aos.agent.core.tools.ToolLoopGuard
 import com.aos.agent.core.tools.ToolPermission
 import com.aos.agent.core.tools.ToolResult
@@ -187,5 +188,30 @@ class AgentEngineToolLoopTest {
         val finished = events.single { it is AgentEvent.ToolFinished } as AgentEvent.ToolFinished
         assertEquals("rejected", finished.outcome)
         assertEquals("算了", (events.last() as AgentEvent.Completed).text)
+    }
+
+    /** 拒绝要带原因分类回灌给模型，模型才知道该换参数、换工具还是如实说明。 */
+    @Test
+    fun rejectionReasonReachesTheModel() = runTest {
+        val system = ToolSystem(confirmer = ToolConfirmer { _, _ -> false })
+        system.register(
+            object : Tool {
+                override val name = "risky"
+                override val version = 1
+                override val category = "test"
+                override val description = "需要确认"
+                override val permission = ToolPermission.Ask
+                override val inputSchema = buildJsonObject { put("type", "object") }
+                override suspend fun execute(args: JsonObject) = ToolResult.Ok(buildJsonObject { })
+            },
+        )
+        val provider = ScriptedProvider(
+            listOf(toolCall("r1", "risky", "{}"), answer("算了")),
+        )
+
+        engine(provider, system).run("试试").toList()
+
+        val toolMessage = provider.requests[1].messages.single { it.role == LlmRole.Tool }
+        assertTrue("应回灌原因分类：${toolMessage.content}", toolMessage.content.contains("user_denied"))
     }
 }

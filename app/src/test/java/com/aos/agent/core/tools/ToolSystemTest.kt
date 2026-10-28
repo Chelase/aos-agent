@@ -81,6 +81,22 @@ class ToolSystemTest {
     }
 
     @Test
+    fun askWhileDrivingIsRejectedWithDriveReason() = runTest {
+        val tool = RecordingTool("ask_drive", ToolPermission.Ask)
+        val system = ToolSystem(
+            confirmer = ToolConfirmer { _, _ -> true },
+            isDriveRestricted = { true },
+        )
+        system.register(tool)
+
+        val result = system.execute("ask_drive", emptyArgs)
+
+        assertTrue(result is ToolResult.Rejected)
+        assertTrue((result as ToolResult.Rejected).message.contains("驾驶中"))
+        assertEquals(0, tool.calls)
+    }
+
+    @Test
     fun forbiddenToolNeverRuns() = runTest {
         val tool = RecordingTool("blocked", ToolPermission.Forbid)
         val system = ToolSystem(confirmer = ToolConfirmer { _, _ -> true })
@@ -88,6 +104,47 @@ class ToolSystemTest {
 
         assertTrue(system.execute("blocked", emptyArgs) is ToolResult.Rejected)
         assertEquals(0, tool.calls)
+    }
+
+    /** 拒绝必须带原因分类，模型才能据原因换策略而不是原样重试。 */
+    @Test
+    fun rejectionCarriesStructuredReasonCode() = runTest {
+        val system = ToolSystem(confirmer = ToolConfirmer { _, _ -> false })
+        system.register(RecordingTool("ask_one", ToolPermission.Ask))
+
+        val rejected = system.execute("ask_one", emptyArgs) as ToolResult.Rejected
+
+        assertEquals(RejectionReason.UserDenied, rejected.reason)
+        assertTrue(rejected.message.isNotBlank())
+    }
+
+    @Test
+    fun rejectionReasonsDistinguishTheCause() = runTest {
+        val ask = ToolSystem(confirmer = ToolConfirmer { _, _ -> false })
+        ask.register(RecordingTool("ask_one", ToolPermission.Ask))
+        val noConfirmer = ToolSystem()
+        noConfirmer.register(RecordingTool("ask_two", ToolPermission.Ask))
+        val forbid = ToolSystem()
+        forbid.register(RecordingTool("blocked", ToolPermission.Forbid))
+        val driving = ToolSystem(confirmer = ToolConfirmer { _, _ -> true }, isDriveRestricted = { true })
+        driving.register(RecordingTool("ask_three", ToolPermission.Ask))
+
+        assertEquals(
+            RejectionReason.UserDenied,
+            (ask.execute("ask_one", emptyArgs) as ToolResult.Rejected).reason,
+        )
+        assertEquals(
+            RejectionReason.ApprovalUnavailable,
+            (noConfirmer.execute("ask_two", emptyArgs) as ToolResult.Rejected).reason,
+        )
+        assertEquals(
+            RejectionReason.Forbidden,
+            (forbid.execute("blocked", emptyArgs) as ToolResult.Rejected).reason,
+        )
+        assertEquals(
+            RejectionReason.DriveRestricted,
+            (driving.execute("ask_three", emptyArgs) as ToolResult.Rejected).reason,
+        )
     }
 
     @Test
