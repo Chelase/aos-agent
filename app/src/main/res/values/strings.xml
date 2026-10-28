@@ -41,6 +41,9 @@
     <string name="engineer_title">工程师模式</string>
     <string name="engineer_subtitle">只读诊断</string>
     <string name="action_back">返回</string>
+    <string name="capture_screen">截图</string>
+    <string name="capture_saved">已保存截图：%1$s</string>
+    <string name="capture_failed">截图失败：%1$s</string>
     <string name="terminal_title">终端</string>
     <string name="terminal_subtitle">本地 shell · PTY</string>
     <string name="terminal_status_running">运行中</string>

@@ -3,15 +3,20 @@ package com.aos.agent.ui.components
 import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import com.aos.agent.R
 import com.aos.agent.ui.theme.*
@@ -32,6 +37,7 @@ fun AOSAppShell(
     destination: AOSDestination,
     driveRestricted: Boolean,
     onNavigate: (AOSDestination) -> Unit,
+    onCapture: (() -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
     BackHandler(enabled = destination != AOSDestination.Home) { onNavigate(AOSDestination.Home) }
@@ -56,8 +62,38 @@ fun AOSAppShell(
                 RailItem(AOSDestination.Engineer, destination, driveRestricted, onNavigate)
             }
             VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = AOSSizing.borderWidth)
-            Box(Modifier.weight(1f).fillMaxHeight()) { content() }
+            Box(Modifier.weight(1f).fillMaxHeight()) {
+                content()
+                // 截图是取证动作，悬在内容之上而非占版面；页面自己的 padding 已经让开了边缘
+                if (onCapture != null) {
+                    CaptureButton(
+                        onClick = onCapture,
+                        modifier = Modifier.align(Alignment.BottomEnd).padding(AOSSpacing.lg),
+                    )
+                }
+            }
         }
+    }
+}
+
+@Composable
+private fun CaptureButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val description = stringResource(R.string.capture_screen)
+    Box(
+        modifier = modifier
+            .size(AOSSizing.touchTarget)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .clickable(onClick = onClick)
+            .semantics { contentDescription = description },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.ic_capture),
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(AOSSizing.iconSize),
+        )
     }
 }
 

@@ -39,6 +39,9 @@
     <string name="engineer_title">Engineer Mode</string>
     <string name="engineer_subtitle">Read-only Diagnostics</string>
     <string name="action_back">Back</string>
+    <string name="capture_screen">Capture</string>
+    <string name="capture_saved">Screenshot saved: %1$s</string>
+    <string name="capture_failed">Screenshot failed: %1$s</string>
     <string name="terminal_title">Terminal</string>
     <string name="terminal_subtitle">Local shell · PTY</string>
     <string name="terminal_status_running">Running</string>

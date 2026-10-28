@@ -6,6 +6,7 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -62,6 +63,7 @@ import com.aos.agent.system.CarUxRestrictionsReader
 import com.aos.agent.system.DriveRestriction
 import com.aos.agent.system.DriveUxDiagnostics
 import com.aos.agent.system.SystemInfoProvider
+import com.aos.agent.system.capture.ScreenCapture
 import com.aos.agent.system.update.ApkInstaller
 import com.aos.agent.system.update.AppVersionReader
 import com.aos.agent.system.voice.AndroidSpeechSynthesizer
@@ -157,6 +159,14 @@ class MainActivity : ComponentActivity() {
                         recreate()
                     }
                 },
+                onCapture = {
+                    val result = ScreenCapture(this@MainActivity).capture()
+                    val message = result.fold(
+                        onSuccess = { getString(R.string.capture_saved, it.name) },
+                        onFailure = { getString(R.string.capture_failed, it.message ?: "unknown") },
+                    )
+                    Toast.makeText(this@MainActivity, message, Toast.LENGTH_LONG).show()
+                },
             )
         }
     }
@@ -199,6 +209,7 @@ private fun AOSAgentApp(
     onLanguageToggle: () -> Unit,
     darkTheme: Boolean,
     onToggleTheme: () -> Unit,
+    onCapture: () -> Unit,
 ) {
     AOSAgentTheme(darkTheme = darkTheme) {
         var destination by rememberSaveable { mutableStateOf(Destination.Home) }
@@ -241,7 +252,7 @@ private fun AOSAgentApp(
             val driveMaskUp = driveRestricted && destination != Destination.Home
             // 遮罩覆盖导航和页面；底页保留组合但从无障碍树隐藏。
             Box(modifier = if (driveMaskUp) Modifier.semantics { hideFromAccessibility() } else Modifier) {
-                AOSAppShell(destination, driveRestricted, onNavigate = { destination = it }) {
+                AOSAppShell(destination, driveRestricted, onNavigate = { destination = it }, onCapture = onCapture) {
                     // 宿主始终在组合中，rail 切页不会取消请求或留下已释放的语音回调。
                     ChatConsole(
                         runtime = runtime,
