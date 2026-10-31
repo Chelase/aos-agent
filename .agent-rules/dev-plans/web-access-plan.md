@@ -429,11 +429,49 @@ WebFetcher.fetch(url, options)
 
 ## 8. 进度
 
-| 步骤 | 状态 |
+| 步骤 | 状态 | 说明 |
+|---|---|---|
+| Step 1 URL 守卫 + 能力探测 | **部分完成** | `UrlGuard` 已实现（40 个测试）；`WebCapability` 探测属 Phase 2，未做 |
+| Step 2 HTML 文本提取 | **已完成** | `HtmlTextExtractor`，12 个测试 |
+| Step 3 `web_search` | **已完成** | `WebSearchTool` + `DuckDuckGoSearchProvider`，18 个测试（含真实 fixture） |
+| Step 4 浏览器页 UI + 导航 | 未开始 | 需 `ui/browser/` + `AOSDestination.Browser` + 栈式导航 |
+| Step 5 浏览器会话与 Agent 打通 | 未开始 | 需 `BrowserController` |
+| Step 6 `browser_read` / `browser_act` | 未开始 | 需 JS 注入封装 + origin 校验 |
+
+### 8.1 Phase 1 已落地内容（2026-10-31）
+
+| 文件 | 职责 |
 |---|---|
-| Step 1 URL 守卫 + 能力探测 | 未开始 |
-| Step 2 HTML 文本提取 | 未开始 |
-| Step 3 `web_search` | 未开始 |
-| Step 4 浏览器页 UI + 导航 | 未开始 |
-| Step 5 浏览器会话与 Agent 打通 | 未开始 |
-| Step 6 `browser_read` / `browser_act` | 未开始 |
+| `core/web/UrlGuard.kt` | https 公网校验：拒内网/回环/链路本地/云元数据/IP 字面量/内网后缀；`checkWithDns` 解析后判地址；中文域名先转 punycode |
+| `core/web/HtmlTextExtractor.kt` | HTML → 文本/标题/链接；剥 script/style/注释；解实体；保留块级换行 |
+| `core/web/SearchProvider.kt` | `SearchProvider` 接口 + DuckDuckGo 实现（html 主端点 → lite 降级）；解开 `uddg=` 跳转链接 |
+| `core/tools/WebSearchTool.kt` | `web_search` 工具，`permission = Auto`，`limit` 夹在 1..20 |
+
+实现要点（踩过的坑）：
+
+- **标题要在剥噪声之前取**：`<title>` 在 `<head>` 里，而 `<head>` 被整块剥掉——顺序反了就永远拿不到标题。
+- **网络失败必须带原因**：最初 `runCatching { ... }.getOrNull()` 把异常吞成 null，报出来只有"无法连接"，
+  排查时看不出是超时、DNS 还是连接被拒。改为 `FetchResult` 密封类保留异常类型与消息。
+- **两个端点都失败才算网络错误**：主端点失败要先试 lite；主端点通了但解析不出条目才报"结构变了"——
+  否则会把"被限流"误报成"页面改版"。
+
+### 8.2 已知遗留
+
+| 项 | 说明 |
+|---|---|
+| `LlmStateMirrorTest.valuesWithSingleQuotesStayShellSafe` 失败 | **既有问题，非本次引入**：该测试需要 `sh`（Git Bash），本机 PATH 中没有。已用 `git stash` 在干净工作区复现确认 |
+| Lint 3 个 error | **既有问题，非本次引入**：`AgentForegroundService.kt:244`、`VoskWakeWordEngine.kt:131` 缺权限检查，`strings.xml:3` 缺英文翻译。已 stash 后复测确认 |
+| 沙箱内无法出网 | JUnit 沙箱无外网，真实端点调用会 `SocketTimeoutException`。端到端验证改用真实抓取的 HTML fixture（`app/src/test/resources/ddg_result_sample.html`）覆盖解析链路 |
+
+### 8.3 Phase 1 验收结果
+
+- [x] UrlGuard 单测全绿（13 个：内网/回环/元数据/IP 字面量/非 https/内网后缀/DNS 解析到内网/解析失败）
+- [x] HtmlTextExtractor 单测全绿（12 个：script 不泄漏、实体解码、结构保留、注释清理）
+- [x] `web_search` 单测全绿（18 个：固定 fixture 解析、真实 fixture 解析、结构变化报错、limit 夹取）
+- [x] 提示词断言（时效性先搜 / 摘要非正文 / 注入防护）
+- [x] 现有单测无回归（363 个测试，仅 1 个既有环境失败）
+- [x] 提示词增长约 140 token，在预算内
+- [x] Lint 我的新文件零告警
+- [ ] 真机复测：真实车机镜像上联网搜索（需在有网环境跑）
+- [ ] 真机复测：`web_search` 在车机弱网下的超时表现
+

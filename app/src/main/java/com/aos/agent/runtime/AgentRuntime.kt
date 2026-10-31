@@ -22,6 +22,7 @@ import com.aos.agent.core.tools.SystemInfoTool
 import com.aos.agent.core.tools.Tool
 import com.aos.agent.core.tools.ToolSystem
 import com.aos.agent.core.tools.VehicleBasicTool
+import com.aos.agent.core.tools.WebSearchTool
 import com.aos.agent.core.tools.mcp.McpServerConfig
 import com.aos.agent.core.tools.mcp.McpSourceStatus
 import com.aos.agent.core.tools.mcp.McpToolSource
@@ -136,6 +137,8 @@ class AgentRuntime(context: Context) {
             FileReadTool(listOf(toolOutputDir)),
             // 结构化提问：模型拿不准时问用户，不是危险操作，不经过 Ask 闸。
             AskUserTool(askUserChannel),
+            // 联网搜索：只读公开信息，不登录不写回，免确认。
+            WebSearchTool(),
         )
         val registry = SkillRegistry.parseAll(AssetSkillLoader(appContext).load())
         val system = ToolSystem(confirmer = toolConfirmer) { driveRestricted() }

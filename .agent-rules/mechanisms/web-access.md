@@ -16,17 +16,30 @@ ACCESS 的 `flutter_linux_webview`、OpenHarmony 的 `web_webview` 同路；不�
 
 ## 涉及对象
 
+**已实现（Phase 1：搜索）**
+
 | 层 | 文件/表 | 角色 |
 |---|---|---|
-| Core | `core/web/UrlGuard.kt` | URL 守卫：仅 https 公网，拒绝内网/回环/云元数据/IP 字面量 |
-| Core | `core/web/SearchProvider.kt` | 搜索引擎适配（DuckDuckGo html/lite 双端点） |
-| Core | `core/web/HtmlTextExtractor.kt` | HTML → 纯文本/markdown（纯函数） |
+| Core | `core/web/UrlGuard.kt` | URL 守卫：仅 https 公网，拒绝内网/回环/云元数据/IP 字面量/内网后缀 |
+| Core | `core/web/SearchProvider.kt` | 搜索引擎适配（DuckDuckGo html 主端点 → lite 降级） |
+| Core | `core/web/HtmlTextExtractor.kt` | HTML → 纯文本/标题/链接（纯函数） |
+| Tool | `core/tools/WebSearchTool.kt` | `web_search`：关键词 → 结果列表 |
+| Test | `test/resources/ddg_result_sample.html` | 真实抓取的搜索页片段，用于解析回归 |
+
+**待实现（Phase 2/3：浏览器页与 Agent 操作）**
+
+| 层 | 文件/表 | 角色 |
+|---|---|---|
 | Core | `core/web/WebCapability.kt` | WebView provider 可用性探测（运行期，不实例化） |
 | Core | `core/web/BrowserController.kt` | 浏览器会话状态机 + JS 注入封装（串行化、主线程、销毁后拒绝） |
-| Tool | `core/tools/WebSearchTool.kt` | `web_search`：关键词 → 结果列表 |
 | Tool | `core/tools/BrowserTool.kt` | `browser_read`：读当前页正文；`browser_act`：受控操作页面 |
 | UI | `ui/browser/BrowserScreen.kt` | 浏览器页：地址栏 + WebView + 状态条 |
 | UI | `ui/components/AOSAppShell.kt` | `AOSDestination.Browser` 导航项 + 栈式导航 |
+
+**通用**
+
+| 层 | 文件/表 | 角色 |
+|---|---|---|
 | Tool | `core/tools/mcp/` | 外部 MCP 服务接入（可选增强） |
 | System | `AndroidManifest.xml` | `INTERNET` / `ACCESS_NETWORK_STATE` 权限 |
 | System | `res/xml/network_security_config.xml` | 公网 TLS 强制；仅本地网段允许明文 |
@@ -36,16 +49,19 @@ ACCESS 的 `flutter_linux_webview`、OpenHarmony 的 `web_webview` 同路；不�
 ```
 [Agent 决定联网]
     |
-    +-- web_search(query)
+    +-- web_search(query)                    ← 已实现
     |     |
     |     v
     |   [SearchProvider.search]
-    |     | GET https://html.duckduckgo.com/html/?q=<encoded>
-    |     |   └─ 解析失败 → 降级 lite 端点 → 仍失败 → 结构化报错
+    |     | GET https://html.duckduckgo.com/html/?q=<encoded>（携桌面 UA）
+    |     |   ├─ 网络失败 → 试 lite 端点 → 都失败 → NetworkError（带异常类型与原因）
+    |     |   ├─ 通了但解析不出条目 → 试 lite → 仍空 → ParseFailed（"结构变化"）
+    |     |   └─ 成功 → 解开 uddg= 跳转链接 → 标题/真实URL/摘要
     |     v
     |   [ToolResult.Ok {status, query, results[], total, provider}]
+    |     status ∈ {ok, parse_failed, network_error}
     |
-    +-- browser_read / browser_act
+    +-- browser_read / browser_act           ← 待实现（Phase 3）
           |
           v
         [BrowserController]  ← 会话不存在 → 返回"浏览器未打开"降级
@@ -112,6 +128,13 @@ ACCESS 的 `flutter_linux_webview`、OpenHarmony 的 `web_webview` 同路；不�
 9. **页面主动回调宿主必须校验 origin**：页面与宿主的通信通道用 `addWebMessageListener`（按 origin 匹配），
    不用 `addJavascriptInterface`（把宿主对象直接暴露给任意页面）。任何页面发起的调用都要校验
    `sourceOrigin` 与当前页一致、且是主 frame、且当前页为 http/https，否则恶意页面可直接调用 Agent 能力。
+10. **网络失败必须带原因**：出网失败要区分连接超时、DNS 失败、连接被拒、非 2xx、空响应体，
+    不能统一报"无法连接"——排查时看不出差别。异常类型与消息要保留（注意别把凭据带进消息里）。
+11. **搜索端点的失败分三类**：网络失败（连不上）、解析失败（结构变了/被限流）、成功但无结果。
+    三者不可混为一谈，尤其**不能把"解析失败"返回成空列表**——那会让模型以为"没搜到"。
+    判定顺序：主端点网络失败 → 试 lite → 都失败才报网络错误；主端点通了但解析不出 → 试 lite
+    → 仍空才报解析失败。
+12. **主机名先转 punycode 再判断**：中文域名不规范化会绕过 `.local` / `.internal` 这类后缀检查。
 
 ## 维护方式
 
