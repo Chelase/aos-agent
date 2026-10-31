@@ -76,6 +76,8 @@ import com.aos.agent.system.voice.AndroidVoiceFocus
 import com.aos.agent.system.voice.WakeModelInstaller
 import com.aos.agent.system.voice.WakeModelState
 import com.aos.agent.terminal.TerminalViewModel
+import com.aos.agent.ui.browser.BrowserScreen
+import com.aos.agent.ui.browser.BrowserViewModel
 import com.aos.agent.ui.engineer.EngineerModeScreen
 import com.aos.agent.ui.components.AOSAppShell
 import com.aos.agent.ui.components.AOSDestination as Destination
@@ -125,6 +127,8 @@ class MainActivity : ComponentActivity() {
         val systemInfoProvider = SystemInfoProvider(AndroidSystemInfoReader(this))
         // 终端会话挂 ViewModel：语言/主题切换重建 Activity 后 shell 不掉
         val terminalViewModel = ViewModelProvider(this)[TerminalViewModel::class.java]
+        // 浏览器会话同样挂 ViewModel：重建 Activity 时 WebView 不重复创建、页面不丢
+        val browserViewModel = ViewModelProvider(this)[BrowserViewModel::class.java]
 
         voiceSettingsStore = VoiceSettingsStore(this)
         // 识别器与 TTS 都绑定主线程与 Activity 生命周期，随 Activity 创建/释放
@@ -147,6 +151,7 @@ class MainActivity : ComponentActivity() {
             AOSAgentApp(
                 systemInfoProvider = systemInfoProvider,
                 terminalViewModel = terminalViewModel,
+                browserViewModel = browserViewModel,
                 voiceController = voiceController,
                 voiceSettingsStore = voiceSettingsStore,
                 driveRestriction = uxRestrictions.restriction,
@@ -203,6 +208,7 @@ class MainActivity : ComponentActivity() {
 private fun AOSAgentApp(
     systemInfoProvider: SystemInfoProvider,
     terminalViewModel: TerminalViewModel,
+    browserViewModel: BrowserViewModel,
     voiceController: VoiceController,
     voiceSettingsStore: VoiceSettingsStore,
     driveRestriction: StateFlow<DriveRestriction>,
@@ -217,6 +223,10 @@ private fun AOSAgentApp(
 ) {
     AOSAgentTheme(darkTheme = darkTheme) {
         var destination by rememberSaveable { mutableStateOf(Destination.Home) }
+        // 从聊天点链接进浏览器时，返回应该回聊天而不是首页——记下来源页
+        var returnDestination by rememberSaveable { mutableStateOf<Destination?>(null) }
+        // 待加载的 URL：切到浏览器页后由 BrowserScreen 消费
+        var pendingUrl by rememberSaveable { mutableStateOf<String?>(null) }
         val pageStateHolder = rememberSaveableStateHolder()
         val settingsDraft = remember { SettingsDraft() }
         val restriction by driveRestriction.collectAsStateWithLifecycle()
@@ -266,6 +276,12 @@ private fun AOSAgentApp(
                         pageStateHolder = pageStateHolder,
                         onBackClick = { destination = Destination.Home },
                         onOpenSettings = { destination = Destination.Settings },
+                        onOpenLink = { url ->
+                            // 栈式：记下来源页，返回时回聊天而不是首页
+                            returnDestination = Destination.Chat
+                            pendingUrl = url
+                            destination = Destination.Browser
+                        },
                     )
                     if (destination != Destination.Chat) {
                         pageStateHolder.SaveableStateProvider(destination.name) {
@@ -296,6 +312,17 @@ private fun AOSAgentApp(
                                 Destination.Terminal -> TerminalScreen(
                                     viewModel = terminalViewModel,
                                     onBackClick = { destination = Destination.Home },
+                                )
+                                Destination.Browser -> BrowserScreen(
+                                    viewModel = browserViewModel,
+                                    initialUrl = pendingUrl,
+                                    onUrlConsumed = { pendingUrl = null },
+                                    onBackClick = {
+                                        // 栈式返回：从聊天进来的回聊天，其他来源回首页
+                                        val back = returnDestination ?: Destination.Home
+                                        returnDestination = null
+                                        destination = back
+                                    },
                                 )
                                 Destination.SystemPanel -> SystemPanelScreen(
                                     provider = systemInfoProvider,
@@ -344,6 +371,7 @@ private fun ChatConsole(
     pageStateHolder: SaveableStateHolder,
     onBackClick: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenLink: (String) -> Unit,
 ) {
     val entries = remember { mutableStateListOf<ChatEntry>() }
     var status by remember { mutableStateOf(RuntimeStatus.EMPTY) }
@@ -461,6 +489,7 @@ private fun ChatConsole(
                 voiceState = voiceState,
                 onBackClick = onBackClick,
                 onSend = { query -> submit(query) },
+                onOpenLink = onOpenLink,
                 onVoiceToggle = {
                     if (voiceState.needsPermission) {
                         permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)

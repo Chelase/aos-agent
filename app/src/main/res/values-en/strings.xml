@@ -254,4 +254,21 @@
     <string name="settings_capability_asr">Speech recognition</string>
     <string name="settings_capability_tts">Speech synthesis</string>
     <string name="settings_capability_hint">Unavailable voice controls are disabled. Type in Chat while parked. Voice features require the corresponding recognition or synthesis service on this device.</string>
+    <!-- Built-in browser -->
+    <string name="nav_browser">Browser</string>
+    <string name="browser_title">Browser</string>
+    <string name="browser_address_hint">Enter a URL or search term</string>
+    <string name="browser_edit_url">Enter</string>
+    <string name="browser_back">Back</string>
+    <string name="browser_forward">Forward</string>
+    <string name="browser_reload">Reload</string>
+    <string name="browser_unavailable">Built-in browser is not available on this device</string>
+    <string name="browser_starting">Starting browser…</string>
+    <string name="browser_home_title">Start browsing</string>
+    <string name="browser_home_hint">Enter a URL or search term in the address bar above</string>
+    <string name="browser_home_duckduckgo">DuckDuckGo</string>
+    <string name="browser_home_wikipedia">Wikipedia</string>
+    <string name="browser_home_android">Android docs</string>
+    <string name="action_go">Go</string>
+    <string name="action_retry">Retry</string>
 </resources>

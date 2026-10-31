@@ -16,9 +16,19 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.LinkInteractionListener
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withLink
 import com.aos.agent.R
+import com.aos.agent.core.web.UrlExtractor
 import com.aos.agent.runtime.RuntimeStatus
 import com.aos.agent.ui.components.*
 import com.aos.agent.ui.theme.*
@@ -30,6 +40,7 @@ fun ChatScreen(
     entries: List<ChatEntry>, status: RuntimeStatus, busy: Boolean,
     voiceState: VoiceUiState, onBackClick: () -> Unit,
     onSend: (String) -> Unit, onVoiceToggle: () -> Unit,
+    onOpenLink: (String) -> Unit = {},
 ) {
     var input by rememberSaveable { mutableStateOf("") }
     val listState = rememberLazyListState()
@@ -61,7 +72,7 @@ fun ChatScreen(
                             Text(stringResource(R.string.chat_empty_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
-                    items(entries) { ChatRow(it) }
+                    items(entries) { ChatRow(it, onOpenLink) }
                     if (busy) item {
                         Row(horizontalArrangement = Arrangement.spacedBy(AOSSpacing.md), verticalAlignment = Alignment.CenterVertically) {
                             CircularProgressIndicator(Modifier.size(AOSSizing.iconSize), strokeWidth = AOSSizing.borderWidth)
@@ -119,7 +130,7 @@ fun ChatScreen(
 }
 
 @Composable
-private fun ChatRow(entry: ChatEntry) {
+private fun ChatRow(entry: ChatEntry, onOpenLink: (String) -> Unit) {
     val user = entry is ChatEntry.User
     val tool = entry is ChatEntry.ToolCalled || entry is ChatEntry.ToolFinished
     val text = when (entry) {
@@ -142,15 +153,80 @@ private fun ChatRow(entry: ChatEntry) {
     }
     BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = if (user) Alignment.CenterEnd else Alignment.CenterStart) {
         val bubbleWidth = maxWidth * if (tool) 0.94f else 0.7f
-        Text(text,
-            style = if (tool) AOSDataText.standard else MaterialTheme.typography.bodyMedium,
-            color = foreground,
-            modifier = Modifier.widthIn(max = bubbleWidth)
-                .clip(RoundedCornerShape(
-                    topStart = AOSSizing.cardCorner, topEnd = AOSSizing.cardCorner,
-                    bottomStart = if (user) AOSSizing.cardCorner else AOSSpacing.sm,
-                    bottomEnd = if (user) AOSSpacing.sm else AOSSizing.cardCorner))
-                .background(background).padding(horizontal = AOSSpacing.lg, vertical = AOSSpacing.md),
-        )
+        // 只有助手回答里的链接可点：用户自己输入的文本点开没有意义，
+        // 工具轨迹里的 URL 也不是给人点的
+        val linkable = entry is ChatEntry.Assistant
+        val bubbleModifier = Modifier.widthIn(max = bubbleWidth)
+            .clip(RoundedCornerShape(
+                topStart = AOSSizing.cardCorner, topEnd = AOSSizing.cardCorner,
+                bottomStart = if (user) AOSSizing.cardCorner else AOSSpacing.sm,
+                bottomEnd = if (user) AOSSpacing.sm else AOSSizing.cardCorner))
+            .background(background).padding(horizontal = AOSSpacing.lg, vertical = AOSSpacing.md)
+        if (linkable) {
+            LinkifiedText(
+                text = text,
+                color = foreground,
+                modifier = bubbleModifier,
+                onOpenLink = onOpenLink,
+            )
+        } else {
+            Text(text,
+                style = if (tool) AOSDataText.standard else MaterialTheme.typography.bodyMedium,
+                color = foreground,
+                modifier = bubbleModifier,
+            )
+        }
     }
+}
+
+/**
+ * 把文本里的 https 链接渲染成可点的。
+ *
+ * 链接必须是 https 公网地址——抽取时已过 [com.aos.agent.core.web.UrlExtractor]
+ * 的守卫，明文 http 和内网地址根本不会进来。
+ */
+@Composable
+private fun LinkifiedText(
+    text: String,
+    color: Color,
+    modifier: Modifier = Modifier,
+    onOpenLink: (String) -> Unit,
+) {
+    val links = remember(text) { UrlExtractor.extract(text) }
+    val linkColor = MaterialTheme.colorScheme.primary
+    // 回调每次重组都是新实例。用 rememberUpdatedState 兜住，
+    // 否则记住的 AnnotatedString 会一直用第一次那个回调。
+    val currentOpen by rememberUpdatedState(onOpenLink)
+    val annotated = remember(text, links, linkColor) {
+        buildAnnotatedString {
+            var cursor = 0
+            links.forEach { link ->
+                if (link.start > cursor) append(text.substring(cursor, link.start))
+                withLink(LinkAnnotation.Url(
+                    url = link.url,
+                    styles = TextLinkStyles(
+                        style = SpanStyle(
+                            color = linkColor,
+                            textDecoration = TextDecoration.Underline,
+                        ),
+                    ),
+                    // 默认行为是交给系统开外部浏览器；车机上应该在内置浏览器里打开
+                    linkInteractionListener = LinkInteractionListener { annotation ->
+                        val target = (annotation as? LinkAnnotation.Url)?.url
+                        if (target != null) currentOpen(target)
+                    },
+                )) {
+                    append(link.url)
+                }
+                cursor = link.end
+            }
+            if (cursor < text.length) append(text.substring(cursor))
+        }
+    }
+    Text(
+        text = annotated,
+        style = MaterialTheme.typography.bodyMedium,
+        color = color,
+        modifier = modifier,
+    )
 }

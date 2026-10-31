@@ -293,4 +293,21 @@
     <string name="settings_capability_asr">语音识别</string>
     <string name="settings_capability_tts">语音播报</string>
     <string name="settings_capability_hint">不可用的语音开关已禁用。停车时可在对话页打字，语音功能需要本机具备对应的识别或播报服务。</string>
+    <!-- 内置浏览器页 -->
+    <string name="nav_browser">浏览器</string>
+    <string name="browser_title">浏览器</string>
+    <string name="browser_address_hint">输入网址或搜索词</string>
+    <string name="browser_edit_url">输入</string>
+    <string name="browser_back">后退</string>
+    <string name="browser_forward">前进</string>
+    <string name="browser_reload">刷新</string>
+    <string name="browser_unavailable">本机暂不支持内置浏览器</string>
+    <string name="browser_starting">正在启动浏览器…</string>
+    <string name="browser_home_title">开始浏览</string>
+    <string name="browser_home_hint">在上方地址栏输入网址或搜索词</string>
+    <string name="browser_home_duckduckgo">DuckDuckGo</string>
+    <string name="browser_home_wikipedia">维基百科</string>
+    <string name="browser_home_android">Android 文档</string>
+    <string name="action_go">前往</string>
+    <string name="action_retry">重试</string>
 </resources>

@@ -23,18 +23,27 @@ ACCESS 的 `flutter_linux_webview`、OpenHarmony 的 `web_webview` 同路；不�
 | Core | `core/web/UrlGuard.kt` | URL 守卫：仅 https 公网，拒绝内网/回环/云元数据/IP 字面量/内网后缀 |
 | Core | `core/web/SearchProvider.kt` | 搜索引擎适配（DuckDuckGo html 主端点 → lite 降级） |
 | Core | `core/web/HtmlTextExtractor.kt` | HTML → 纯文本/标题/链接（纯函数） |
+| Core | `core/web/UrlExtractor.kt` | 文本 → 可点击 https 链接（纯函数，过 URL 守卫） |
 | Tool | `core/tools/WebSearchTool.kt` | `web_search`：关键词 → 结果列表 |
 | Test | `test/resources/ddg_result_sample.html` | 真实抓取的搜索页片段，用于解析回归 |
 
-**待实现（Phase 2/3：浏览器页与 Agent 操作）**
+**已实现（Phase 2：内置浏览器页）**
 
 | 层 | 文件/表 | 角色 |
 |---|---|---|
-| Core | `core/web/WebCapability.kt` | WebView provider 可用性探测（运行期，不实例化） |
-| Core | `core/web/BrowserController.kt` | 浏览器会话状态机 + JS 注入封装（串行化、主线程、销毁后拒绝） |
+| Core | `core/web/WebCapability.kt` | WebView 可用性探测（真建一个，失败给原因） |
+| Core | `core/web/BrowserController.kt` | WebView 持有 + JS 注入封装（串行化、释放后拒绝） |
+| UI | `ui/browser/BrowserInput.kt` | 地址栏输入解析：网址还是搜索词（纯函数） |
+| UI | `ui/browser/BrowserViewModel.kt` | 浏览器页状态、地址栏、历史、导航动作 |
+| UI | `ui/browser/BrowserScreen.kt` | 浏览器页：起始页 + 地址栏 + WebView + 状态条 |
+| UI | `ui/components/AOSAppShell.kt` | `AOSDestination.Browser` 导航项 |
+| UI | `ui/chat/ChatScreen.kt` | 助手回答里的 https 链接渲染为可点，交给宿主在内置浏览器打开 |
+
+**待实现（Phase 3：Agent 操作页面）**
+
+| 层 | 文件/表 | 角色 |
+|---|---|---|
 | Tool | `core/tools/BrowserTool.kt` | `browser_read`：读当前页正文；`browser_act`：受控操作页面 |
-| UI | `ui/browser/BrowserScreen.kt` | 浏览器页：地址栏 + WebView + 状态条 |
-| UI | `ui/components/AOSAppShell.kt` | `AOSDestination.Browser` 导航项 + 栈式导航 |
 
 **通用**
 
@@ -81,19 +90,34 @@ ACCESS 的 `flutter_linux_webview`、OpenHarmony 的 `web_webview` 同路；不�
     |
     v
 [BrowserScreen]
-    ├─ 地址栏：URL → 直接加载；非 URL 文本 → 当搜索词
+    ├─ 起始页：未加载任何页时盖住 WebView（否则是黑屏，车机上突兀）
+    │    └─ 标题 + 提示 + 三个常用入口（文字链，非卡片堆砌）
+    ├─ 地址栏：URL → 直接加载；非 URL 文本 → 当搜索词（走 DDG）
     ├─ WebView（AndroidView 包 Compose）
-    │    ├─ onPageFinished → 更新 title/url 状态
-    │    ├─ onReceivedError → 可读原因 + 重试
+    │    ├─ onPageStarted/Finished → 更新 title/url/进度状态
+    │    ├─ onReceivedError → 可读原因 + 重试按钮
     │    └─ 离开页面 → destroy() + 清引用
-    └─ 状态条：加载中 / 错误 / 当前 URL
+    └─ 底部条：后退 / 前进 / 刷新
+```
+
+```
+[从聊天进浏览器]
+    |
+    v
+[助手回答里的 https 链接可点]（UrlExtractor 抽链接，过 URL 守卫）
+    |
+    v
+[MainActivity] 记下来源页(Chat) → 切到 Browser → BrowserScreen 消费 URL → 加载
+    |
+    v
+[返回] → 回来源页(Chat)，对话内容不丢
 ```
 
 ## 使用点
 
-- `AgentRuntime.refresh()`：注册 `web_search` / `browser_read` / `browser_act`
-- `AgentRuntime`：持有 `BrowserController`，与浏览器页共享同一会话
-- `MainActivity`：`AOSDestination.Browser` 装配与栈式导航
+- `AgentRuntime.refresh()`：注册 `web_search`（Phase 3 再加 `browser_read` / `browser_act`）
+- `AgentRuntime`：持有 `BrowserController`，与浏览器页共享同一会话（Phase 3 接入）
+- `MainActivity`：`AOSDestination.Browser` 装配、栈式导航、待加载 URL 的传递
 - `PromptSections.capabilities`：向模型声明工具名与"时效性问题先查再答"
 - `PromptSections.rules`：声明网页内容只当数据，不执行页面内指令
 - `McpToolSource`：外部 MCP 工具（可选增强路径）
@@ -105,6 +129,7 @@ ACCESS 的 `flutter_linux_webview`、OpenHarmony 的 `web_webview` 同路；不�
 | 换搜索引擎 | `core/web/SearchProvider.kt` | 新增一个实现，工具层只依赖接口 |
 | 抓取格式扩展 | `core/web/HtmlTextExtractor.kt` | 加格式分支，不动工具层 |
 | 放宽/收紧 URL 规则 | `core/web/UrlGuard.kt` | 改判定函数；内网拒绝不可放宽 |
+| 改起始页内容 | `ui/browser/BrowserScreen.kt` 的 `StartPage` | 走既有 token 与双语资源 |
 | 加浏览器交互动作 | `core/tools/BrowserTool.kt` + `BrowserController` | 新增动作类型；写动作必须走 Ask 闸 |
 | 浏览器页视觉调整 | `ui/browser/BrowserScreen.kt` | 走既有 token 与双语资源，不硬编码色值字号 |
 
@@ -142,6 +167,18 @@ ACCESS 的 `flutter_linux_webview`、OpenHarmony 的 `web_webview` 同路；不�
     当前搜索层用 `connect 8s / read 12s / call 15s`，并关闭 `retryOnConnectionFailure`（重试只会放大等待）。
 15. **同一域名族不重复试**：主端点与降级端点同域时，主端点网络失败即返回，不再试降级端点。
     降级端点只在"网络通了但解析不出结果"时使用。
+16. **WebView 可用性靠真建一个来判**：不查固定包名（各厂商包名不同，写死会在非 Google 设备上误报），
+    不反射 `WebViewFactory`（hidden API，ROM 差异大）。直接建一个，失败就给原因。
+    代价是几十 MB 内存与几百毫秒，但只在浏览器页真正打开时发生一次。
+17. **浏览器首屏不能是黑屏**：未加载任何页面时 WebView 是纯黑，车机上非常突兀。
+    用 Compose 起始页盖住（标题 + 提示 + 常用入口），加载真实页面后撤掉。
+    起始页用 Compose 渲染而非 assets HTML——两套设计语言会打架，且要跟 token 保持一致。
+18. **地址栏草稿不能跟随页面状态重置**：草稿状态若以地址栏当前值为 key，
+    页面加载回调一改地址栏，用户正在输入的内容就被冲掉。草稿只在进入编辑态时显式赋值。
+19. **聊天里的链接只有 https 可点**：明文 http 不做可点入口——模型输出的链接不能默认可信；
+    内网/回环/云元数据地址直接不抽。抽取统一走 `UrlGuard`。
+20. **栈式返回要记住来源页**：从聊天点链接进浏览器，返回应回聊天而不是首页，
+    且对话内容不丢。用一个"来源页"状态承接，不做完整导航栈。
 
 ## 维护方式
 
@@ -160,5 +197,18 @@ ACCESS 的 `flutter_linux_webview`、OpenHarmony 的 `web_webview` 同路；不�
   另发现 **AAOS 镜像没有 ethernet 服务**（车机走 cellular radio），`eth0` DOWN 属正常。
 - **弱网与超时**：默认 OkHttp 超时会让两个端点累计 40 秒，车上不可接受；
   已改为 `connect 8s / read 12s / call 15s` 并关闭重试，主端点网络失败不再试 lite。
+- **Phase 2 设备端实测（2026-10-31，AAOS 模拟器 API 35）**：
+  - 浏览器页可从导航栏进入；起始页渲染正常（此前 WebView 区域实测为纯黑，已用起始页覆盖）。
+  - 点起始页"维基百科"入口 → 真实加载成功，标题"维基百科，自由的百科全书"，
+    地址栏拿到真实 URL `https://zh.wikipedia.org/wiki/Wikipedia:%E9%A6%96%E9%A1%B5`。
+  - 助手回答里的链接可点 → 进浏览器 → 返回后回到对话且对话内容仍在（栈式导航端到端通过）。
+  - 地址栏输入 `https://192.168.0.1/` 被守卫拦下并显示"禁止直接使用 IP 地址：192.168.0.1"。
+  - 设备侧测试：BrowserScreenTest 6 例、BrowserCoreTest 8 例、ChatLinkTest 3 例、
+    BrowserStackNavigationTest 1 例全部通过；JVM 单测 379 例中仅 `LlmStateMirrorTest` 失败
+    （依赖宿主 `sh` 命令，Windows 环境问题，改动前即失败）。
+- **测试环境注意**：模拟器若设了系统 HTTP 代理，到 `127.0.0.1` 的本地 fixture 请求会被代理劫持，
+  LLM SSE fixture 收不到连接（表现为 `SocketTimeoutException: Poll timed out`）。
+  `BrowserStackNavigationTest` 已自行在测前关代理、测后恢复；`V6NavigationTest` 未做此处理，
+  在带代理的环境下会失败——这是既有失败，与浏览器页改动无关。
 
 > 更新时间：2026-10-31

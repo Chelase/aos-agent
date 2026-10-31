@@ -25,6 +25,7 @@ import com.aos.agent.ui.theme.*
 enum class AOSDestination(@param:StringRes val label: Int, val icon: Int) {
     Home(R.string.nav_home, R.drawable.ic_nav_home),
     Chat(R.string.action_chat, R.drawable.ic_nav_chat),
+    Browser(R.string.nav_browser, R.drawable.ic_nav_browser),
     Terminal(R.string.action_terminal, R.drawable.ic_nav_terminal),
     SystemPanel(R.string.nav_panel, R.drawable.ic_nav_panel),
     Settings(R.string.action_settings, R.drawable.ic_nav_settings),

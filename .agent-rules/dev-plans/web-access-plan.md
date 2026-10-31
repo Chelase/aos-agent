@@ -287,9 +287,9 @@ DuckDuckGoSearchProvider.search(query, limit)
 > 携桌面 UA 返回 HTTP 200、34,396 字节，解析锚点 `result__a`、`result__snippet`、
 > `uddg=` 重定向参数均存在，未触发 anomaly 反爬页。说明该端点在带 UA 时可用。
 
-### Phase 2：内置浏览器页（用户可见）
+### Phase 2：内置浏览器页（用户可见）  ✅ 已落地（2026-10-31）
 
-#### Step 4：浏览器页 UI + 导航
+#### Step 4：浏览器页 UI + 导航  ✅
 
 ```
 [AOSDestination.Browser]（新增导航项）
@@ -310,7 +310,15 @@ DuckDuckGoSearchProvider.search(query, limit)
 
 **验收**：模拟器上走通——打开 URL、后退前进、输入搜索词、加载失败有提示、离开页后 WebView 已销毁。
 
-#### Step 5：浏览器会话与 Agent 打通
+> **实测记录（2026-10-31，AAOS 模拟器 API 35）**：
+> 起点页渲染正常；点起点页"维基百科"入口 → 真实加载成功，标题与真实 URL 均正确回填；
+> 地址栏输入 `https://192.168.0.1/` 被守卫拦下并显示可读原因；离开页再回来可重新初始化。
+> **发现并修掉的两个真问题**：
+> 1. WebView 未加载任何页时是纯黑屏，车机上非常突兀 → 用 Compose 起始页盖住，加载后撤掉；
+> 2. 地址栏草稿以地址栏当前值为 key，页面加载回调一改地址栏就把用户正在输入的内容冲掉
+>    → 草稿只在进入编辑态时显式赋值。
+
+#### Step 5：浏览器会话与 Agent 打通  ⏸ 部分落地（注入封装已就绪，共享会话留到 Phase 3）
 
 ```
 BrowserController（单例，挂在 AgentRuntime 生命周期上）
@@ -321,6 +329,11 @@ BrowserController（单例，挂在 AgentRuntime 生命周期上）
 ```
 
 **验收**：单测——无会话时调用返回降级；会话已销毁时调用不崩。
+
+> **落地情况**：`BrowserController.evaluate`（串行化 + 超时 + 结构化失败）已实现，
+> 无会话时返回"浏览器未打开"，释放后调用不崩。
+> **未做**：把 Controller 挂到 `AgentRuntime` 做跨层共享会话——Phase 2 的浏览器页
+> 与 Agent 工具尚未同时存在，共享没有实际收益，等 Phase 3 接 `browser_read` 时一起做更合适。
 
 ### Phase 3：Agent 自主操作
 
