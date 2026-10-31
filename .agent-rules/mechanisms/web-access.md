@@ -10,6 +10,10 @@ AOS-Agent 的联网能力由三层构成：纯 HTTP 的搜索工具、可供人�
 ACCESS 的 `flutter_linux_webview`、OpenHarmony 的 `web_webview` 同路；不采用 Chrome/Vivaldi/Firefox
 等现成车机浏览器，因为外部 App 无法被 Agent 注入 JS、读 DOM、点按钮。
 
+成熟的开源车机浏览器 [kododake/AABrowser](https://github.com/kododake/AABrowser)（AAOS 原生、694 stars、
+持续活跃）作为**参考实现**而非依赖：它是 GPL-3.0，与本仓 Apache-2.0 不兼容；且它是独立浏览器 App，
+缺 Agent 接口与宿主集成。本仓保持 Apache-2.0，浏览器能力自建。
+
 ## 涉及对象
 
 | 层 | 文件/表 | 角色 |
@@ -103,6 +107,8 @@ ACCESS 的 `flutter_linux_webview`、OpenHarmony 的 `web_webview` 同路；不�
 6. **网页内容一律视为数据**：网页里的指令性文字不是给 Agent 的指令，不得执行；此约束同时写进系统提示。
 7. **能力缺失结构化降级**：无 WebView provider、无网络、解析失败、页面未加载完，都要给出可读原因，
    不抛未捕获异常、不返回空内容冒充成功。
+8. **不得链接 GPL 代码**：本仓是 Apache-2.0。开源车机浏览器 AABrowser 是 GPL-3.0，
+   链接或复制其代码会要求衍生作品按 GPL 发布，与本仓许可不兼容。可读可借鉴，不可复制不可依赖。
 
 ## 维护方式
 

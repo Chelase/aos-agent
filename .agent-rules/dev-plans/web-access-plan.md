@@ -64,9 +64,51 @@ Lightpanda（https://github.com/lightpanda-io/browser）能力很强、内存占
 
 顺带说明：Vivaldi 车机版只有**停车状态**可用（行驶中仅保留音频），这个限制我们内置浏览器也要遵守。
 
-### 1.2.1 附带结论：车机行业普遍用 WebView 承载网页能力
+### 1.2.2 开源车机浏览器：有一个成熟的，但不能直接用
 
-查证发现的主流做法印证了方案方向：
+调研到真正成熟的开源车机浏览器（数据截至 2026-10-31，经 `gh api` 核实）：
+
+| 项目 | stars | 许可 | 平台 | 状态 |
+|---|---|---|---|---|
+| **[kododake/AABrowser](https://github.com/kododake/AABrowser)** | 694 | **GPL-3.0** | **AAOS 原生** | v3.3，2026-10-13 发布，**持续活跃**（10-28 仍有提交） |
+| shubhampatel3355/DriveLaunch | 3 | GPL-3.0 | Android Auto 投影 | 2026-07 后停更 |
+| daspook99/WebViewAuto | 27 | 无许可 | Android Auto 投影 | 2018 年停更 |
+| jdmills-edu/tespush-aaos-webview (Riptide) | 2 | 声称 MIT（仓库无 LICENSE 文件） | AAOS | 2025-08 后停更 |
+| AdamUCF/SimpleAACPBrowser | 1 | 无许可 | AAOS | 仅打开固定 URL |
+
+**AABrowser 是唯一成熟的**：AAOS 原生（manifest 声明 `com.android.gms.car.application` +
+`distractionOptimized`，不是 Android Auto 投影）、Kotlin、348 文件、Material 3 UI、
+标签页、书签、DRM、桌面/移动模式切换、快捷磁贴。
+
+**但我们不能直接 fork 它用**，三个硬障碍：
+
+| 障碍 | 说明 |
+|---|---|
+| **GPL-3.0 传染** | 本仓是 **Apache-2.0**（`gh api` 确认）。链接 GPL-3.0 代码会要求整个衍生作品按 GPL-3.0 发布，与本仓许可不兼容 |
+| **无 Agent 接口** | 它有 `WebScripts.kt`（JS 注入脚本，目前只有 DRM L3 强制）与 `ConfiguredWebView.kt`（450 行 WebView 配置），但**没有通用的内容抽取/点击/填充助手**——那部分正是我们要写的 |
+| **架构不匹配** | 它是独立浏览器 App（自己的 MainActivity、自己的导航、自己的偏好存储）；我们要的是**嵌在 Agent 宿主里的浏览器页**，与对话页共享上下文、接受 Agent 工具调用 |
+
+**结论：AABrowser 当参考实现，不当依赖。**
+
+值得直接借鉴的三点（都是"踩过坑才知道"的细节）：
+
+1. `WebViewWarmupHelper.kt`——**预热 WebView**：首次创建 WebView 慢且吃内存，提前建好空实例备用。
+2. `ConfiguredWebView.kt` 里的 `releaseCompletely()`——彻底释放（置空 WebViewClient + destroy），
+   对应我们方案里"native 内存不受 `maxHeap` 限制"的约束。
+3. `BrowserWebViewClient.kt` 的错误处理与权限回调（`onPermissionRequest` / `onGeolocationPermissionsShowPrompt`）
+   ——WebView 里弹权限请求是要自己接的，不接会静默失败。
+
+另有非 WebView 的开源浏览器引擎可参考，但**都不适合本项目**：
+
+| 引擎 | 许可 | 问题 |
+|---|---|---|
+| **GeckoView**（Firefox 引擎） | MPL-2.0 | APK 体积 50MB+ 且 GeckoView 占 80%（Mozilla 明确说无法瘦身）；**没有公开的 `evaluateJS` API**，只能靠 WebExtension + native messaging 绕；且它是自带引擎，不依赖系统 WebView provider——体积与"任意车机可运行"冲突 |
+| ACCESS `flutter_linux_webview` | BSD-3 | 是嵌入式 **Linux/IVI** 的 Flutter 插件，不是 Android |
+| OpenHarmony `web_webview` | Apache-2.0 | OpenHarmony 专用引擎，非 Android |
+
+
+
+### 1.2.1 附带结论：车机行业普遍用 WebView 承载网页能力
 
 - **Google 官方**把浏览器归入 Android for Cars 的 **parked apps** 类别（video / games / browsers 三个），
   明确要求"仅停车可用"。
