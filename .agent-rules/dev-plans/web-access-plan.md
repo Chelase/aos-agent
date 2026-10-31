@@ -35,23 +35,47 @@ Lightpanda（https://github.com/lightpanda-io/browser）能力很强、内存占
 **Lightpanda 的定位**：可作为**开发期/CI 侧**的可选 MCP 服务（它自带 `lightpanda mcp --port 9223`，
 本项目 MCP 客户端已支持 Streamable HTTP），不计入车机端能力。
 
-### 1.2 为什么自己内置 WebView，而不是装 Vivaldi 车机版
+### 1.2 为什么自己内置 WebView，而不是装现成车机浏览器
 
-Vivaldi 确实有官方车机版（`com.vivaldi.browser.automotive`），但**不适合本项目**：
+车机浏览器确实有成熟产品。截至 2026-10，AAOS（GAS / Google built-in）平台上有三个：
 
-| 事实 | 依据 |
+| 浏览器 | 包名 | 状态 | 获取渠道 |
+|---|---|---|---|
+| **Google Chrome** | `com.android.chrome` | 首个，2024 起 beta | 车机 Play 商店 |
+| **Vivaldi** | `com.vivaldi.browser.automotive` | 2023 起 | 车机 Play 商店；官网**不提供**车机版 APK 直链 |
+| **Firefox** | `org.mozilla.firefox` | 2026-10 新增 | 车机 Play 商店（随新 Play 商店改版逐步推送） |
+
+国内车机（非 GAS）多为 OEM 自研，公开可查的只有：极氪 OS 5.3 新增"浏览器 App"（**仅 P 挡可用**）；
+比亚迪 DiLink 有内置 `com.android.browser`（社区有启动器工具）。
+
+**都不适合本项目**，原因逐条：
+
+| 问题 | 影响 |
 |---|---|
-| 官方分发靠车机自带 Google Play | 官网只给 exe/macOS 桌面版；车机版走车机里的 Play 商店搜"Vivaldi Browser"安装 |
-| 侧载门槛高 | 非 GAS 车机需自己解决 APK 获取（官网**不提供**车机版 APK 直链）+ USB/Files/ADB 任一可用 |
-| 需 Play Services 相关组件 | 无 GAS 镜像上"需要 Google Play Services 的应用可能失败" |
-| 侧载应用可能被 OTA 清除 | 车机固件升级会移除非商店安装的应用 |
-| **无法被 Agent 操作** | 独立 App，Agent 无权注入 JS、读 DOM、点按钮——这是最致命的一点 |
-| 车机屏幕适配 | 侧载应用"在超宽屏上可能缩放不正确" |
+| **无法被 Agent 操作** | 独立 App，Agent 无权注入 JS、读 DOM、点按钮——**决定性理由** |
+| 分发依赖 GAS | 非 GAS 车机无 Play 商店，得自己找第三方 APK 源 |
+| 需 Play Services | 无 GAS 镜像上"需要 Google Play Services 的应用可能失败" |
+| 侧载可能被 OTA 清除 | 车机固件升级会移除非商店安装的应用 |
+| 超宽屏缩放可能不正确 | 车机常见 2560x1600 这类比例 |
+| 仅停车可用（**这点我们反而要遵守**） | 三家全是 parked-only；我们内置浏览器同样按行驶中锁定处理 |
 
-**决定性理由是最后两条**：Vivaldi 是给人用的独立浏览器，而本项目要的是
-**Agent 能读能控的内嵌浏览器**。装一个外部浏览器解决不了 Agent 自主操作的问题。
+**决定性理由是第一条**：Vivaldi/Chrome/Firefox 是给人用的独立浏览器，
+而本项目要的是**Agent 能读能控的内嵌浏览器**。装一个外部浏览器解决不了 Agent 自主操作。
 
 顺带说明：Vivaldi 车机版只有**停车状态**可用（行驶中仅保留音频），这个限制我们内置浏览器也要遵守。
+
+### 1.2.1 附带结论：车机行业普遍用 WebView 承载网页能力
+
+查证发现的主流做法印证了方案方向：
+
+- **Google 官方**把浏览器归入 Android for Cars 的 **parked apps** 类别（video / games / browsers 三个），
+  明确要求"仅停车可用"。
+- **蔚来**公开分享的方案是"基于 RTOS + VM + **WebView** 的应用运行容器"，用 **JS Bridge** 连接座舱设备；
+  其演进方向是"基于 Chromium、WebF 在车端为前端应用提供更高性能的运行容器"。
+- **ACCESS** 的开源 `flutter_linux_webview`（BSD-3-Clause）就是给嵌入式 Linux/IVI 的 Chromium WebView 插件。
+- **OpenHarmony** 的 `web_webview` 引擎基于 Chromium/CEF。
+
+即：**"车机内置 WebView + JS Bridge"是行业通行做法**，本方案与之一致，不是自造轮子。
 
 ### 1.3 WebView 的能力边界（**必须如实告知用户**）
 
@@ -214,7 +238,8 @@ DuckDuckGoSearchProvider.search(query, limit)
 要点：
 
 - **地址栏**：输入非 URL 文本 → 当搜索词走 `web_search` 并把结果页渲染出来（浏览器里也能搜）
-- **行驶中锁定**：复用现有 `driveRestricted` 遮罩，行驶中浏览器页不可交互（与 Vivaldi 车机版"仅停车可用"一致）
+- **行驶中锁定**：复用现有 `driveRestricted` 遮罩，行驶中浏览器页不可交互。这与行业惯例一致——
+  Google 把浏览器归入 parked apps 类别，Chrome/Vivaldi/Firefox 三家车机版全部仅停车可用。
 - **WebView 销毁**：离开浏览器页 → `destroy()` + 清引用（native 内存不受 `maxHeap` 限制）
 - **错误页**：加载失败给可读原因 + 重试按钮，不白屏
 
@@ -316,7 +341,7 @@ WebFetcher.fetch(url, options)
 ## 6. 不在本期做的事
 
 - Lightpanda 接入车机端——技术上不成立（无 Android 构建）；可另起开发期 MCP 方案
-- 装 Vivaldi 车机版作为"浏览器"——解决不了 Agent 自主操作（外部 App 无法注入 JS/读 DOM）
+- 装现成车机浏览器（Chrome/Vivaldi/Firefox）作为"浏览器"——解决不了 Agent 自主操作（外部 App 无法注入 JS/读 DOM）
 - 多标签页、书签同步、下载管理器、无痕模式、扩展机制、广告拦截
 - Agent 自动登录/自动提交表单——写操作一律走人工确认
 - 自建搜索引擎/爬虫集群——车机场景不成立

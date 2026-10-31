@@ -6,6 +6,10 @@ AOS-Agent 的联网能力由三层构成：纯 HTTP 的搜索工具、可供人�
 以及在浏览器页上做只读抽取与受控操作的 Agent 工具；所有外网请求必须过 URL 守卫，
 能力缺失时结构化降级而非崩溃。
 
+采用"车机内置 WebView + JS Bridge"是行业通行做法，与蔚来的 WebView 运行容器、
+ACCESS 的 `flutter_linux_webview`、OpenHarmony 的 `web_webview` 同路；不采用 Chrome/Vivaldi/Firefox
+等现成车机浏览器，因为外部 App 无法被 Agent 注入 JS、读 DOM、点按钮。
+
 ## 涉及对象
 
 | 层 | 文件/表 | 角色 |
@@ -90,12 +94,14 @@ AOS-Agent 的联网能力由三层构成：纯 HTTP 的搜索工具、可供人�
    `localhost`/`*.local`/`*.internal`，以及 IP 字面量直连（防 DNS rebinding）。所有外网入口都必须先过它。
 2. **浏览器用有窗口的 WebView，不用无头的**：Chromium 明确声明脱离窗口的 WebView 属未受支持用法
    （可能崩、升级即失效）。有窗口既避开该风险，也让 Agent 自主操作与人工操作共用同一实例。
-3. **WebView 必须显式释放**：其内存主要在 native 侧，不受 `maxHeap` 限制，不释放会持续涨并触发 LMK。
+3. **浏览器仅停车可用**：与行业惯例一致——Google 把浏览器归入 parked apps 类别，
+   Chrome/Vivaldi/Firefox 三家车机版全部仅停车可用。行驶中锁定浏览器页，复用现有 `driveRestricted` 遮罩。
+4. **WebView 必须显式释放**：其内存主要在 native 侧，不受 `maxHeap` 限制，不释放会持续涨并触发 LMK。
    离开页面必须 `destroy()` 并清引用。
-4. **Agent 的浏览器写操作必须走 Ask 闸**：`browser_act` 的点击/填写可能触及付费、提交、登录等真实后果，
+5. **Agent 的浏览器写操作必须走 Ask 闸**：`browser_act` 的点击/填写可能触及付费、提交、登录等真实后果，
    需人工确认；无确认器即拒（与现有 `ToolPermission.Ask` 一致）。
-5. **网页内容一律视为数据**：网页里的指令性文字不是给 Agent 的指令，不得执行；此约束同时写进系统提示。
-6. **能力缺失结构化降级**：无 WebView provider、无网络、解析失败、页面未加载完，都要给出可读原因，
+6. **网页内容一律视为数据**：网页里的指令性文字不是给 Agent 的指令，不得执行；此约束同时写进系统提示。
+7. **能力缺失结构化降级**：无 WebView provider、无网络、解析失败、页面未加载完，都要给出可读原因，
    不抛未捕获异常、不返回空内容冒充成功。
 
 ## 维护方式
