@@ -60,6 +60,11 @@ object UrlGuard {
      *
      * 解析失败**不放行**：域名解析不出来时无法证明它是公网地址，
      * 让它过等于把判断交给网络层。调用方应把解析失败当网络错误处理。
+     *
+     * **注意代理环境（车机常态）**：若设备走 HTTP 代理，域名由代理侧解析，
+     * 本地 `InetAddress.getAllByName` 会失败——此时本方法会误判为"非公网"而拒绝。
+     * 生产用 URL 校验请走 [check]（静态判断），需要 DNS 判定的场景（如 SSRF 防护）
+     * 要么用 [check] 配合服务端二次校验，要么在代理环境下跳过 DNS 判定。
      */
     fun checkWithDns(raw: String, resolver: (String) -> List<InetAddress> = { host ->
         runCatching { InetAddress.getAllByName(host).toList() }.getOrElse { emptyList() }

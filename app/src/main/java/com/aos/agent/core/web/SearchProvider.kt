@@ -1,6 +1,7 @@
 package com.aos.agent.core.web
 
 import java.net.URLDecoder
+import java.util.concurrent.TimeUnit
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
@@ -44,7 +45,7 @@ data class SearchResult(
  * 两个端点都要求带桌面 UA，否则会被当成异常流量。
  */
 class DuckDuckGoSearchProvider(
-    private val client: OkHttpClient = OkHttpClient(),
+    private val client: OkHttpClient = defaultClient(),
 ) : SearchProvider {
 
     override val name: String = "duckduckgo"
@@ -55,20 +56,9 @@ class DuckDuckGoSearchProvider(
 
         when (val html = fetch(HTML_ENDPOINT, trimmed)) {
             is FetchResult.Failure -> {
-                // 主端点就失败了：先试 lite，都不行才算网络错误
-                val lite = fetch(LITE_ENDPOINT, trimmed)
-                if (lite is FetchResult.Success) {
-                    val liteResults = parseLiteResults(lite.body)
-                    if (liteResults.isNotEmpty()) {
-                        return SearchProvider.SearchOutcome.Ok(liteResults.take(limit), "$name-lite")
-                    }
-                }
-                val reason = if (lite is FetchResult.Failure) {
-                    "主端点 ${html.reason}；lite 端点 ${lite.reason}"
-                } else {
-                    "主端点 ${html.reason}"
-                }
-                return SearchProvider.SearchOutcome.NetworkError(reason)
+                // 主端点连不上时不再试 lite：两个端点同在 duckduckgo.com，
+                // 网络不通时 lite 必然也不通，重试只是把等待翻倍（车上等 40 秒不可接受）。
+                return SearchProvider.SearchOutcome.NetworkError("主端点 ${html.reason}")
             }
 
             is FetchResult.Success -> {
@@ -202,6 +192,20 @@ class DuckDuckGoSearchProvider(
         const val DESKTOP_UA =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
                 "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+
+        /**
+         * 显式超时，不依赖 OkHttp 默认值。
+         *
+         * 车机上弱网是常态，默认超时（connect 10s + read 10s，最坏两个端点累计 40s）
+         * 会让 Agent 长时间无响应。15 秒是权衡：够慢网完成一次请求，
+         * 又不至于让用户以为死机。
+         */
+        fun defaultClient(): OkHttpClient = OkHttpClient.Builder()
+            .connectTimeout(8, TimeUnit.SECONDS)
+            .readTimeout(12, TimeUnit.SECONDS)
+            .callTimeout(15, TimeUnit.SECONDS)
+            .retryOnConnectionFailure(false)
+            .build()
     }
 }
 

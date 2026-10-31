@@ -463,7 +463,42 @@ WebFetcher.fetch(url, options)
 | Lint 3 个 error | **既有问题，非本次引入**：`AgentForegroundService.kt:244`、`VoskWakeWordEngine.kt:131` 缺权限检查，`strings.xml:3` 缺英文翻译。已 stash 后复测确认 |
 | 沙箱内无法出网 | JUnit 沙箱无外网，真实端点调用会 `SocketTimeoutException`。端到端验证改用真实抓取的 HTML fixture（`app/src/test/resources/ddg_result_sample.html`）覆盖解析链路 |
 
-### 8.3 Phase 1 验收结果
+### 8.3 设备端验证结果（2026-10-31，AAOS + Android 模拟器）
+
+在 `Automotive_1408p_landscape_with_Google_Play`（AAOS，API 35）与 `aosagent-api35` 两个镜像上验证：
+
+| 项 | 结果 |
+|---|---|
+| **AAOS 镜像带 WebView provider** | `com.google.android.webview` 存在（`com.google.android.overlay.googlewebview`），**Phase 2 的内置浏览器页成立** |
+| AAOS 镜像**没有 ethernet 服务** | logcat：`SystemServiceRegistry: No service published for: ethernet`。车机网络走 cellular radio，不是 eth0——这是 AAOS 镜像的设计，不是缺陷 |
+| 设备端真实搜索 | 5 条结果，标题与 URL 全部正确解出，耗时 **1.6–1.8 秒** |
+| 设备端工具层 | `status=ok`，`total=3`，结构完整 |
+| 设备端 URL 守卫 | 拒 `127.0.0.1` / `169.254.169.254` / `http://`，放行 `https://example.com` |
+| **断网行为** | **0.24 秒快速失败**，报 `UnknownHostException: Unable to resolve host`——错误原因清晰，不是笼统的"连不上" |
+
+### 8.4 真机验证发现并修掉的问题
+
+| 问题 | 修法 |
+|---|---|
+| **默认 OkHttp 无显式超时**，两个端点最坏累计 40 秒。车上弱网是常态，Agent 会长时间无响应 | 显式 `connectTimeout(8s)` / `readTimeout(12s)` / `callTimeout(15s)`，关掉 `retryOnConnectionFailure` |
+| **网络失败时仍会重试 lite 端点**：两者同在 `duckduckgo.com`，网络不通时 lite 必然也不通，只是把等待翻倍 | 主端点网络失败即返回，不再试 lite；lite 只在"通了但解析不出"时作为降级 |
+
+### 8.5 代理环境的坑（重要，影响 Phase 2）
+
+本次验证在**开发机走 WSL 桥接 + mihomo 代理**的环境下完成，发现一个会直接影响 Phase 2 的事实：
+
+> **设备走 HTTP 代理时，域名由代理侧解析，本地 `InetAddress.getAllByName` 会失败。**
+> `UrlGuard.checkWithDns` 因此会把合法 URL 误判为"非公网"而拒绝。
+
+已做两件事：
+
+1. 在 `UrlGuard.checkWithDns` 的 KDoc 里写明这个限制与正确用法
+   （生产校验走静态 [UrlGuard.check]；需要 DNS 判定时配合服务端二次校验）。
+2. `checkWithDns` **当前只被测试调用，生产代码未使用**——Phase 1 的搜索走固定域名，不经过 URL 守卫。
+
+Phase 2 引入 `web_fetch`（用户可控 URL）时必须处理这一点，否则**车机在代理环境下会拒绝一切正常网址**。
+
+### 8.6 Phase 1 验收结果
 
 - [x] UrlGuard 单测全绿（13 个：内网/回环/元数据/IP 字面量/非 https/内网后缀/DNS 解析到内网/解析失败）
 - [x] HtmlTextExtractor 单测全绿（12 个：script 不泄漏、实体解码、结构保留、注释清理）
@@ -472,6 +507,9 @@ WebFetcher.fetch(url, options)
 - [x] 现有单测无回归（363 个测试，仅 1 个既有环境失败）
 - [x] 提示词增长约 140 token，在预算内
 - [x] Lint 我的新文件零告警
-- [ ] 真机复测：真实车机镜像上联网搜索（需在有网环境跑）
-- [ ] 真机复测：`web_search` 在车机弱网下的超时表现
+- [x] **设备端验证**：AAOS 与 Android 镜像上真实搜索成功（5 条结果，1.6–1.8 秒）
+- [x] **断网验证**：0.24 秒快速失败且原因清晰
+- [x] **弱网超时**：显式超时后最坏 15 秒（改前 40 秒）
+- [ ] 真机（非模拟器）复测：真实车机镜像上的蜂窝网络表现
+- [ ] 真机复测：车机常见的代理/ captive portal 环境
 

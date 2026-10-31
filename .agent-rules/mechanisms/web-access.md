@@ -128,13 +128,20 @@ ACCESS 的 `flutter_linux_webview`、OpenHarmony 的 `web_webview` 同路；不�
 9. **页面主动回调宿主必须校验 origin**：页面与宿主的通信通道用 `addWebMessageListener`（按 origin 匹配），
    不用 `addJavascriptInterface`（把宿主对象直接暴露给任意页面）。任何页面发起的调用都要校验
    `sourceOrigin` 与当前页一致、且是主 frame、且当前页为 http/https，否则恶意页面可直接调用 Agent 能力。
-10. **网络失败必须带原因**：出网失败要区分连接超时、DNS 失败、连接被拒、非 2xx、空响应体，
+10. **代理环境下不要依赖本地 DNS 判定**：车机常走 HTTP 代理，域名由代理侧解析，本地
+    `InetAddress.getAllByName` 会失败。`UrlGuard.checkWithDns` 在此场景会把合法 URL 误判为非公网。
+    生产校验走静态 `UrlGuard.check`；`checkWithDns` 当前只用于测试。
+11. **网络失败必须带原因**：出网失败要区分连接超时、DNS 失败、连接被拒、非 2xx、空响应体，
     不能统一报"无法连接"——排查时看不出差别。异常类型与消息要保留（注意别把凭据带进消息里）。
-11. **搜索端点的失败分三类**：网络失败（连不上）、解析失败（结构变了/被限流）、成功但无结果。
+12. **搜索端点的失败分三类**：网络失败（连不上）、解析失败（结构变了/被限流）、成功但无结果。
     三者不可混为一谈，尤其**不能把"解析失败"返回成空列表**——那会让模型以为"没搜到"。
-    判定顺序：主端点网络失败 → 试 lite → 都失败才报网络错误；主端点通了但解析不出 → 试 lite
+    判定顺序：主端点网络失败 → 直接报网络错误（不再试 lite）；主端点通了但解析不出 → 试 lite
     → 仍空才报解析失败。
-12. **主机名先转 punycode 再判断**：中文域名不规范化会绕过 `.local` / `.internal` 这类后缀检查。
+13. **主机名先转 punycode 再判断**：中文域名不规范化会绕过 `.local` / `.internal` 这类后缀检查。
+14. **出网必须显式设超时**：车机弱网是常态，依赖客户端默认超时会让 Agent 长时间无响应。
+    当前搜索层用 `connect 8s / read 12s / call 15s`，并关闭 `retryOnConnectionFailure`（重试只会放大等待）。
+15. **同一域名族不重复试**：主端点与降级端点同域时，主端点网络失败即返回，不再试降级端点。
+    降级端点只在"网络通了但解析不出结果"时使用。
 
 ## 维护方式
 
@@ -147,5 +154,11 @@ ACCESS 的 `flutter_linux_webview`、OpenHarmony 的 `web_webview` 同路；不�
 - **实测记录**：2026-10-31 宿主侧实测 `html.duckduckgo.com/html/` 与 `lite.duckduckgo.com/lite/` 均 HTTP 200 可用；
   `api.duckduckgo.com` 返回 202 且需 key，不适合内置。
   携桌面 UA 实测 html 端点：HTTP 200、34,396 字节，解析锚点 `result__a` / `result__snippet` / `uddg=` 均存在，未触发反爬。
+- **设备端实测（2026-10-31）**：AAOS 镜像（`android-35-ext15` Play Store 版）带 WebView provider
+  `com.google.android.webview`；设备上真实搜索 5 条结果、耗时 1.6–1.8 秒；
+  切断网络后 0.24 秒快速失败并报 `UnknownHostException`。
+  另发现 **AAOS 镜像没有 ethernet 服务**（车机走 cellular radio），`eth0` DOWN 属正常。
+- **弱网与超时**：默认 OkHttp 超时会让两个端点累计 40 秒，车上不可接受；
+  已改为 `connect 8s / read 12s / call 15s` 并关闭重试，主端点网络失败不再试 lite。
 
 > 更新时间：2026-10-31
