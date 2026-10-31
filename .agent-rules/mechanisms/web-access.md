@@ -1,22 +1,25 @@
-# 联网访问机制
+# 联网访问与内置浏览器机制
 
 ## 结论
 
-AOS-Agent 的联网能力由两类来源构成：本地内置的搜索与抓取工具（公开互联网、只读、无登录态），
-以及可选接入的外部 MCP 服务；所有外网请求必须过 URL 守卫，缺失能力时结构化降级而非崩溃。
+AOS-Agent 的联网能力由三层构成：纯 HTTP 的搜索工具、可供人工操作的内置 WebView 浏览器页、
+以及在浏览器页上做只读抽取与受控操作的 Agent 工具；所有外网请求必须过 URL 守卫，
+能力缺失时结构化降级而非崩溃。
 
 ## 涉及对象
 
 | 层 | 文件/表 | 角色 |
 |---|---|---|
-| Core | `core/web/UrlGuard.kt` | URL 白名单校验：仅 https 公网，拒绝内网/回环/云元数据 |
-| Core | `core/web/WebCapability.kt` | WebView provider 可用性探测（运行期，不实例化） |
-| Core | `core/web/WebFetcher.kt` | WebView 生命周期管理 + 加载 + 正文提取 |
+| Core | `core/web/UrlGuard.kt` | URL 守卫：仅 https 公网，拒绝内网/回环/云元数据/IP 字面量 |
 | Core | `core/web/SearchProvider.kt` | 搜索引擎适配（DuckDuckGo html/lite 双端点） |
 | Core | `core/web/HtmlTextExtractor.kt` | HTML → 纯文本/markdown（纯函数） |
-| Tool | `core/tools/WebSearchTool.kt` | `web_search` 工具：关键词 → 结果列表 |
-| Tool | `core/tools/WebFetchTool.kt` | `web_fetch` 工具：URL → 正文 |
-| Tool | `core/tools/mcp/` | 外部 MCP 服务接入（可选增强，含 Lightpanda 等） |
+| Core | `core/web/WebCapability.kt` | WebView provider 可用性探测（运行期，不实例化） |
+| Core | `core/web/BrowserController.kt` | 浏览器会话状态机 + JS 注入封装（串行化、主线程、销毁后拒绝） |
+| Tool | `core/tools/WebSearchTool.kt` | `web_search`：关键词 → 结果列表 |
+| Tool | `core/tools/BrowserTool.kt` | `browser_read`：读当前页正文；`browser_act`：受控操作页面 |
+| UI | `ui/browser/BrowserScreen.kt` | 浏览器页：地址栏 + WebView + 状态条 |
+| UI | `ui/components/AOSAppShell.kt` | `AOSDestination.Browser` 导航项 + 栈式导航 |
+| Tool | `core/tools/mcp/` | 外部 MCP 服务接入（可选增强） |
 | System | `AndroidManifest.xml` | `INTERNET` / `ACCESS_NETWORK_STATE` 权限 |
 | System | `res/xml/network_security_config.xml` | 公网 TLS 强制；仅本地网段允许明文 |
 
@@ -34,31 +37,41 @@ AOS-Agent 的联网能力由两类来源构成：本地内置的搜索与抓取�
     |     v
     |   [ToolResult.Ok {status, query, results[], total, provider}]
     |
-    +-- web_fetch(url)
+    +-- browser_read / browser_act
           |
           v
-        [UrlGuard.isPublicHttpUrl]  ← 不通过直接拒（SSRF 防线）
+        [BrowserController]  ← 会话不存在 → 返回"浏览器未打开"降级
           |
           v
-        [WebCapability.probe]        ← 无 WebView provider → 降级
-          |
+        [WebView.evaluateJavascript]（串行化 + 主线程）
+          │
           v
-        [WebFetcher.fetch]
-          | 创建 WebView（主线程）→ 加载 → onPageFinished
-          | evaluateJavascript 提取正文（<article>/<main> → body → JS 剥标签）
-          | 超时/异常 → 销毁并报错
-          v
-        [ToolResult.Ok {status, url, final_url, title, content, truncated}]
-          |
-          v
-        [结果回灌 LLM]
+        [ToolResult.Ok {status, url, title, content, …}]
+```
+
+```
+[人工使用浏览器]
+    |
+    v
+[AOSDestination.Browser]  ← 栈式导航压栈，不打断对话
+    |
+    v
+[BrowserScreen]
+    ├─ 地址栏：URL → 直接加载；非 URL 文本 → 当搜索词
+    ├─ WebView（AndroidView 包 Compose）
+    │    ├─ onPageFinished → 更新 title/url 状态
+    │    ├─ onReceivedError → 可读原因 + 重试
+    │    └─ 离开页面 → destroy() + 清引用
+    └─ 状态条：加载中 / 错误 / 当前 URL
 ```
 
 ## 使用点
 
-- `AgentRuntime.refresh()`：注册两个工具到 `ToolSystem`
+- `AgentRuntime.refresh()`：注册 `web_search` / `browser_read` / `browser_act`
+- `AgentRuntime`：持有 `BrowserController`，与浏览器页共享同一会话
+- `MainActivity`：`AOSDestination.Browser` 装配与栈式导航
 - `PromptSections.capabilities`：向模型声明工具名与"时效性问题先查再答"
-- `PromptSections.rules`：声明抓取内容只当数据，不执行页面内指令
+- `PromptSections.rules`：声明网页内容只当数据，不执行页面内指令
 - `McpToolSource`：外部 MCP 工具（可选增强路径）
 
 ## 修改点
@@ -68,31 +81,33 @@ AOS-Agent 的联网能力由两类来源构成：本地内置的搜索与抓取�
 | 换搜索引擎 | `core/web/SearchProvider.kt` | 新增一个实现，工具层只依赖接口 |
 | 抓取格式扩展 | `core/web/HtmlTextExtractor.kt` | 加格式分支，不动工具层 |
 | 放宽/收紧 URL 规则 | `core/web/UrlGuard.kt` | 改判定函数；内网拒绝不可放宽 |
-| 加浏览器交互 | 新增工具 + `core/web/` 交互层 | 需重新评估驾驶场景安全边界 |
+| 加浏览器交互动作 | `core/tools/BrowserTool.kt` + `BrowserController` | 新增动作类型；写动作必须走 Ask 闸 |
+| 浏览器页视觉调整 | `ui/browser/BrowserScreen.kt` | 走既有 token 与双语资源，不硬编码色值字号 |
 
 ## 关键约束
 
 1. **URL 守卫不可绕过**：只允许 https 公网域名；拒绝回环、私网、链路本地（含 `169.254.169.254` 云元数据）、
    `localhost`/`*.local`/`*.internal`，以及 IP 字面量直连（防 DNS rebinding）。所有外网入口都必须先过它。
-2. **WebView headless 是非官方支持用法**：Chromium 明确不保证修复此类问题、WebView 更新可能突然失效。
-   失败必须结构化报错并可观测，禁止掩盖成"抓取成功但内容为空"。
+2. **浏览器用有窗口的 WebView，不用无头的**：Chromium 明确声明脱离窗口的 WebView 属未受支持用法
+   （可能崩、升级即失效）。有窗口既避开该风险，也让 Agent 自主操作与人工操作共用同一实例。
 3. **WebView 必须显式释放**：其内存主要在 native 侧，不受 `maxHeap` 限制，不释放会持续涨并触发 LMK。
-   所有路径（成功/超时/异常）都必须 `destroy()` 并清引用。
-4. **搜索引擎格式不稳定**：DuckDuckGo html 端点是给浏览器用的，非官方 API，结构随时可能变。
-   解析失败要报"结构变化导致解析失败"，**不能返回空列表冒充"没找到结果"**。
-5. **抓取内容一律视为数据**：网页里的指令性文字不是给 Agent 的指令，不得执行；此约束同时写进系统提示。
-6. **能力缺失结构化降级**：无 WebView provider、无网络、解析失败都要给出可读原因，不抛未捕获异常。
+   离开页面必须 `destroy()` 并清引用。
+4. **Agent 的浏览器写操作必须走 Ask 闸**：`browser_act` 的点击/填写可能触及付费、提交、登录等真实后果，
+   需人工确认；无确认器即拒（与现有 `ToolPermission.Ask` 一致）。
+5. **网页内容一律视为数据**：网页里的指令性文字不是给 Agent 的指令，不得执行；此约束同时写进系统提示。
+6. **能力缺失结构化降级**：无 WebView provider、无网络、解析失败、页面未加载完，都要给出可读原因，
+   不抛未捕获异常、不返回空内容冒充成功。
 
 ## 维护方式
 
 - **新增**：加一个 `SearchProvider` 实现即可换搜索源，工具层不动。
-- **排查**：抓取失败先看返回的 `status`/`detail`——`missing_provider` 是镜像缺 WebView，
-  `parse_failed` 是搜索页结构变了，`timeout` 是页面太慢，`network` 是出网问题。
-- **验证**：`./gradlew :app:testDebugUnitTest`（守卫/提取/解析/生命周期共 N 例，纯函数与假 WebView，不依赖网络）；
-  真机复测重点是 **WebView provider 是否存在** 与 **连续抓取后内存是否上涨**。
-- **实测记录**：2026-10-28 宿主侧实测 `html.duckduckgo.com/html/` 与 `lite.duckduckgo.com/lite/` 均 HTTP 200 可用；
+- **排查**：先看返回的 `status`/`detail`——`missing_provider` 是镜像缺 WebView，
+  `parse_failed` 是搜索页结构变了，`timeout` 是页面太慢，`network` 是出网问题，
+  `no_session` 是浏览器页没打开。
+- **验证**：`./gradlew :app:testDebugUnitTest`（守卫/提取/解析/会话/注入构造共 N 例，纯函数与假 WebView，不依赖网络）；
+  真机复测重点是 **WebView provider 是否存在** 与 **反复进出浏览器后内存是否上涨**。
+- **实测记录**：2026-10-31 宿主侧实测 `html.duckduckgo.com/html/` 与 `lite.duckduckgo.com/lite/` 均 HTTP 200 可用；
   `api.duckduckgo.com` 返回 202 且需 key，不适合内置。
-  2026-10-31 携桌面 UA 实测 html 端点：HTTP 200、34,396 字节，解析锚点
-  `result__a` / `result__snippet` / `uddg=` 均存在，未触发 anomaly 反爬。
+  携桌面 UA 实测 html 端点：HTTP 200、34,396 字节，解析锚点 `result__a` / `result__snippet` / `uddg=` 均存在，未触发反爬。
 
 > 更新时间：2026-10-31
