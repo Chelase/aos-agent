@@ -109,6 +109,9 @@ ACCESS 的 `flutter_linux_webview`、OpenHarmony 的 `web_webview` 同路；不�
    不抛未捕获异常、不返回空内容冒充成功。
 8. **不得链接 GPL 代码**：本仓是 Apache-2.0。开源车机浏览器 AABrowser 是 GPL-3.0，
    链接或复制其代码会要求衍生作品按 GPL 发布，与本仓许可不兼容。可读可借鉴，不可复制不可依赖。
+9. **页面主动回调宿主必须校验 origin**：页面与宿主的通信通道用 `addWebMessageListener`（按 origin 匹配），
+   不用 `addJavascriptInterface`（把宿主对象直接暴露给任意页面）。任何页面发起的调用都要校验
+   `sourceOrigin` 与当前页一致、且是主 frame、且当前页为 http/https，否则恶意页面可直接调用 Agent 能力。
 
 ## 维护方式
 

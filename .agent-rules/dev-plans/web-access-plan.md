@@ -85,7 +85,7 @@ Lightpanda（https://github.com/lightpanda-io/browser）能力很强、内存占
 | 障碍 | 说明 |
 |---|---|
 | **GPL-3.0 传染** | 本仓是 **Apache-2.0**（`gh api` 确认）。链接 GPL-3.0 代码会要求整个衍生作品按 GPL-3.0 发布，与本仓许可不兼容 |
-| **无 Agent 接口** | 它有 `WebScripts.kt`（JS 注入脚本，目前只有 DRM L3 强制）与 `ConfiguredWebView.kt`（450 行 WebView 配置），但**没有通用的内容抽取/点击/填充助手**——那部分正是我们要写的 |
+| **无 Agent 接口** | 它有 `WebScripts.kt`（JS 注入脚本，目前只有 DRM L3 强制）、`ConfiguredWebView.kt`（450 行 WebView 配置）与 `SpeechRecognitionBridge.kt`（467 行 JS 桥），但**没有针对 Agent 的通用内容抽取/点击/填充助手**——那部分正是我们要写的 |
 | **架构不匹配** | 它是独立浏览器 App（自己的 MainActivity、自己的导航、自己的偏好存储）；我们要的是**嵌在 Agent 宿主里的浏览器页**，与对话页共享上下文、接受 Agent 工具调用 |
 
 **结论：AABrowser 当参考实现，不当依赖。**
@@ -97,6 +97,19 @@ Lightpanda（https://github.com/lightpanda-io/browser）能力很强、内存占
    对应我们方案里"native 内存不受 `maxHeap` 限制"的约束。
 3. `BrowserWebViewClient.kt` 的错误处理与权限回调（`onPermissionRequest` / `onGeolocationPermissionsShowPrompt`）
    ——WebView 里弹权限请求是要自己接的，不接会静默失败。
+
+另有一点**架构级**的借鉴，比上面三条更值钱——它的 `SpeechRecognitionBridge.kt`（467 行）
+演示了页面与宿主通信的正确姿势：
+
+| 做法 | 说明 |
+|---|---|
+| 用 `addWebMessageListener` 而非 `addJavascriptInterface` | 后者会把对象直接暴露给任意页面（任意页都能调我们的方法）；前者是按 origin 匹配的回调 |
+| **校验来源 origin** | `isTrustedCaller()`：只接受 `sourceOrigin` 与当前页面 origin 一致、且是主 frame、且当前页是 http/https 的调用 |
+| 回程用 `evaluateJavascript` | 且对注入内容做转义（`\r`/换行等）防破坏页面脚本 |
+| 宿主侧持有 `WeakReference<WebView>` | 避免桥对象持有 WebView 造成泄漏 |
+
+这套模式正是我们 `browser_act` 该用的：**Agent 注入的脚本要在页面上下文里跑，
+但任何"页面主动回调宿主"的通道必须做 origin 校验**，否则恶意页面能直接调用 Agent 能力。
 
 另有非 WebView 的开源浏览器引擎可参考，但**都不适合本项目**：
 
@@ -155,6 +168,16 @@ WebView 内置 Chromium 内核，**渲染能力等同手机浏览器**：JS 引�
 
 **结论：车机端用注入 JS 即可**，不需要 CDP。CDP 只在开发期调试用（`WebView.setWebContentsDebuggingEnabled`
 仅在 debug 构建开启），既不需要也不该进生产包。
+
+**两条通道要分清，别混用**：
+
+| 通道 | 方向 | 用途 | 安全要求 |
+|---|---|---|---|
+| `evaluateJavascript` | 宿主 → 页面 | Agent 注入操作脚本、抽内容 | 注入内容需转义；只在用户已打开的页面执行 |
+| `addWebMessageListener` | 页面 → 宿主 | 页面主动上报（如登录完成、内容变化） | **必须校验 `sourceOrigin`** 与当前页一致、且是主 frame、且当前页为 http/https |
+
+**不要用 `addJavascriptInterface`**：它把宿主对象直接暴露给任意页面，恶意页面可直接调用宿主能力。
+若确需页面回调宿主，用 `addWebMessageListener` + origin 校验（参考 AABrowser 的 `isTrustedCaller()`）。
 
 注入 JS 的实现要点：
 
