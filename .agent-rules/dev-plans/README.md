@@ -68,6 +68,7 @@
 - [llm-config-cli-plan.md](./llm-config-cli-plan.md) — LLM 配置 CLI（aos-llm）：装车现场快速配置/切换模型服务
 - [agent-harness-plan.md](./agent-harness-plan.md) — Agent harness 层：提示分节 / 审批通道 / 会话工具轨迹 / shell 输出后处理（H1–H4）
 - [real-car-readonly-probe-plan.md](./real-car-readonly-probe-plan.md) — 实车只读数据挖取：47 条测量（A–G 组），结论只认原始输出
+- [web-access-plan.md](./web-access-plan.md) — 联网搜索与网页抓取（web_search / web_fetch，WebView 无头化，Lightpanda 不可上车的结论）
 
 ## 6. 已归档
 

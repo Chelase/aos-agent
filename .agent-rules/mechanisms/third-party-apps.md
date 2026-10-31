@@ -2,107 +2,63 @@
 
 ## 结论
 
-提供车机第三方应用管理能力：通过本地上传 APK 安装、搜索网络可用车机软件、应用列表管理，解决车机应用生态匮乏的问题。
+**本机制尚未实现。** 早期规划过"车机第三方应用管理"（应用市场、本地上传 APK、网络搜索安装），
+但代码中从未落地：规划里提到的 `AppMarketActivity` / `AppListViewModel` / `AppSearchEngine` / `ApkRepository`
+全部不存在，现有 `system/update/ApkInstaller.kt` 只服务于**应用自身升级通道**（下载 + 校验 + 拉起系统安装器）。
+
+本文档保留此条，是为了避免后续开发者按"已实现"来理解；真正落地时请整体重写本文档。
 
 ## 涉及对象
 
-| 层 | 文件/模块 | 角色 |
+| 层 | 文件/表 | 角色 |
 |---|---|---|
-| UI | AppMarketActivity.kt | 应用市场/管理入口 |
-| UI | AppListViewModel.kt | 已安装应用列表管理 |
-| UI | AppSearchViewModel.kt | 网络搜索应用 |
-| UI | ApkInstaller.kt | APK 安装与管理 |
-| Core | ApkRepository.kt | 应用数据仓库 |
-| Core | AppSearchEngine.kt | 网络应用搜索引擎 |
-| System | PackageManager | 系统包管理（安装/卸载/查询） |
-| System | FileProvider | APK 文件共享给系统安装器 |
+| System | `system/update/ApkInstaller.kt` | **仅**升级通道：下载 APK、逐位校验 SHA-256、拉起系统安装器 |
+
+> 注意：原规划中的 `AppMarketActivity.kt` / `AppListViewModel.kt` / `AppSearchEngine.kt` / `ApkRepository.kt` 均不存在。
 
 ## 运行链路
 
-### 本地上传安装
+### 实际存在：应用自身升级
 
 ```
-[用户选择 APK 文件]
-    | 文件选择器（支持 U 盘/下载目录）
+[设置页「版本与更新」→ 检查更新]
     v
-[ApkInstaller 接收文件]
-    | 复制到 App 私有目录（安全沙箱）
+[UpdateChecker]  GET releases/latest/download/update.json
     v
-[调用 PackageManager.installPackage()]
-    | 或调用系统安装器 Intent
+[UpdateDecision.decide]  版本比较 + 官方主机白名单 + 校验和格式
     v
-[系统安装流程]
-    | 用户确认权限
-    v
-[安装完成 -> 刷新已安装列表]
+[ApkInstaller.download]
+    ├─ 地址不在官方白名单 → UNTRUSTED_URL（不发起下载）
+    ├─ 下载 → 逐位比 SHA-256 → 不过 → 删文件 → CHECKSUM_MISMATCH
+    └─ 过 → FileProvider 授权 → ACTION_VIEW 拉起系统安装器（用户确认）
 ```
 
-### 网络搜索安装
-
-```
-[用户在搜索框输入关键词]
-    v
-[AppSearchEngine]
-    | 搜索多个源：
-    | - APKPure / APKMirror / APKCombo 等镜像站
-    | - 车机应用社区（车机应用市场）
-    | - 自建应用仓库
-    v
-[返回搜索结果列表]
-    | 用户选择 -> 下载 APK
-    v
-[ApkInstaller.installFromUrl(url)]
-    | 下载 -> 校验签名 -> 安装
-```
-
-### 应用管理
-
-```
-[应用列表]
-    |
-    +-- 已安装应用（PackageManager.getInstalledPackages）
-    |     显示名称/图标/版本/包名
-    |     操作：打开 / 卸载 / 查看权限
-    |
-    +-- 可更新应用（检测版本差异）
-    |
-    +-- 收藏应用（本地数据库）
-```
-
-### 应用来源
-
-| 来源 | 方式 | 可靠性 |
-|---|---|---|
-| 本地上传（U 盘/下载） | 文件选择器 + FileProvider | 用户自行负责 |
-| APKPure / APKMirror | 网页抓取搜索结果 | 中（需校验签名） |
-| 车机专用应用市场 | 自建或第三方 API | 高 |
-| 开发者自建仓库 | 自建服务器 | 最高 |
+详见 [`release-and-update.md`](./release-and-update.md)。
 
 ## 使用点
 
-- 用户缺少车机应用 -> 搜索安装导航/音乐/视频工具
-- 安装我们的 Debug APK -> 通过本地上传 sideload
-- 后续 Agent 可自动安装必要工具包
+- 设置页「版本与更新」卡：检查更新 / 下载并安装
+- `AgentRuntime`：不涉及第三方应用安装
 
 ## 修改点
 
 | 要做什么 | 改哪里 | 怎么改 |
 |---|---|---|
-| APK 本地上传安装 | ApkInstaller.kt | 文件选择 + PackageManager 调用 |
-| 网络搜索 | AppSearchEngine.kt | 多源聚合搜索 + 下载 |
-| 应用列表 | AppListViewModel.kt | PackageManager 查询 + UI |
-| 权限处理 | AndroidManifest.xml | REQUEST_INSTALL_PACKAGES 等 |
+| 实现应用市场 | 新建 `ui/market/` + `core/appmarket/` | 全新模块，需先写机制文档并整体重写本文档 |
+| 实现网络搜索应用 | 新建搜索来源适配 | 见 [`web-access.md`](./web-access.md) 的搜索层，可复用 |
+| 复用 APK 安装能力 | `system/update/ApkInstaller.kt` | 当前绑死升级语义（官方白名单 + update.json 契约），复用前需解耦 |
 
 ## 关键约束
 
-1. Android 8+ 安装未知来源应用需要用户手动授权"安装未知应用"权限。
-2. 网络下载 APK 必须校验签名，防止恶意替换。
-3. 不上架非法/盗版应用，仅提供搜索工具，用户自行决定。
-4. 搜索源可配置，默认只启用可信源。
+1. **现有 APK 安装能力只为"升级自己"设计**：白名单与 `update.json` 契约都绑定版本比较语义，
+   不能直接拿来当通用侧载通道——否则等于开出任意 URL 安装入口。
+2. **网络下载的 APK 必须校验签名**，防止恶意替换。
+3. **不做静默安装**：最终确认权在系统安装器与用户手里。
+4. **上架合法性由运营方负责**，本仓只提供工具能力。
 
 ## 维护方式
 
-- **新增搜索源**：在 AppSearchEngine 的源配置中追加 URL 和解析规则。
-- **验证**：上传 APK 安装 -> 成功；搜索应用 -> 返回结果 -> 下载安装。
+- **排查**：想找"应用市场"代码时注意它不存在；目前只有升级通道。
+- **验证**：`./gradlew :app:testDebugUnitTest`；完整升级链路需真机或已有 Release。
 
-> 更新时间：2026-06-28
+> 更新时间：2026-10-31（修正：原文描述的功能从未实现，标注为未实现并列出实际存在对象）

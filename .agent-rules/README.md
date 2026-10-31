@@ -96,6 +96,7 @@
 - mechanisms/release-and-update.md — 发布与更新机制（签名/CI/检查更新/校验后拉起安装器）
 - mechanisms/website-and-pages.md — 独立静态官网、正式版本元数据校验与 Pages 自动部署
 - mechanisms/llm-config-cli.md — 模型服务配置 CLI（aos-llm：终端快速配置/切换供应商）
+- mechanisms/web-access.md — 联网访问机制（URL 守卫防 SSRF / WebView 无头抓取 / 搜索端点 / 能力降级）
 
 新增机制文档必须按 `mechanisms/README.md` 的七段强制结构编写（结论 → 涉及对象 → 运行链路 → 使用点 → 修改点 → 关键约束 → 维护方式），并遵守禁止写入内容清单。
 
