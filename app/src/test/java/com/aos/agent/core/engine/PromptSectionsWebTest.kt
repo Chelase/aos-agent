@@ -42,4 +42,29 @@ class PromptSectionsWebTest {
         assertTrue(text.contains("web_search"))
         assertTrue(text.contains("file_read"))
     }
+
+    @Test
+    fun mentionsBrowserToolsForCurrentPageWork() {
+        val text = rules()
+        assertTrue("应提到 browser_read", text.contains("browser_read"))
+        assertTrue("应提到 browser_act", text.contains("browser_act"))
+    }
+
+    @Test
+    fun statesThatClickAndFillNeedConfirmation() {
+        val text = rules()
+        // 改页面状态的动作必须人工确认，提示词里要说清楚
+        assertTrue("应说明 click/fill 需要确认", text.contains("确认"))
+        assertTrue("应说明只读动作直接执行", text.contains("直接执行"))
+    }
+
+    @Test
+    fun keepsBrowserRulesWithinBudget() {
+        // 提示词增长要受控，否则每轮对话都在烧 token
+        val text = rules()
+        assertTrue(
+            "浏览器相关规则不应超过 400 字，实际 ${text.length}",
+            text.length < 1200,
+        )
+    }
 }

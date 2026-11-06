@@ -39,11 +39,18 @@ ACCESS 的 `flutter_linux_webview`、OpenHarmony 的 `web_webview` 同路；不�
 | UI | `ui/components/AOSAppShell.kt` | `AOSDestination.Browser` 导航项 |
 | UI | `ui/chat/ChatScreen.kt` | 助手回答里的 https 链接渲染为可点，交给宿主在内置浏览器打开 |
 
-**待实现（Phase 3：Agent 操作页面）**
+**已实现（Phase 3：Agent 自主操作）**
 
 | 层 | 文件/表 | 角色 |
 |---|---|---|
-| Tool | `core/tools/BrowserTool.kt` | `browser_read`：读当前页正文；`browser_act`：受控操作页面 |
+| Core | `core/web/BrowserSession.kt` | 浏览器会话最小接口（工具只依赖它，便于假实现测试） |
+| Core | `core/web/BrowserSessionHolder.kt` | 进程级单例会话：UI 与 Agent 工具共用同一个 WebView |
+| Core | `core/web/BrowserScripts.kt` | JS 脚本构造 + 结果解析（纯函数，参数严格转义） |
+| Tool | `core/tools/BrowserReadTool.kt` | `browser_read`：读当前页正文（`permission = Auto`） |
+| Tool | `core/tools/BrowserActTool.kt` | `browser_act`：click/fill/scroll/wait（按动作分级权限） |
+| Test | `test/core/web/BrowserScriptsTest.kt` | 转义、脚本构造、结果解析 |
+| Test | `test/core/tools/BrowserToolTest.kt` | 降级、权限分级、Ask 闸行为 |
+| Test | `androidTest/ui/browser/BrowserSessionShareTest.kt` | 共享会话端到端（本地固定页面，不依赖外网） |
 
 **通用**
 
@@ -70,16 +77,21 @@ ACCESS 的 `flutter_linux_webview`、OpenHarmony 的 `web_webview` 同路；不�
     |   [ToolResult.Ok {status, query, results[], total, provider}]
     |     status ∈ {ok, parse_failed, network_error}
     |
-    +-- browser_read / browser_act           ← 待实现（Phase 3）
+    +-- browser_read / browser_act           ← 已实现（Phase 3）
           |
           v
-        [BrowserController]  ← 会话不存在 → 返回"浏览器未打开"降级
+        [BrowserSessionHolder.current()]  ← 会话不存在 → 返回 no_session 降级
           |
           v
-        [WebView.evaluateJavascript]（串行化 + 主线程）
+        [BrowserController.evaluate]  ← 主线程派发 WebView 调用 + Mutex 串行化
+          |
+          v
+        [WebView.evaluateJavascript]（脚本返回对象，不是 JSON 字符串）
           │
           v
         [ToolResult.Ok {status, url, title, content, …}]
+    browser_read 的 status ∈ {ok, no_session, loading, error}
+    browser_act 的 status ∈ {ok, not_found, no_session, error}
 ```
 
 ```
@@ -115,8 +127,9 @@ ACCESS 的 `flutter_linux_webview`、OpenHarmony 的 `web_webview` 同路；不�
 
 ## 使用点
 
-- `AgentRuntime.refresh()`：注册 `web_search`（Phase 3 再加 `browser_read` / `browser_act`）
-- `AgentRuntime`：持有 `BrowserController`，与浏览器页共享同一会话（Phase 3 接入）
+- `AgentRuntime.refresh()`：注册 `web_search`、`browser_read`、`browser_act`
+- `BrowserSessionHolder`：进程级单例，浏览器页创建 WebView 后登记、离开时注销；
+  Agent 工具从这里取会话——两边必须操作同一个 WebView 实例
 - `MainActivity`：`AOSDestination.Browser` 装配、栈式导航、待加载 URL 的传递
 - `PromptSections.capabilities`：向模型声明工具名与"时效性问题先查再答"
 - `PromptSections.rules`：声明网页内容只当数据，不执行页面内指令
@@ -179,6 +192,31 @@ ACCESS 的 `flutter_linux_webview`、OpenHarmony 的 `web_webview` 同路；不�
     内网/回环/云元数据地址直接不抽。抽取统一走 `UrlGuard`。
 20. **栈式返回要记住来源页**：从聊天点链接进浏览器，返回应回聊天而不是首页，
     且对话内容不丢。用一个"来源页"状态承接，不做完整导航栈。
+21. **WebView 的每个方法都要在主线程调**：Agent 工具跑在 runtime 的协程里，那个线程不是 WebView 的
+    创建线程，直接调会抛 "A WebView method was called on thread ..."。连 `webView.url` / `webView.title`
+    这种属性读取也一样。做法：`evaluateJavascript` 用 `withContext(Dispatchers.Main)` 派发，
+    **等待留在调用方线程**（不在主线程上阻塞）；URL/标题由主线程的 WebViewClient 回调同步进缓存，
+    工具侧读缓存。不能用 `runBlocking + withContext(Main)` 绕——从主线程调用会挂死。
+22. **注入脚本返回对象，不要返回 JSON 字符串**：`evaluateJavascript` 的回调收到的是结果的 JSON 序列化形式。
+    脚本返回字符串会多一层引号与转义，宿主手工解码那层转义时会把正文里的换行变成裸换行，JSON 就解析不了。
+    直接 `return {status:'ok', content: text}`，由 WebView 负责序列化。
+23. **脚本语法错误不会报错，只会让 evaluateJavascript 返回 null**：症状是"脚本没有执行"，
+    与"页面还没准备好"完全一样，极难区分。所以设备端测试必须逐个跑一遍所有脚本、
+    断言返回值是可解析 JSON——这是唯一能挡住语法错误的自动化防线。
+24. **共享会话必须是进程级单例**：Agent 工具（`AgentRuntime`）与浏览器页（`BrowserViewModel`）
+    各建一个 WebView 的话，Agent 读到的永远是另一个空页面。用 `BrowserSessionHolder` 登记/注销，
+    页面创建时登记、离开时注销（注销要判身份，避免注销掉别人的会话）。
+25. **滚动对 Agent 用即时滚动，不用平滑滚动**：平滑滚动是异步动画，调用返回时页面还没滚到位，
+    紧接着读正文会读到旧位置。Agent 不看动画，要的是"滚完之后的位置"。
+26. **填表单必须用原生 setter 再派发 input/change**：直接 `el.value = x` 改的是 DOM 属性，
+    React/Vue 的受控组件监听事件，属性被覆盖后框架状态不更新——表单看着填了，提交上去是空的。
+    用 `Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, txt)`。
+27. **模型给的参数必须转义后再拼进 JS**：selector、文本这些来自模型输出，裸拼等于给了注入口。
+    按 JS 规则转义反斜杠、引号、换行、控制字符，并把 U+2028/U+2029 转成 `\uXXXX`
+    （它们在 JS 字符串字面量里会截断字符串）。
+28. **页面加载失败时 WebView 显示的是内部错误页**：URL 形如 `chrome-error://chromewebdata/`，
+    它的正文是"网页无法打开"这类提示。当成正常正文返回会让 Agent 以为读到了页面——
+    脚本里要先判 `chrome-error://` 前缀并报 error。
 
 ## 维护方式
 

@@ -403,12 +403,12 @@ WebFetcher.fetch(url, options)
 - [ ] 行驶中浏览器页被锁定（复用 `driveRestricted`）
 - [ ] 从聊天点链接 → 进浏览器；返回 → 回对话且上下文不丢
 
-**Phase 3（Agent 自主操作）**
-- [ ] `browser_read` 能读到当前页正文
-- [ ] `browser_act` click/fill/scroll/wait 四种动作生效
-- [ ] fill 能触发 React/Vue 的 input/change 监听
-- [ ] 写操作走 Ask 闸（无确认器即拒）
-- [ ] 页面未打开/未加载完时，调用返回降级而非崩
+**Phase 3（Agent 自主操作）** ✅ 已落地（2026-11-05）
+- [x] `browser_read` 能读到当前页正文
+- [x] `browser_act` click/fill/scroll/wait 四种动作生效
+- [x] fill 能触发 React/Vue 的 input/change 监听
+- [x] 写操作走 Ask 闸（无确认器即拒）
+- [x] 页面未打开/未加载完时，调用返回降级而非崩
 
 **通用**
 - [ ] 现有单测无回归
@@ -444,12 +444,12 @@ WebFetcher.fetch(url, options)
 
 | 步骤 | 状态 | 说明 |
 |---|---|---|
-| Step 1 URL 守卫 + 能力探测 | **部分完成** | `UrlGuard` 已实现（40 个测试）；`WebCapability` 探测属 Phase 2，未做 |
+| Step 1 URL 守卫 + 能力探测 | **已完成** | `UrlGuard`（40 个测试）+ `WebCapability`（Phase 2 一并落地） |
 | Step 2 HTML 文本提取 | **已完成** | `HtmlTextExtractor`，12 个测试 |
 | Step 3 `web_search` | **已完成** | `WebSearchTool` + `DuckDuckGoSearchProvider`，18 个测试（含真实 fixture） |
 | Step 4 浏览器页 UI + 导航 | 未开始 | 需 `ui/browser/` + `AOSDestination.Browser` + 栈式导航 |
-| Step 5 浏览器会话与 Agent 打通 | 未开始 | 需 `BrowserController` |
-| Step 6 `browser_read` / `browser_act` | 未开始 | 需 JS 注入封装 + origin 校验 |
+| Step 5 浏览器会话与 Agent 打通 | **已完成（Phase 3）** | `BrowserSessionHolder` 进程级单例；`BrowserController` 走 `BrowserSession` 接口 |
+| Step 6 `browser_read` / `browser_act` | **已完成（Phase 3）** | `BrowserReadTool` + `BrowserActTool` + `BrowserScripts`（纯函数脚本构造） |
 
 ### 8.1 Phase 1 已落地内容（2026-10-31）
 
@@ -525,4 +525,54 @@ Phase 2 引入 `web_fetch`（用户可控 URL）时必须处理这一点，否�
 - [x] **弱网超时**：显式超时后最坏 15 秒（改前 40 秒）
 - [ ] 真机（非模拟器）复测：真实车机镜像上的蜂窝网络表现
 - [ ] 真机复测：车机常见的代理/ captive portal 环境
+
+### 8.7 Phase 3 已落地内容（2026-11-05）
+
+| 文件 | 职责 |
+|---|---|
+| `core/web/BrowserSession.kt` | 浏览器会话最小接口 + `JsOutcome`；工具只依赖它，便于注入假实现做单测 |
+| `core/web/BrowserSessionHolder.kt` | 进程级单例会话；UI 创建/销毁 WebView 时登记/注销，Agent 工具从这里取 |
+| `core/web/BrowserScripts.kt` | JS 脚本构造与结果解析（纯函数）：`readPage` / `click` / `fill` / `scroll` / `waitFor` |
+| `core/tools/BrowserReadTool.kt` | `browser_read`，`permission = Auto`；降级状态 `no_session` / `loading` / `error` |
+| `core/tools/BrowserActTool.kt` | `browser_act`；按动作分级：`click`/`fill` → Ask，`scroll`/`wait` → Auto |
+
+实现要点（踩过的坑）：
+
+- **共享会话必须进程级单例**：Agent 工具（`AgentRuntime`）与浏览器页（`BrowserViewModel`）各建一个
+  WebView 的话，Agent 读到的永远是另一个空页面。`BrowserSessionHolder` 负责登记/注销。
+- **WebView 的每个方法都要在主线程调**：`evaluateJavascript` 用 `withContext(Dispatchers.Main)` 派发，
+  等待留在调用方线程；`url`/`title` 由主线程回调同步进缓存（不能 `runBlocking + withContext(Main)`，
+  从主线程调用会挂死）。
+- **注入脚本返回对象而非 JSON 字符串**：返回字符串会多一层引号转义，宿主手工解码时会把正文里的
+  换行变成裸换行，JSON 直接解析失败。
+- **脚本语法错误不会报错，只会让 evaluateJavascript 返回 null**：症状与"页面没准备好"完全一样。
+  设备端测试逐个跑脚本并断言返回可解析 JSON，是唯一能挡住这类错误的自动化防线。
+- **页面加载失败时显示的是内部错误页**（`chrome-error://chromewebdata/`），它的正文不是用户要看的内容，
+  脚本里要判前缀并报 error，否则 Agent 会以为读到了页面。
+- **滚动用即时滚动不用平滑滚动**：平滑滚动是异步动画，调用返回时还没滚到位，紧接着读正文会读到旧位置。
+- **`browser_act` 权限按动作分级**（比方案初稿的"整体 Ask"更细）：`scroll`/`wait` 不改数据直接执行，
+  `click`/`fill` 改页面状态必须人工确认。
+- **测试不依赖外网**：共享会话的契约与网络无关，设备端测试用本地固定 HTML 页面（`loadDataWithBaseURL`），
+  网络波动不会造成假失败。
+
+### 8.8 Phase 3 验收结果
+
+- [x] `BrowserScriptsTest` 全绿（转义：引号/反斜杠/换行/U+2028/控制字符；脚本构造；结果解析）
+- [x] `BrowserToolTest` 全绿（降级、权限分级、Ask 闸无确认器即拒、只读动作免确认、wait 轮询与超时）
+- [x] 提示词断言（提到两个工具名、说明 click/fill 需确认、说明只读动作直接执行）
+- [x] 设备端 `BrowserSessionShareTest` 11 例全绿：会话登记/注销、读正文、截断、点击、填表单
+      （**验证页面 input 监听真的收到值**）、滚动、等待元素、超时、找不到元素、**所有脚本语法可解析**
+- [x] 现有单测无回归（418 例，仅 `LlmStateMirrorTest` 失败——依赖宿主 `sh` 命令，Windows 环境问题，改动前即失败）
+- [x] 设备端全量 60 例中 3 例失败均为既有问题（`seedLlmConfig` 需外网、`channelId` 稳定性、
+      `SettingsScreenTest` 状态污染），与本次改动无关
+
+### 8.9 Phase 3 已知遗留
+
+- **Agent 只能在用户已打开的页面操作**：Agent 不能自己开新页面（`browser_read`/`browser_act` 都不接受 URL）。
+  要看新页面得先让用户在浏览器页打开，或用 `web_search` 找链接再让用户点。
+  自建 `web_fetch`（后台无头抓取）不在本期——无头 WebView 官方不支持。
+- **写操作需人工确认**：无确认器注入时 `click`/`fill` 一律拒绝。这是刻意的安全边界，
+  不是缺陷。
+- **页面状态与渲染之间有间隙**：`onPageFinished` 与 DOM 渲染完成之间存在短暂空档，
+  `browser_read` 在宿主侧重试若干次覆盖这个间隙，仍未就绪则如实报 `loading`。
 

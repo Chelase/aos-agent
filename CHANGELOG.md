@@ -1,5 +1,33 @@
 # 更新日志
 
+## 未发布
+
+### 新增功能
+
+- **Agent 自主操作浏览器**（Phase 3）：Agent 现在能读用户已打开的页面正文，并能受控操作页面。
+    - **`browser_read`**：读当前页正文（优先 `<article>` → `<main>` → `<body>`，剥掉 script/style），返回 `{status, url, title, content, truncated}`；页面未打开或仍在渲染时返回 `no_session` / `loading` 状态，**不返回空内容冒充成功**（`BrowserReadTool`）。
+    - **`browser_act`**：支持 `click`（按选择器或可见文本）、`fill`（按选择器或字段名）、`scroll`、`wait`（轮询选择器至命中或超时）四种动作（`BrowserActTool`）。
+    - **共享浏览器会话**：Agent 工具与浏览器页操作**同一个 WebView 实例**（`BrowserSessionHolder` 进程级单例），否则 Agent 读到的永远是另一个空页面。
+    - **权限按动作分级**：`click` / `fill` 会改动页面状态，走人工确认闸（无确认器即拒）；`scroll` / `wait` 不改数据，直接执行。
+    - **框架兼容的表单填写**：用原生 setter 再派发 `input`/`change` 事件，React/Vue 的受控组件能收到值（直接设 `value` 会漏）。
+    - **注入安全**：模型给的 selector / 文本一律按 JS 规则转义后才拼进脚本，不给注入口。
+
+### 修复
+
+- **WebView 跨线程调用崩溃**：Agent 工具在 runtime 协程里读页面时，非主线程调用 `evaluateJavascript` 会抛
+  "A WebView method was called on thread ..."。现在 WebView 调用统一派发到主线程，等待留在调用方线程；
+  URL 与标题改由主线程回调同步进缓存（`BrowserController`）。
+- **页面加载失败被当成正常正文**：WebView 加载失败时显示的是内部错误页（`chrome-error://chromewebdata/`），
+  其正文是"网页无法打开"提示。现在识别该协议并如实报 error。
+
+### 验证与实测说明
+
+- JVM 单测 418 例，仅 `LlmStateMirrorTest` 失败（依赖宿主 `sh` 命令，Windows 环境问题，改动前即失败）。
+- 设备端新增 `BrowserSessionShareTest` 11 例全部通过：会话登记/注销、读正文与截断、点击、填表单（**验证页面
+  input 监听真的收到值**）、滚动、等待元素、超时、找不到元素，以及"所有注入脚本语法可解析"这条防线。
+- 设备端全量 60 例中 3 例失败均为既有问题（`seedLlmConfig` 需外网、`channelId` 稳定性、
+  `SettingsScreenTest` 状态污染），与本次改动无关。
+
 ## 1.4.0 - 2026-11-05
 
 ### 新增功能

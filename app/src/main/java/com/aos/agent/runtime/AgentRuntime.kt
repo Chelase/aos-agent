@@ -19,6 +19,8 @@ import com.aos.agent.core.tools.FileReadTool
 import com.aos.agent.core.tools.ProcessCommandRunner
 import com.aos.agent.core.tools.ShellTool
 import com.aos.agent.core.tools.SystemInfoTool
+import com.aos.agent.core.tools.BrowserActTool
+import com.aos.agent.core.tools.BrowserReadTool
 import com.aos.agent.core.tools.Tool
 import com.aos.agent.core.tools.ToolSystem
 import com.aos.agent.core.tools.VehicleBasicTool
@@ -139,6 +141,9 @@ class AgentRuntime(context: Context) {
             AskUserTool(askUserChannel),
             // 联网搜索：只读公开信息，不登录不写回，免确认。
             WebSearchTool(),
+            // 浏览器：读当前页正文（只读，免确认）；操作页面按动作分级权限。
+            BrowserReadTool(),
+            BrowserActTool(),
         )
         val registry = SkillRegistry.parseAll(AssetSkillLoader(appContext).load())
         val system = ToolSystem(confirmer = toolConfirmer) { driveRestricted() }

@@ -9,6 +9,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.lifecycle.AndroidViewModel
 import com.aos.agent.core.web.BrowserController
+import com.aos.agent.core.web.BrowserSessionHolder
 import com.aos.agent.core.web.UrlGuard
 import com.aos.agent.core.web.WebCapability
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -62,9 +63,6 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     private val _addressBar = MutableStateFlow("")
     val addressBar: StateFlow<String> = _addressBar
 
-    /** Agent 工具用的会话句柄；页面没开时工具据此降级。 */
-    val session: BrowserController get() = controller
-
     private var webView: WebView? = null
 
     /**
@@ -94,6 +92,8 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         }
         created.webViewClient = object : WebViewClient() {
             override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
+                controller.setLoading(true)
+                controller.setPageInfo(url, null)
                 update {
                     it.copy(
                         url = url,
@@ -107,6 +107,8 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
             }
 
             override fun onPageFinished(view: WebView, url: String) {
+                controller.setLoading(false)
+                controller.setPageInfo(url, view.title)
                 update {
                     it.copy(
                         url = url,
@@ -153,6 +155,8 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
             }
         }
         controller.attach(created)
+        // 登记到进程级会话：Agent 工具要操作的是同一个 WebView 实例
+        BrowserSessionHolder.register(controller)
         webView = created
         _state.value = BrowserUiState.Ready(webView = created)
     }
@@ -188,6 +192,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     /** 页面被移除时调用：显式释放 WebView，避免 native 内存持续涨。 */
     fun releaseWebView() {
         webView = null
+        BrowserSessionHolder.unregister(controller)
         controller.release()
     }
 
